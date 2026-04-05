@@ -42,6 +42,7 @@ export class RolesService {
         code: dto.code,
         description: dto.description ?? undefined,
         isSystem: dto.isSystem ?? false,
+        dataScope: dto.dataScope,
         permissions: {
           createMany: {
             data: dto.permissionIds.map((permissionId) => ({ permissionId }))
@@ -89,7 +90,8 @@ export class RolesService {
         data: {
           name: dto.name,
           description: dto.description === undefined ? undefined : dto.description,
-          isSystem: dto.isSystem
+          isSystem: dto.isSystem,
+          dataScope: dto.dataScope
         },
         include: {
           permissions: {

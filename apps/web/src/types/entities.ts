@@ -1,3 +1,15 @@
+export type SortOrder = "asc" | "desc";
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  sortBy?: string;
+  sortOrder: SortOrder;
+}
+
 export interface Department {
   id: string;
   name: string;
@@ -79,6 +91,20 @@ export interface Reminder {
   status: "PENDING" | "DONE" | "CANCELLED";
 }
 
+export interface ReminderListItem extends Reminder {
+  entityType: "LEAD" | "CUSTOMER";
+  createdAt: string;
+  updatedAt: string;
+  owner?: User;
+  lead?: Pick<Lead, "id" | "name" | "contactName" | "phone"> | null;
+  customer?: Pick<Customer, "id" | "name" | "contactName"> | null;
+  followUp?: {
+    id: string;
+    content: string;
+    nextFollowUpAt?: string | null;
+  } | null;
+}
+
 export interface FollowUp {
   id: string;
   content: string;
@@ -114,10 +140,12 @@ export interface DictionaryEntry {
 
 export interface AuditLog {
   id: string;
+  actorId?: string | null;
   actorName?: string | null;
   actionType: string;
   targetType: string;
   targetId?: string | null;
+  detail?: Record<string, unknown> | null;
   createdAt: string;
 }
 
@@ -131,4 +159,3 @@ export interface DashboardOverview {
   conversionRate: number;
   pendingReminders: number;
 }
-

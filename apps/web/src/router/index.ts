@@ -7,7 +7,9 @@ import DashboardPage from "../pages/DashboardPage.vue";
 import CustomersPage from "../pages/CustomersPage.vue";
 import LeadsPage from "../pages/LeadsPage.vue";
 import LoginPage from "../pages/LoginPage.vue";
+import NoAccessPage from "../pages/NoAccessPage.vue";
 import SystemAdminPage from "../pages/SystemAdminPage.vue";
+import { resolveFirstAccessiblePath } from "./access";
 import { useAuthStore } from "../stores/auth";
 
 const routes: RouteRecordRaw[] = [
@@ -17,6 +19,15 @@ const routes: RouteRecordRaw[] = [
     component: LoginPage,
     meta: {
       title: "登录"
+    }
+  },
+  {
+    path: "/no-access",
+    name: "no-access",
+    component: NoAccessPage,
+    meta: {
+      title: "权限待配置",
+      hideInMenu: true
     }
   },
   {
@@ -82,7 +93,21 @@ router.beforeEach(async (to) => {
   const authStore = useAuthStore();
 
   if (to.path === "/login") {
-    return true;
+    if (!authStore.token) {
+      return true;
+    }
+
+    if (!authStore.currentUser) {
+      try {
+        await authStore.fetchProfile();
+      } catch (error) {
+        await authStore.logout();
+        ElMessage.error("登录状态已失效，请重新登录。");
+        return true;
+      }
+    }
+
+    return resolveFirstAccessiblePath(authStore.currentUser?.permissions ?? []) ?? "/no-access";
   }
 
   if (!authStore.token) {
@@ -93,17 +118,34 @@ router.beforeEach(async (to) => {
     try {
       await authStore.fetchProfile();
     } catch (error) {
-      authStore.logout();
+      await authStore.logout();
       ElMessage.error("登录状态已失效，请重新登录。");
       return "/login";
     }
   }
 
+  if (to.path === "/no-access") {
+    const fallbackPath = resolveFirstAccessiblePath(authStore.currentUser?.permissions ?? []);
+
+    if (fallbackPath) {
+      return fallbackPath;
+    }
+
+    return true;
+  }
+
   const permission = to.meta.permission;
 
   if (permission && !authStore.hasPermission(permission)) {
-    ElMessage.warning("当前账号没有访问该页面的权限。");
-    return "/dashboard";
+    const fallbackPath = resolveFirstAccessiblePath(authStore.currentUser?.permissions ?? []);
+
+    if (fallbackPath && fallbackPath !== to.path) {
+      ElMessage.warning("当前账号没有访问该页面的权限，已为你跳转到可访问页面。");
+      return fallbackPath;
+    }
+
+    ElMessage.warning("当前账号没有可访问的页面，请联系管理员分配权限。");
+    return "/no-access";
   }
 
   return true;

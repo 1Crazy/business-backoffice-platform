@@ -1,8 +1,13 @@
 import { Injectable } from "@nestjs/common";
 import { AuditActionType, Prisma } from "@prisma/client";
 
+import {
+  buildPaginatedResponse,
+  getPaginationParams,
+  resolveSort
+} from "../../common/pagination/pagination.util";
 import { PrismaService } from "../../common/prisma/prisma.service";
-import { ListAuditLogsDto } from "./dto/list-audit-logs.dto";
+import { AUDIT_LOG_SORT_FIELDS, type AuditLogSortField, ListAuditLogsDto } from "./dto/list-audit-logs.dto";
 
 interface CreateAuditLogInput {
   actorId?: string;
@@ -12,6 +17,11 @@ interface CreateAuditLogInput {
   targetId?: string;
   detail?: Prisma.InputJsonValue;
 }
+
+const AUDIT_LOG_DEFAULT_SORT: { field: AuditLogSortField; order: Prisma.SortOrder } = {
+  field: "createdAt",
+  order: "desc"
+};
 
 @Injectable()
 export class AuditLogsService {
@@ -31,21 +41,41 @@ export class AuditLogsService {
   }
 
   async list(query: ListAuditLogsDto) {
-    return this.prisma.auditLog.findMany({
-      where: {
-        actionType: query.actionType as AuditActionType | undefined,
-        targetType: query.targetType,
-        actorName: query.actorName
+    const pagination = getPaginationParams(query);
+    const sort = resolveSort(query, AUDIT_LOG_SORT_FIELDS, AUDIT_LOG_DEFAULT_SORT);
+    const where: Prisma.AuditLogWhereInput = {
+      actionType: query.actionType,
+      targetType: query.targetType,
+      targetId: query.targetId,
+      actorId: query.actorId,
+      actorName: query.actorName
+        ? {
+            contains: query.actorName,
+            mode: "insensitive"
+          }
+        : undefined,
+      createdAt:
+        query.startDate || query.endDate
           ? {
-              contains: query.actorName,
-              mode: "insensitive"
+              gte: query.startDate ? new Date(query.startDate) : undefined,
+              lte: query.endDate ? new Date(query.endDate) : undefined
             }
           : undefined
-      },
-      orderBy: {
-        createdAt: "desc"
-      }
-    });
+    };
+    const orderBy: Prisma.AuditLogOrderByWithRelationInput[] = [
+      { [sort.field]: sort.order } as Prisma.AuditLogOrderByWithRelationInput,
+      { id: "desc" }
+    ];
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.auditLog.findMany({
+        where,
+        orderBy,
+        skip: pagination.skip,
+        take: pagination.take
+      }),
+      this.prisma.auditLog.count({ where })
+    ]);
+
+    return buildPaginatedResponse(items, total, pagination, sort);
   }
 }
-

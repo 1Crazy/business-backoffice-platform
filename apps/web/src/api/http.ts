@@ -1,5 +1,8 @@
 import axios from "axios";
 
+import { clearStoredSession, getStoredSession, updateAccessToken } from "../auth/session";
+import type { LoginResponse } from "../types/auth";
+
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api";
 
 export const http = axios.create({
@@ -7,13 +10,76 @@ export const http = axios.create({
   timeout: 20000
 });
 
-http.interceptors.request.use((config) => {
-  const token = window.localStorage.getItem("scrm-token");
+const refreshHttp = axios.create({
+  baseURL,
+  timeout: 20000
+});
 
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+let refreshPromise: Promise<string | null> | null = null;
+
+http.interceptors.request.use((config) => {
+  const { accessToken } = getStoredSession();
+
+  if (accessToken) {
+    config.headers.Authorization = `Bearer ${accessToken}`;
   }
 
   return config;
 });
 
+http.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config as (typeof error.config & { _retry?: boolean }) | undefined;
+    const status = error.response?.status;
+    const requestUrl = originalRequest?.url as string | undefined;
+
+    if (status !== 401 || !originalRequest || originalRequest._retry) {
+      throw error;
+    }
+
+    if (requestUrl?.includes("/auth/login") || requestUrl?.includes("/auth/refresh")) {
+      throw error;
+    }
+
+    const { refreshToken } = getStoredSession();
+
+    if (!refreshToken) {
+      clearStoredSession();
+      throw error;
+    }
+
+    originalRequest._retry = true;
+    const nextAccessToken = await refreshAccessToken(refreshToken);
+
+    if (!nextAccessToken) {
+      clearStoredSession();
+      throw error;
+    }
+
+    originalRequest.headers = originalRequest.headers ?? {};
+    originalRequest.headers.Authorization = `Bearer ${nextAccessToken}`;
+
+    return http(originalRequest);
+  }
+);
+
+async function refreshAccessToken(refreshToken: string): Promise<string | null> {
+  if (!refreshPromise) {
+    refreshPromise = refreshHttp
+      .post<LoginResponse>("/auth/refresh", { refreshToken })
+      .then(({ data }) => {
+        updateAccessToken(data.accessToken, data.sessionExpiresAt);
+        return data.accessToken;
+      })
+      .catch(() => {
+        clearStoredSession();
+        return null;
+      })
+      .finally(() => {
+        refreshPromise = null;
+      });
+  }
+
+  return refreshPromise;
+}

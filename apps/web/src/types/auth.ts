@@ -9,6 +9,8 @@ export interface CurrentUser {
 
 export interface LoginResponse {
   accessToken: string;
+  refreshToken: string;
+  sessionExpiresAt: string;
+  success?: boolean;
   user: CurrentUser;
 }
-

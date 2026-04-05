@@ -1,4 +1,5 @@
-import { IsArray, IsBoolean, IsOptional, IsString } from "class-validator";
+import { DataScope } from "@prisma/client";
+import { IsArray, IsBoolean, IsEnum, IsOptional, IsString } from "class-validator";
 
 export class UpdateRoleDto {
   @IsOptional()
@@ -12,6 +13,10 @@ export class UpdateRoleDto {
   @IsOptional()
   @IsBoolean()
   isSystem?: boolean;
+
+  @IsOptional()
+  @IsEnum(DataScope)
+  dataScope?: DataScope;
 
   @IsOptional()
   @IsArray()

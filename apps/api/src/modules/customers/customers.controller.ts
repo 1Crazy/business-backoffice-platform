@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 
 import type { AuthUser } from "../../common/auth/auth-user.interface";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
@@ -6,18 +7,33 @@ import { Permissions } from "../../common/decorators/permissions.decorator";
 import { CreateCustomerDto } from "./dto/create-customer.dto";
 import { CreateCustomerFollowUpDto } from "./dto/create-customer-follow-up.dto";
 import { CreateCustomerTagDto } from "./dto/create-customer-tag.dto";
-import { ListCustomersDto } from "./dto/list-customers.dto";
+import { PaginatedCustomersResponseDto } from "./dto/list-customers-response.dto";
+import { CUSTOMER_SORT_FIELDS, ListCustomersDto } from "./dto/list-customers.dto";
 import { ReassignCustomerOwnerDto } from "./dto/reassign-customer-owner.dto";
 import { UpdateCustomerDto } from "./dto/update-customer.dto";
 import { UpdateCustomerTagsDto } from "./dto/update-customer-tags.dto";
 import { CustomersService } from "./customers.service";
 
+@ApiTags("customers")
+@ApiBearerAuth()
 @Controller("customers")
 export class CustomersController {
   constructor(private readonly customersService: CustomersService) {}
 
   @Get()
   @Permissions("customer:read")
+  @ApiOperation({
+    summary: "分页查询客户列表"
+  })
+  @ApiQuery({
+    name: "sortBy",
+    required: false,
+    enum: CUSTOMER_SORT_FIELDS,
+    description: "允许的排序字段。"
+  })
+  @ApiOkResponse({
+    type: PaginatedCustomersResponseDto
+  })
   list(@Query() query: ListCustomersDto, @CurrentUser() user: AuthUser) {
     return this.customersService.list(query, user);
   }
@@ -84,4 +100,3 @@ export class CustomersController {
     return this.customersService.createFollowUp(id, dto, user);
   }
 }
-

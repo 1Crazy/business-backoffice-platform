@@ -3,6 +3,7 @@ import { ConfigModule } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
 
 import { AppController } from "./app.controller";
+import { DataScopeModule } from "./common/data-scope/data-scope.module";
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "./common/guards/permissions.guard";
 import { PrismaModule } from "./common/prisma/prisma.module";
@@ -24,6 +25,7 @@ import { UsersModule } from "./modules/users/users.module";
       envFilePath: [".env", ".env.local"]
     }),
     PrismaModule,
+    DataScopeModule,
     AuditLogsModule,
     AuthModule,
     DepartmentsModule,

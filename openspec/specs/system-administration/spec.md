@@ -4,7 +4,7 @@
 TBD - created by archiving change bootstrap-scrm-mvp. Update Purpose after archive.
 ## Requirements
 ### Requirement: 敏感后台操作可审计
-系统 SHALL 为敏感后台操作记录审计日志，包括认证事件以及创建、更新、删除、启用、停用、分配和转化等动作。
+系统 SHALL 为敏感后台操作记录审计日志，包括成功与失败的认证事件，以及创建、更新、删除、启用、停用、分配、转化、上传和会话撤销等动作。系统 SHALL 允许具备授权的管理员按操作类型、对象类型、操作人和时间范围分页查询审计日志。
 
 #### Scenario: 记录客户转交的审计日志
 - **WHEN** 具备授权的用户调整客户归属人
@@ -13,6 +13,14 @@ TBD - created by archiving change bootstrap-scrm-mvp. Update Purpose after archi
 #### Scenario: 记录登录审计日志
 - **WHEN** 员工成功登录
 - **THEN** 系统为该认证事件保存一条审计日志
+
+#### Scenario: 记录失败登录审计日志
+- **WHEN** 员工使用无效账号或错误密码尝试登录
+- **THEN** 系统为该失败认证事件保存一条审计日志
+
+#### Scenario: 分页查询审计日志
+- **WHEN** 管理员按操作类型和时间范围筛选审计日志
+- **THEN** 系统返回满足条件的当前页日志记录以及对应的分页信息
 
 ### Requirement: 管理员可以管理字典项
 系统 SHALL 允许具备授权的管理员创建、更新、启用、停用和查看业务表单使用的字典项，包括客户来源和客户状态等选项。
@@ -26,13 +34,21 @@ TBD - created by archiving change bootstrap-scrm-mvp. Update Purpose after archi
 - **THEN** 系统阻止该字典项出现在新的表单选择中，同时保留历史记录
 
 ### Requirement: 系统支持业务附件上传
-系统 SHALL 允许具备授权的用户上传附件并将其关联到受支持的业务记录。
+系统 SHALL 允许具备授权的用户上传符合大小和类型约束的附件，并将其关联到受支持的业务记录。附件 SHALL 通过受保护的存储后端保存元数据和存储键，且下载行为 SHALL 经过业务权限校验。
 
 #### Scenario: 为客户上传附件
 - **WHEN** 具备授权的用户为客户记录上传受支持文件
-- **THEN** 系统保存附件元数据并将其关联到该客户
+- **THEN** 系统保存附件元数据、所属存储后端标识和该客户关联关系
 
 #### Scenario: 无权限上传被拒绝
 - **WHEN** 不具备上传权限的用户尝试上传附件
 - **THEN** 系统拒绝该请求并返回未授权结果
+
+#### Scenario: 授权用户下载附件
+- **WHEN** 具备对应业务访问权限的用户下载一条附件
+- **THEN** 系统返回该附件的文件内容或受保护的下载响应
+
+#### Scenario: 超出约束的附件上传失败
+- **WHEN** 用户上传不符合大小或类型约束的附件
+- **THEN** 系统拒绝保存该附件并提示约束原因
 

@@ -41,6 +41,7 @@ import type { FormInstance, FormRules } from "element-plus";
 import { reactive, ref } from "vue";
 import { useRouter } from "vue-router";
 
+import { resolveFirstAccessiblePath } from "../router/access";
 import { useAuthStore } from "../stores/auth";
 import { normalizeRequiredText } from "../utils/form";
 import { getRequestErrorMessage, validateForm } from "../utils/request";
@@ -68,7 +69,15 @@ async function handleSubmit(): Promise<void> {
 
   try {
     await authStore.login(normalizeRequiredText(form.username), normalizeRequiredText(form.password));
-    await router.push("/dashboard");
+    const targetPath = resolveFirstAccessiblePath(authStore.currentUser?.permissions ?? []);
+
+    if (!targetPath) {
+      await router.push("/no-access");
+      ElMessage.warning("当前账号没有可访问的页面，请联系管理员分配权限。");
+      return;
+    }
+
+    await router.push(targetPath);
     ElMessage.success("登录成功。");
   } catch (error) {
     ElMessage.error(getRequestErrorMessage(error, "登录失败，请检查账号密码和后端服务状态。"));

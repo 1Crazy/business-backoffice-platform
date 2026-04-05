@@ -1,46 +1,75 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
-import { AuditActionType, FollowUpEntityType, LeadStatus, ReminderStatus } from "@prisma/client";
+import { AuditActionType, FollowUpEntityType, LeadStatus, Prisma, ReminderStatus } from "@prisma/client";
 
 import type { AuthUser } from "../../common/auth/auth-user.interface";
+import { DataScopeService } from "../../common/data-scope/data-scope.service";
+import {
+  buildPaginatedResponse,
+  getPaginationParams,
+  resolveSort
+} from "../../common/pagination/pagination.util";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CreateLeadDto } from "./dto/create-lead.dto";
 import { CreateLeadFollowUpDto } from "./dto/create-lead-follow-up.dto";
-import { ListLeadsDto } from "./dto/list-leads.dto";
+import { ListLeadRemindersDto, REMINDER_SORT_FIELDS, type ReminderSortField } from "./dto/list-lead-reminders.dto";
+import { LEAD_SORT_FIELDS, type LeadSortField, ListLeadsDto } from "./dto/list-leads.dto";
 import { ReassignLeadOwnerDto } from "./dto/reassign-lead-owner.dto";
 import { UpdateLeadDto } from "./dto/update-lead.dto";
+
+const LEAD_DEFAULT_SORT: { field: LeadSortField; order: Prisma.SortOrder } = {
+  field: "createdAt",
+  order: "desc"
+};
+
+const REMINDER_DEFAULT_SORT: { field: ReminderSortField; order: Prisma.SortOrder } = {
+  field: "remindAt",
+  order: "asc"
+};
 
 @Injectable()
 export class LeadsService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly auditLogsService: AuditLogsService
+    private readonly auditLogsService: AuditLogsService,
+    private readonly dataScopeService: DataScopeService
   ) {}
 
   async list(query: ListLeadsDto, actor: AuthUser) {
-    const ownerFilter = await this.buildScopedOwnerFilter(actor, query.ownerId);
+    const ownerFilter = await this.dataScopeService.buildScopedOwnerFilter(actor, query.ownerId);
+    const pagination = getPaginationParams(query);
+    const sort = resolveSort(query, LEAD_SORT_FIELDS, LEAD_DEFAULT_SORT);
+    const where: Prisma.LeadWhereInput = {
+      ...ownerFilter,
+      source: query.source,
+      status: query.status,
+      OR: query.keyword
+        ? [
+            { name: { contains: query.keyword, mode: "insensitive" } },
+            { contactName: { contains: query.keyword, mode: "insensitive" } },
+            { phone: { contains: query.keyword, mode: "insensitive" } }
+          ]
+        : undefined
+    };
+    const orderBy: Prisma.LeadOrderByWithRelationInput[] = [
+      { [sort.field]: sort.order } as Prisma.LeadOrderByWithRelationInput,
+      { id: "desc" }
+    ];
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.lead.findMany({
+        where,
+        include: {
+          owner: true,
+          convertedCustomer: true
+        },
+        orderBy,
+        skip: pagination.skip,
+        take: pagination.take
+      }),
+      this.prisma.lead.count({ where })
+    ]);
 
-    return this.prisma.lead.findMany({
-      where: {
-        ...ownerFilter,
-        source: query.source,
-        status: query.status as LeadStatus | undefined,
-        OR: query.keyword
-          ? [
-              { name: { contains: query.keyword, mode: "insensitive" } },
-              { contactName: { contains: query.keyword, mode: "insensitive" } },
-              { phone: { contains: query.keyword, mode: "insensitive" } }
-            ]
-          : undefined
-      },
-      include: {
-        owner: true,
-        convertedCustomer: true
-      },
-      orderBy: {
-        createdAt: "desc"
-      }
-    });
+    return buildPaginatedResponse(items, total, pagination, sort);
   }
 
   async detail(id: string, actor: AuthUser) {
@@ -58,6 +87,14 @@ export class LeadsService {
   }
 
   async create(dto: CreateLeadDto, actor: AuthUser) {
+    if (dto.ownerId) {
+      await this.dataScopeService.assertOwnerAccessible(
+        actor,
+        dto.ownerId,
+        "You cannot assign leads outside your data scope."
+      );
+    }
+
     const lead = await this.prisma.lead.create({
       data: {
         name: dto.name,
@@ -89,6 +126,14 @@ export class LeadsService {
     });
 
     await this.assertLeadAccessible(lead.ownerId, actor);
+
+    if (dto.ownerId) {
+      await this.dataScopeService.assertOwnerAccessible(
+        actor,
+        dto.ownerId,
+        "You cannot assign leads outside your data scope."
+      );
+    }
 
     const updated = await this.prisma.lead.update({
       where: { id },
@@ -124,6 +169,11 @@ export class LeadsService {
     });
 
     await this.assertLeadAccessible(lead.ownerId, actor);
+    await this.dataScopeService.assertOwnerAccessible(
+      actor,
+      dto.ownerId,
+      "You cannot assign leads outside your data scope."
+    );
 
     const updated = await this.prisma.lead.update({
       where: { id },
@@ -270,84 +320,38 @@ export class LeadsService {
     return followUp;
   }
 
-  async pendingReminders(actor: AuthUser) {
-    const ownerIds = actor.roleCodes.includes("super-admin")
-      ? undefined
-      : actor.roleCodes.includes("sales-manager") && actor.departmentId
-        ? {
-            in: (
-              await this.prisma.user.findMany({
-                where: { departmentId: actor.departmentId },
-                select: { id: true }
-              })
-            ).map((item) => item.id)
-          }
-        : actor.id;
-
-    return this.prisma.reminder.findMany({
-      where: {
-        status: ReminderStatus.PENDING,
-        ownerId: ownerIds as string | { in: string[] } | undefined
-      },
-      include: {
-        lead: true,
-        customer: true,
-        followUp: true,
-        owner: true
-      },
-      orderBy: {
-        remindAt: "asc"
-      }
-    });
-  }
-
-  private async buildScopedOwnerFilter(actor: AuthUser, requestedOwnerId?: string) {
-    if (actor.roleCodes.includes("super-admin")) {
-      return requestedOwnerId ? { ownerId: requestedOwnerId } : {};
-    }
-
-    const accessibleOwnerIds = await this.getAccessibleOwnerIds(actor);
-
-    if (requestedOwnerId) {
-      return {
-        ownerId: accessibleOwnerIds.includes(requestedOwnerId) ? requestedOwnerId : "__no_match__"
-      };
-    }
-
-    return {
-      ownerId: {
-        in: accessibleOwnerIds
-      }
+  async pendingReminders(query: ListLeadRemindersDto, actor: AuthUser) {
+    const ownerFilter = await this.dataScopeService.buildScopedOwnerFilter(actor, query.ownerId);
+    const pagination = getPaginationParams(query);
+    const sort = resolveSort(query, REMINDER_SORT_FIELDS, REMINDER_DEFAULT_SORT);
+    const where: Prisma.ReminderWhereInput = {
+      ...ownerFilter,
+      status: query.status ?? ReminderStatus.PENDING
     };
+    const orderBy: Prisma.ReminderOrderByWithRelationInput[] = [
+      { [sort.field]: sort.order } as Prisma.ReminderOrderByWithRelationInput,
+      { id: "desc" }
+    ];
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.reminder.findMany({
+        where,
+        include: {
+          lead: true,
+          customer: true,
+          followUp: true,
+          owner: true
+        },
+        orderBy,
+        skip: pagination.skip,
+        take: pagination.take
+      }),
+      this.prisma.reminder.count({ where })
+    ]);
+
+    return buildPaginatedResponse(items, total, pagination, sort);
   }
 
   private async assertLeadAccessible(ownerId: string, actor: AuthUser) {
-    if (actor.roleCodes.includes("super-admin")) {
-      return;
-    }
-
-    const accessibleOwnerIds = await this.getAccessibleOwnerIds(actor);
-
-    if (!accessibleOwnerIds.includes(ownerId)) {
-      throw new ForbiddenException("You do not have access to this lead.");
-    }
-  }
-
-  private async getAccessibleOwnerIds(actor: AuthUser): Promise<string[]> {
-    if (actor.roleCodes.includes("sales-manager") && actor.departmentId) {
-      const teamUsers = await this.prisma.user.findMany({
-        where: {
-          departmentId: actor.departmentId
-        },
-        select: {
-          id: true
-        }
-      });
-
-      return teamUsers.map((item) => item.id);
-    }
-
-    return [actor.id];
+    await this.dataScopeService.assertOwnerAccessible(actor, ownerId, "You do not have access to this lead.");
   }
 }
-

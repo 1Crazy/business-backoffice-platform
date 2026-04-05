@@ -17,6 +17,13 @@ enum UserStatus {
   DISABLED
 }
 
+enum DataScope {
+  SELF
+  DEPARTMENT
+  DEPARTMENT_AND_SUBTREE
+  ALL
+}
+
 enum LeadStatus {
   NEW
   CONTACTED
@@ -38,6 +45,7 @@ enum ReminderStatus {
 
 enum AuditActionType {
   SIGN_IN
+  SIGN_IN_FAILED
   CREATE
   UPDATE
   DELETE
@@ -46,6 +54,7 @@ enum AuditActionType {
   ASSIGN
   CONVERT
   UPLOAD
+  SESSION_REVOKE
 }
 
 enum AttachmentBusinessType {
@@ -54,58 +63,65 @@ enum AttachmentBusinessType {
   OTHER
 }
 
+enum AttachmentStorageProvider {
+  LOCAL
+}
+
 model Department {
-  id         String       @id @default(cuid())
-  name       String
-  code       String       @unique
-  parentId   String?
-  status     RecordStatus @default(ACTIVE)
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
-  parent     Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children   Department[] @relation("DepartmentHierarchy")
-  users      User[]
+  id        String       @id @default(cuid())
+  name      String
+  code      String       @unique
+  parentId  String?
+  status    RecordStatus @default(ACTIVE)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  parent    Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Department[] @relation("DepartmentHierarchy")
+  users     User[]
 
   @@index([parentId])
   @@index([status])
 }
 
 model User {
-  id                  String           @id @default(cuid())
-  username            String           @unique
+  id                  String        @id @default(cuid())
+  username            String        @unique
   passwordHash        String
   displayName         String
   email               String?
   phone               String?
-  status              UserStatus       @default(ACTIVE)
+  status              UserStatus    @default(ACTIVE)
   departmentId        String?
-  createdAt           DateTime         @default(now())
-  updatedAt           DateTime         @updatedAt
-  department          Department?      @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  department          Department?   @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   roles               UserRole[]
-  ownedCustomers      Customer[]       @relation("CustomerOwner")
-  ownedLeads          Lead[]           @relation("LeadOwner")
-  followUps           FollowUp[]       @relation("FollowUpCreator")
-  reminders           Reminder[]       @relation("ReminderOwner")
-  auditLogs           AuditLog[]       @relation("AuditActor")
-  uploadedAttachments Attachment[]     @relation("AttachmentUploader")
+  ownedCustomers      Customer[]    @relation("CustomerOwner")
+  ownedLeads          Lead[]        @relation("LeadOwner")
+  followUps           FollowUp[]    @relation("FollowUpCreator")
+  reminders           Reminder[]    @relation("ReminderOwner")
+  auditLogs           AuditLog[]    @relation("AuditActor")
+  uploadedAttachments Attachment[]  @relation("AttachmentUploader")
+  sessions            UserSession[]
 
   @@index([departmentId])
   @@index([status])
 }
 
 model Role {
-  id          String         @id @default(cuid())
+  id          String           @id @default(cuid())
   name        String
-  code        String         @unique
+  code        String           @unique
   description String?
-  isSystem    Boolean        @default(false)
-  status      RecordStatus   @default(ACTIVE)
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  isSystem    Boolean          @default(false)
+  status      RecordStatus     @default(ACTIVE)
+  dataScope   DataScope        @default(SELF)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
   users       UserRole[]
   permissions RolePermission[]
 
+  @@index([dataScope])
   @@index([status])
 }
 
@@ -143,7 +159,7 @@ model RolePermission {
 }
 
 model Customer {
-  id                 String                @id @default(cuid())
+  id                 String                  @id @default(cuid())
   name               String
   contactName        String?
   phone              String?
@@ -152,14 +168,14 @@ model Customer {
   status             String?
   notes              String?
   ownerId            String
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @updatedAt
-  owner              User                  @relation("CustomerOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  createdAt          DateTime                @default(now())
+  updatedAt          DateTime                @updatedAt
+  owner              User                    @relation("CustomerOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   tags               CustomerTagOnCustomer[]
-  followUps          FollowUp[]            @relation("CustomerFollowUps")
-  reminders          Reminder[]            @relation("CustomerReminders")
-  attachments        Attachment[]          @relation("CustomerAttachments")
-  convertedFromLeads Lead[]                @relation("LeadConvertedCustomer")
+  followUps          FollowUp[]              @relation("CustomerFollowUps")
+  reminders          Reminder[]              @relation("CustomerReminders")
+  attachments        Attachment[]            @relation("CustomerAttachments")
+  convertedFromLeads Lead[]                  @relation("LeadConvertedCustomer")
 
   @@index([ownerId])
   @@index([source])
@@ -167,11 +183,11 @@ model Customer {
 }
 
 model CustomerTag {
-  id        String                @id @default(cuid())
-  name      String                @unique
+  id        String                  @id @default(cuid())
+  name      String                  @unique
   color     String?
-  createdAt DateTime              @default(now())
-  updatedAt DateTime              @updatedAt
+  createdAt DateTime                @default(now())
+  updatedAt DateTime                @updatedAt
   customers CustomerTagOnCustomer[]
 }
 
@@ -185,22 +201,22 @@ model CustomerTagOnCustomer {
 }
 
 model Lead {
-  id                  String        @id @default(cuid())
+  id                  String       @id @default(cuid())
   name                String
   contactName         String?
   phone               String?
   source              String?
-  status              LeadStatus    @default(NEW)
+  status              LeadStatus   @default(NEW)
   notes               String?
   ownerId             String
   convertedCustomerId String?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  owner               User          @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  convertedCustomer   Customer?     @relation("LeadConvertedCustomer", fields: [convertedCustomerId], references: [id], onDelete: SetNull)
-  followUps           FollowUp[]    @relation("LeadFollowUps")
-  reminders           Reminder[]    @relation("LeadReminders")
-  attachments         Attachment[]  @relation("LeadAttachments")
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+  owner               User         @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  convertedCustomer   Customer?    @relation("LeadConvertedCustomer", fields: [convertedCustomerId], references: [id], onDelete: SetNull)
+  followUps           FollowUp[]   @relation("LeadFollowUps")
+  reminders           Reminder[]   @relation("LeadReminders")
+  attachments         Attachment[] @relation("LeadAttachments")
 
   @@index([ownerId])
   @@index([source])
@@ -260,6 +276,24 @@ model AuditLog {
   @@index([targetType])
 }
 
+model UserSession {
+  id               String    @id @default(cuid())
+  userId           String
+  refreshTokenHash String    @unique
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  lastSeenAt       DateTime?
+  ipAddress        String?
+  userAgent        String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([revokedAt])
+}
+
 model DictionaryEntry {
   id        String   @id @default(cuid())
   type      String
@@ -275,23 +309,23 @@ model DictionaryEntry {
 }
 
 model Attachment {
-  id           String                 @id @default(cuid())
-  businessType AttachmentBusinessType
-  businessId   String
-  fileName     String
-  originalName String
-  mimeType     String
-  size         Int
-  path         String
-  customerId   String?
-  leadId       String?
-  uploadedById String
-  createdAt    DateTime               @default(now())
-  customer     Customer?              @relation("CustomerAttachments", fields: [customerId], references: [id], onDelete: Cascade)
-  lead         Lead?                  @relation("LeadAttachments", fields: [leadId], references: [id], onDelete: Cascade)
-  uploadedBy   User                   @relation("AttachmentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+  id              String                    @id @default(cuid())
+  businessType    AttachmentBusinessType
+  businessId      String
+  fileName        String
+  originalName    String
+  mimeType        String
+  size            Int
+  storageProvider AttachmentStorageProvider @default(LOCAL)
+  storageKey      String
+  customerId      String?
+  leadId          String?
+  uploadedById    String
+  createdAt       DateTime                  @default(now())
+  customer        Customer?                 @relation("CustomerAttachments", fields: [customerId], references: [id], onDelete: Cascade)
+  lead            Lead?                     @relation("LeadAttachments", fields: [leadId], references: [id], onDelete: Cascade)
+  uploadedBy      User                      @relation("AttachmentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
 
   @@index([businessType, businessId])
   @@index([uploadedById])
 }
-

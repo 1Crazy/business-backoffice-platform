@@ -27,8 +27,34 @@ describe("LeadsPage", () => {
     postMock.mockReset();
     postMock.mockResolvedValue({ data: {} });
     getMock.mockImplementation((url: string) => {
-      if (url === "/users" || url === "/dictionaries" || url === "/leads" || url === "/leads/reminders") {
+      if (url === "/users" || url === "/dictionaries") {
         return Promise.resolve({ data: [] });
+      }
+      if (url === "/leads") {
+        return Promise.resolve({
+          data: {
+            items: [],
+            page: 1,
+            pageSize: 10,
+            total: 0,
+            totalPages: 0,
+            sortBy: "createdAt",
+            sortOrder: "desc"
+          }
+        });
+      }
+      if (url === "/leads/reminders") {
+        return Promise.resolve({
+          data: {
+            items: [],
+            page: 1,
+            pageSize: 5,
+            total: 0,
+            totalPages: 0,
+            sortBy: "remindAt",
+            sortOrder: "asc"
+          }
+        });
       }
       return Promise.resolve({ data: [] });
     });
@@ -38,6 +64,7 @@ describe("LeadsPage", () => {
         stubs: {
           "el-button": true,
           "el-empty": true,
+          "el-pagination": true,
           "el-form": true,
           "el-form-item": true,
           "el-input": true,

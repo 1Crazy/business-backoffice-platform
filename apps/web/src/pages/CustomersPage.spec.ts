@@ -34,7 +34,17 @@ describe("CustomersPage", () => {
         return Promise.resolve({ data: [] });
       }
       if (url === "/customers") {
-        return Promise.resolve({ data: [] });
+        return Promise.resolve({
+          data: {
+            items: [],
+            page: 1,
+            pageSize: 10,
+            total: 0,
+            totalPages: 0,
+            sortBy: "createdAt",
+            sortOrder: "desc"
+          }
+        });
       }
       return Promise.resolve({ data: [] });
     });
@@ -51,6 +61,8 @@ describe("CustomersPage", () => {
           "el-table": true,
           "el-table-column": true,
           "el-tag": true,
+          "el-empty": true,
+          "el-pagination": true,
           "el-row": true,
           "el-col": true,
           "el-dialog": true,
@@ -73,7 +85,11 @@ describe("CustomersPage", () => {
         source: undefined,
         status: undefined,
         ownerId: undefined,
-        tagId: undefined
+        tagId: undefined,
+        page: 1,
+        pageSize: 10,
+        sortBy: "createdAt",
+        sortOrder: "desc"
       }
     });
   });

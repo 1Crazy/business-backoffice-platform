@@ -25,6 +25,16 @@
             <el-option v-for="item in tags" :key="item.id" :label="item.name" :value="item.id" />
           </el-select>
         </el-form-item>
+        <el-form-item label="排序">
+          <el-select v-model="customerTableState.sortPreset" placeholder="选择排序方式">
+            <el-option
+              v-for="item in customerSortOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
       </el-form>
       <div class="toolbar-row">
         <p>把客户资料、标签、归属和跟进放在同一张工作台里，销售切换成本会更低。</p>
@@ -36,8 +46,17 @@
       </div>
     </section>
 
-    <section class="page-card">
-      <div class="page-table-shell">
+    <section class="page-card table-card">
+      <div class="table-meta">
+        <div>
+          <span class="table-kicker">Customers / Scoped Query</span>
+          <h3>客户结果</h3>
+          <p>当前筛选与数据范围交叉后，共返回 {{ customerTableState.total }} 条客户记录。</p>
+        </div>
+        <div class="meta-pill">第 {{ customerTableState.page }} / {{ Math.max(customerTableState.totalPages, 1) }} 页</div>
+      </div>
+
+      <div v-if="customers.length" class="page-table-shell">
         <el-table :data="customers" border>
           <el-table-column prop="name" label="客户名称" min-width="180" />
           <el-table-column prop="contactName" label="联系人" min-width="120" />
@@ -69,6 +88,21 @@
             </template>
           </el-table-column>
         </el-table>
+      </div>
+      <el-empty v-else description="当前筛选和数据范围下暂无客户" />
+
+      <div class="pagination-row">
+        <span class="pagination-caption">每页 {{ customerTableState.pageSize }} 条，当前排序：{{ currentCustomerSortLabel }}</span>
+        <el-pagination
+          :current-page="customerTableState.page"
+          :page-size="customerTableState.pageSize"
+          :page-sizes="[10, 20, 50]"
+          :total="customerTableState.total"
+          background
+          layout="total, sizes, prev, pager, next"
+          @current-change="handleCustomerPageChange"
+          @size-change="handleCustomerPageSizeChange"
+        />
       </div>
     </section>
 
@@ -251,12 +285,20 @@
 <script setup lang="ts">
 import { ElMessage } from "element-plus";
 import type { FormInstance, FormRules } from "element-plus";
-import { nextTick, onMounted, reactive, ref, watch } from "vue";
+import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
 
 import { http } from "../api/http";
 import RecordUploadPanel from "../components/RecordUploadPanel.vue";
 import { useViewport } from "../composables/useViewport";
-import type { Customer, CustomerTag, DictionaryEntry, FollowUp, User } from "../types/entities";
+import type {
+  Customer,
+  CustomerTag,
+  DictionaryEntry,
+  FollowUp,
+  PaginatedResponse,
+  SortOrder,
+  User
+} from "../types/entities";
 import {
   normalizeOptionalArray,
   normalizeOptionalTextForCreate,
@@ -292,7 +334,28 @@ const filters = reactive({
   tagId: ""
 });
 
+const customerSortOptions = [
+  { value: "createdAt:desc", label: "最新创建", sortBy: "createdAt", sortOrder: "desc" },
+  { value: "updatedAt:desc", label: "最近更新", sortBy: "updatedAt", sortOrder: "desc" },
+  { value: "name:asc", label: "名称 A-Z", sortBy: "name", sortOrder: "asc" },
+  { value: "status:asc", label: "状态升序", sortBy: "status", sortOrder: "asc" }
+] as const;
+
+const customerTableState = reactive({
+  page: 1,
+  pageSize: 10,
+  total: 0,
+  totalPages: 0,
+  sortBy: "createdAt",
+  sortOrder: "desc" as SortOrder,
+  sortPreset: "createdAt:desc"
+});
+
 const { isDesktop, isTabletOrDown } = useViewport();
+
+const currentCustomerSortLabel = computed(
+  () => customerSortOptions.find((item) => item.value === customerTableState.sortPreset)?.label ?? "最新创建"
+);
 
 const customerForm = reactive({
   id: "",
@@ -384,17 +447,25 @@ async function loadMeta(): Promise<void> {
 
 async function loadCustomers(): Promise<void> {
   try {
-    const { data } = await http.get<Customer[]>("/customers", {
+    const { data } = await http.get<PaginatedResponse<Customer>>("/customers", {
       params: {
         keyword: filters.keyword || undefined,
         source: filters.source || undefined,
         status: filters.status || undefined,
         ownerId: filters.ownerId || undefined,
-        tagId: filters.tagId || undefined
+        tagId: filters.tagId || undefined,
+        page: customerTableState.page,
+        pageSize: customerTableState.pageSize,
+        sortBy: customerTableState.sortBy,
+        sortOrder: customerTableState.sortOrder
       }
     });
 
-    customers.value = data;
+    customers.value = data.items;
+    customerTableState.page = data.page;
+    customerTableState.pageSize = data.pageSize;
+    customerTableState.total = data.total;
+    customerTableState.totalPages = data.totalPages;
   } catch (error) {
     ElMessage.error(getRequestErrorMessage(error, "客户列表加载失败，请稍后重试。"));
   }
@@ -571,9 +642,33 @@ async function submitFollowUp(): Promise<void> {
 watch(
   () => [filters.keyword, filters.source, filters.status, filters.ownerId, filters.tagId],
   () => {
+    customerTableState.page = 1;
     void loadCustomers();
   }
 );
+
+watch(
+  () => customerTableState.sortPreset,
+  (value) => {
+    const nextSort = customerSortOptions.find((item) => item.value === value) ?? customerSortOptions[0];
+
+    customerTableState.sortBy = nextSort.sortBy;
+    customerTableState.sortOrder = nextSort.sortOrder;
+    customerTableState.page = 1;
+    void loadCustomers();
+  }
+);
+
+function handleCustomerPageChange(page: number): void {
+  customerTableState.page = page;
+  void loadCustomers();
+}
+
+function handleCustomerPageSizeChange(pageSize: number): void {
+  customerTableState.pageSize = pageSize;
+  customerTableState.page = 1;
+  void loadCustomers();
+}
 
 onMounted(async () => {
   await loadMeta();
@@ -589,6 +684,11 @@ onMounted(async () => {
 }
 
 .filter-card {
+  display: grid;
+  gap: 16px;
+}
+
+.table-card {
   display: grid;
   gap: 16px;
 }
@@ -616,6 +716,46 @@ onMounted(async () => {
   gap: 10px;
   flex-wrap: wrap;
   justify-content: flex-end;
+}
+
+.table-meta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.table-kicker {
+  display: inline-flex;
+  margin-bottom: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(30, 64, 175, 0.08);
+  color: #1e40af;
+  font-size: 12px;
+  font-family: "Fira Code", monospace;
+  letter-spacing: 0.04em;
+}
+
+.table-meta h3 {
+  margin: 0 0 6px;
+}
+
+.table-meta p,
+.pagination-caption {
+  margin: 0;
+  color: #64748b;
+}
+
+.meta-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(30, 64, 175, 0.08), rgba(245, 158, 11, 0.12));
+  color: #1e3a8a;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .tag-item {
@@ -652,12 +792,22 @@ onMounted(async () => {
   width: 100%;
 }
 
+.pagination-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+ }
+
 @media (max-width: 960px) {
   .filter-form {
     grid-template-columns: 1fr;
   }
 
-  .toolbar-row {
+  .toolbar-row,
+  .table-meta,
+  .pagination-row {
     flex-direction: column;
     align-items: stretch;
   }

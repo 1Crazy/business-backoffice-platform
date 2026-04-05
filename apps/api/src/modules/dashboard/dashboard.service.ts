@@ -1,12 +1,17 @@
 import { Injectable } from "@nestjs/common";
+import { LeadStatus, type Prisma, ReminderStatus } from "@prisma/client";
 
 import type { AuthUser } from "../../common/auth/auth-user.interface";
+import { DataScopeService } from "../../common/data-scope/data-scope.service";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 
 @Injectable()
 export class DashboardService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly dataScopeService: DataScopeService
+  ) {}
 
   async overview(query: DashboardQueryDto, actor: AuthUser) {
     const endDate = query.endDate ? new Date(query.endDate) : new Date();
@@ -14,7 +19,9 @@ export class DashboardService {
       ? new Date(query.startDate)
       : new Date(endDate.getTime() - 1000 * 60 * 60 * 24 * 30);
 
-    const ownerFilter = await this.buildOwnerScope(actor);
+    const ownerIds = await this.dataScopeService.resolveAccessibleOwnerIds(actor);
+    const ownerFilter = this.buildOwnerScope(ownerIds);
+    const followUpScope = this.buildFollowUpScope(ownerIds);
 
     const [newCustomers, followUpCount, convertedLeads, totalLeads, pendingReminders] = await Promise.all([
       this.prisma.customer.count({
@@ -28,7 +35,7 @@ export class DashboardService {
       }),
       this.prisma.followUp.count({
         where: {
-          createdById: ownerFilter.ownerId,
+          ...followUpScope,
           createdAt: {
             gte: startDate,
             lte: endDate
@@ -38,7 +45,7 @@ export class DashboardService {
       this.prisma.lead.count({
         where: {
           ...ownerFilter,
-          status: "CONVERTED",
+          status: LeadStatus.CONVERTED,
           updatedAt: {
             gte: startDate,
             lte: endDate
@@ -56,7 +63,8 @@ export class DashboardService {
       }),
       this.prisma.reminder.count({
         where: {
-          ownerId: ownerFilter.ownerId
+          ...ownerFilter,
+          status: ReminderStatus.PENDING
         }
       })
     ]);
@@ -73,31 +81,40 @@ export class DashboardService {
     };
   }
 
-  private async buildOwnerScope(actor: AuthUser) {
-    if (actor.roleCodes.includes("super-admin")) {
+  private buildOwnerScope(ownerIds?: string[]): { ownerId?: { in: string[] } } {
+    if (!ownerIds) {
       return {};
     }
 
-    if (actor.roleCodes.includes("sales-manager") && actor.departmentId) {
-      const users = await this.prisma.user.findMany({
-        where: {
-          departmentId: actor.departmentId
-        },
-        select: {
-          id: true
-        }
-      });
+    return {
+      ownerId: {
+        in: ownerIds
+      }
+    };
+  }
 
-      return {
-        ownerId: {
-          in: users.map((item) => item.id)
-        }
-      };
+  private buildFollowUpScope(ownerIds?: string[]): Prisma.FollowUpWhereInput {
+    if (!ownerIds) {
+      return {};
     }
 
     return {
-      ownerId: actor.id
+      OR: [
+        {
+          lead: {
+            ownerId: {
+              in: ownerIds
+            }
+          }
+        },
+        {
+          customer: {
+            ownerId: {
+              in: ownerIds
+            }
+          }
+        }
+      ]
     };
   }
 }
-

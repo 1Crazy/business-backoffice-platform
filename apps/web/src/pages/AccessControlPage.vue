@@ -88,6 +88,9 @@
               <el-table-column prop="code" label="编码" min-width="140" />
               <el-table-column label="权限" min-width="260">
                 <template #default="{ row }">
+                  <el-tag v-if="row.permissions.length === 0" class="tag-item" type="warning">
+                    未分配权限
+                  </el-tag>
                   <el-tag
                     v-for="item in row.permissions"
                     :key="item.permission.id"
@@ -216,6 +219,7 @@
           <el-select v-model="userForm.roleIds" class="full-width" multiple placeholder="请至少选择一个角色">
             <el-option v-for="item in roles" :key="item.id" :label="item.name" :value="item.id" />
           </el-select>
+          <div class="field-hint">至少一个角色需要具备页面权限，否则账号登录后只能进入无权限说明页。</div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -265,6 +269,7 @@
               {{ item.name }}
             </el-checkbox>
           </el-checkbox-group>
+          <div class="field-hint">未勾选任何权限的角色无法访问后台页面，绑定后只会进入无权限说明页。</div>
         </el-form-item>
       </el-form>
       <template #footer>
@@ -645,6 +650,13 @@ onMounted(() => {
 .toolbar-row p {
   margin: 0;
   color: #64748b;
+}
+
+.field-hint {
+  margin-top: 8px;
+  color: #64748b;
+  font-size: 13px;
+  line-height: 1.7;
 }
 
 .tag-item {

@@ -1,60 +1,83 @@
-import { ForbiddenException, Injectable } from "@nestjs/common";
-import { AuditActionType, FollowUpEntityType } from "@prisma/client";
+import { Injectable } from "@nestjs/common";
+import { AuditActionType, FollowUpEntityType, Prisma } from "@prisma/client";
 
 import type { AuthUser } from "../../common/auth/auth-user.interface";
+import { DataScopeService } from "../../common/data-scope/data-scope.service";
+import {
+  buildPaginatedResponse,
+  getPaginationParams,
+  resolveSort
+} from "../../common/pagination/pagination.util";
 import { PrismaService } from "../../common/prisma/prisma.service";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CreateCustomerDto } from "./dto/create-customer.dto";
 import { CreateCustomerFollowUpDto } from "./dto/create-customer-follow-up.dto";
 import { CreateCustomerTagDto } from "./dto/create-customer-tag.dto";
-import { ListCustomersDto } from "./dto/list-customers.dto";
+import { CUSTOMER_SORT_FIELDS, type CustomerSortField, ListCustomersDto } from "./dto/list-customers.dto";
 import { ReassignCustomerOwnerDto } from "./dto/reassign-customer-owner.dto";
 import { UpdateCustomerDto } from "./dto/update-customer.dto";
 import { UpdateCustomerTagsDto } from "./dto/update-customer-tags.dto";
+
+const CUSTOMER_DEFAULT_SORT: { field: CustomerSortField; order: Prisma.SortOrder } = {
+  field: "createdAt",
+  order: "desc"
+};
 
 @Injectable()
 export class CustomersService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly auditLogsService: AuditLogsService
+    private readonly auditLogsService: AuditLogsService,
+    private readonly dataScopeService: DataScopeService
   ) {}
 
   async list(query: ListCustomersDto, actor: AuthUser) {
-    const ownerFilter = await this.buildScopedOwnerFilter(actor, query.ownerId);
-
-    return this.prisma.customer.findMany({
-      where: {
-        ...ownerFilter,
-        source: query.source,
-        status: query.status,
-        OR: query.keyword
-          ? [
-              { name: { contains: query.keyword, mode: "insensitive" } },
-              { contactName: { contains: query.keyword, mode: "insensitive" } },
-              { phone: { contains: query.keyword, mode: "insensitive" } },
-              { email: { contains: query.keyword, mode: "insensitive" } }
-            ]
-          : undefined,
-        tags: query.tagId
-          ? {
-              some: {
-                tagId: query.tagId
-              }
+    const ownerFilter = await this.dataScopeService.buildScopedOwnerFilter(actor, query.ownerId);
+    const pagination = getPaginationParams(query);
+    const sort = resolveSort(query, CUSTOMER_SORT_FIELDS, CUSTOMER_DEFAULT_SORT);
+    const where: Prisma.CustomerWhereInput = {
+      ...ownerFilter,
+      source: query.source,
+      status: query.status,
+      OR: query.keyword
+        ? [
+            { name: { contains: query.keyword, mode: "insensitive" } },
+            { contactName: { contains: query.keyword, mode: "insensitive" } },
+            { phone: { contains: query.keyword, mode: "insensitive" } },
+            { email: { contains: query.keyword, mode: "insensitive" } }
+          ]
+        : undefined,
+      tags: query.tagId
+        ? {
+            some: {
+              tagId: query.tagId
             }
-          : undefined
-      },
-      include: {
-        owner: true,
-        tags: {
-          include: {
-            tag: true
           }
-        }
-      },
-      orderBy: {
-        createdAt: "desc"
-      }
-    });
+        : undefined
+    };
+    const orderBy: Prisma.CustomerOrderByWithRelationInput[] = [
+      { [sort.field]: sort.order } as Prisma.CustomerOrderByWithRelationInput,
+      { id: "desc" }
+    ];
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.customer.findMany({
+        where,
+        include: {
+          owner: true,
+          tags: {
+            include: {
+              tag: true
+            }
+          }
+        },
+        orderBy,
+        skip: pagination.skip,
+        take: pagination.take
+      }),
+      this.prisma.customer.count({ where })
+    ]);
+
+    return buildPaginatedResponse(items, total, pagination, sort);
   }
 
   async detail(id: string, actor: AuthUser) {
@@ -76,6 +99,14 @@ export class CustomersService {
   }
 
   async create(dto: CreateCustomerDto, actor: AuthUser) {
+    if (dto.ownerId) {
+      await this.dataScopeService.assertOwnerAccessible(
+        actor,
+        dto.ownerId,
+        "You cannot assign customers outside your data scope."
+      );
+    }
+
     const customer = await this.prisma.$transaction(async (tx) => {
       const created = await tx.customer.create({
         data: {
@@ -129,6 +160,14 @@ export class CustomersService {
     });
 
     await this.assertCustomerAccessible(existing.ownerId, actor);
+
+    if (dto.ownerId) {
+      await this.dataScopeService.assertOwnerAccessible(
+        actor,
+        dto.ownerId,
+        "You cannot assign customers outside your data scope."
+      );
+    }
 
     const customer = await this.prisma.$transaction(async (tx) => {
       const updated = await tx.customer.update({
@@ -249,6 +288,11 @@ export class CustomersService {
     });
 
     await this.assertCustomerAccessible(customer.ownerId, actor);
+    await this.dataScopeService.assertOwnerAccessible(
+      actor,
+      dto.ownerId,
+      "You cannot assign customers outside your data scope."
+    );
 
     const updated = await this.prisma.customer.update({
       where: { id },
@@ -346,53 +390,7 @@ export class CustomersService {
     return followUp;
   }
 
-  private async buildScopedOwnerFilter(actor: AuthUser, requestedOwnerId?: string) {
-    if (actor.roleCodes.includes("super-admin")) {
-      return requestedOwnerId ? { ownerId: requestedOwnerId } : {};
-    }
-
-    const accessibleOwnerIds = await this.getAccessibleOwnerIds(actor);
-
-    if (requestedOwnerId) {
-      return {
-        ownerId: accessibleOwnerIds.includes(requestedOwnerId) ? requestedOwnerId : "__no_match__"
-      };
-    }
-
-    return {
-      ownerId: {
-        in: accessibleOwnerIds
-      }
-    };
-  }
-
   private async assertCustomerAccessible(ownerId: string, actor: AuthUser) {
-    if (actor.roleCodes.includes("super-admin")) {
-      return;
-    }
-
-    const accessibleOwnerIds = await this.getAccessibleOwnerIds(actor);
-
-    if (!accessibleOwnerIds.includes(ownerId)) {
-      throw new ForbiddenException("You do not have access to this customer.");
-    }
-  }
-
-  private async getAccessibleOwnerIds(actor: AuthUser): Promise<string[]> {
-    if (actor.roleCodes.includes("sales-manager") && actor.departmentId) {
-      const teamUsers = await this.prisma.user.findMany({
-        where: {
-          departmentId: actor.departmentId
-        },
-        select: {
-          id: true
-        }
-      });
-
-      return teamUsers.map((item) => item.id);
-    }
-
-    return [actor.id];
+    await this.dataScopeService.assertOwnerAccessible(actor, ownerId, "You do not have access to this customer.");
   }
 }
-

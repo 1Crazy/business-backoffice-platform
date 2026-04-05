@@ -73,7 +73,12 @@ const routerInstance = useRouter();
 const authStore = useAuthStore();
 
 const menuItems = router.getRoutes().filter(
-  (item) => item.path.startsWith("/") && item.meta?.title && item.path !== "/" && item.path !== "/login"
+  (item) =>
+    item.path.startsWith("/") &&
+    item.meta?.title &&
+    item.path !== "/" &&
+    item.path !== "/login" &&
+    !item.meta?.hideInMenu
 );
 
 const visibleItems = computed(() =>
@@ -94,9 +99,9 @@ function handleNavigate(path: string): void {
   }
 }
 
-function handleLogout(): void {
-  authStore.logout();
-  void routerInstance.push("/login");
+async function handleLogout(): Promise<void> {
+  await authStore.logout();
+  await routerInstance.push("/login");
 }
 </script>
 

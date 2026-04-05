@@ -19,8 +19,11 @@ describe("DashboardService", () => {
         count: jest.fn().mockResolvedValue(4)
       }
     } as any;
+    const dataScopeService = {
+      resolveAccessibleOwnerIds: jest.fn().mockResolvedValue(["user-1", "user-2"])
+    } as any;
 
-    const service = new DashboardService(prisma);
+    const service = new DashboardService(prisma, dataScopeService);
     const result = await service.overview({}, {
       id: "admin-1",
       username: "admin",
@@ -33,6 +36,44 @@ describe("DashboardService", () => {
     expect(result.followUpCount).toBe(36);
     expect(result.conversionRate).toBe(30);
     expect(result.pendingReminders).toBe(4);
+    expect(prisma.customer.count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          ownerId: {
+            in: ["user-1", "user-2"]
+          }
+        })
+      })
+    );
+    expect(prisma.followUp.count).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({
+          OR: [
+            {
+              lead: {
+                ownerId: {
+                  in: ["user-1", "user-2"]
+                }
+              }
+            },
+            {
+              customer: {
+                ownerId: {
+                  in: ["user-1", "user-2"]
+                }
+              }
+            }
+          ]
+        })
+      })
+    );
+    expect(prisma.reminder.count).toHaveBeenCalledWith({
+      where: {
+        ownerId: {
+          in: ["user-1", "user-2"]
+        },
+        status: "PENDING"
+      }
+    });
   });
 });
-

@@ -1,4 +1,4 @@
-import { PrismaClient, RecordStatus, UserStatus } from "@prisma/client";
+import { DataScope, PrismaClient, RecordStatus, UserStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
@@ -54,12 +54,14 @@ async function main(): Promise<void> {
     update: {
       name: "超级管理员",
       status: RecordStatus.ACTIVE,
-      isSystem: true
+      isSystem: true,
+      dataScope: DataScope.ALL
     },
     create: {
       name: "超级管理员",
       code: "super-admin",
-      isSystem: true
+      isSystem: true,
+      dataScope: DataScope.ALL
     }
   });
 
@@ -68,12 +70,14 @@ async function main(): Promise<void> {
     update: {
       name: "销售主管",
       status: RecordStatus.ACTIVE,
-      isSystem: true
+      isSystem: true,
+      dataScope: DataScope.DEPARTMENT
     },
     create: {
       name: "销售主管",
       code: "sales-manager",
-      isSystem: true
+      isSystem: true,
+      dataScope: DataScope.DEPARTMENT
     }
   });
 
@@ -82,12 +86,14 @@ async function main(): Promise<void> {
     update: {
       name: "销售成员",
       status: RecordStatus.ACTIVE,
-      isSystem: true
+      isSystem: true,
+      dataScope: DataScope.SELF
     },
     create: {
       name: "销售成员",
       code: "sales-member",
-      isSystem: true
+      isSystem: true,
+      dataScope: DataScope.SELF
     }
   });
 
@@ -208,4 +214,3 @@ main()
     await prisma.$disconnect();
     throw error;
   });
-

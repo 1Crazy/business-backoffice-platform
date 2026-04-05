@@ -3,22 +3,35 @@
     <section class="reminder-grid">
       <article class="page-card reminder-summary">
         <span>待办提醒</span>
-        <strong>{{ reminders.length }}</strong>
+        <strong>{{ reminderTableState.total }}</strong>
         <p>按当前权限范围汇总，还未处理的线索/客户提醒都会显示在这里。</p>
       </article>
       <section class="page-card reminder-list">
         <div class="list-head">
-          <h3>最近提醒</h3>
+          <div>
+            <h3>最近提醒</h3>
+            <p>只展示当前分页内的提醒，翻页后会保留筛选状态。</p>
+          </div>
           <el-button text @click="loadReminders">刷新</el-button>
         </div>
         <el-empty v-if="!reminders.length" description="暂无待办提醒" />
         <ul v-else>
-          <li v-for="item in reminders.slice(0, 5)" :key="item.id">
+          <li v-for="item in reminders" :key="item.id">
             <span>{{ item.owner?.displayName ?? "-" }}</span>
             <strong>{{ item.lead?.name ?? item.customer?.name ?? "未命名记录" }}</strong>
             <small>{{ item.remindAt }}</small>
           </li>
         </ul>
+        <el-pagination
+          class="mini-pagination"
+          :current-page="reminderTableState.page"
+          :page-size="reminderTableState.pageSize"
+          :total="reminderTableState.total"
+          small
+          background
+          layout="prev, pager, next"
+          @current-change="handleReminderPageChange"
+        />
       </section>
     </section>
 
@@ -42,6 +55,16 @@
             <el-option v-for="item in users" :key="item.id" :label="item.displayName" :value="item.id" />
           </el-select>
         </el-form-item>
+        <el-form-item label="排序">
+          <el-select v-model="leadTableState.sortPreset" placeholder="选择排序方式">
+            <el-option
+              v-for="item in leadSortOptions"
+              :key="item.value"
+              :label="item.label"
+              :value="item.value"
+            />
+          </el-select>
+        </el-form-item>
       </el-form>
       <div class="toolbar-row">
         <p>线索页把“分配、转化、跟进、提醒”压缩到一条工作路径里，减少销售切换页面的次数。</p>
@@ -52,8 +75,17 @@
       </div>
     </section>
 
-    <section class="page-card">
-      <div class="page-table-shell">
+    <section class="page-card table-card">
+      <div class="table-meta">
+        <div>
+          <span class="table-kicker">Leads / Scoped Query</span>
+          <h3>线索结果</h3>
+          <p>当前筛选、排序和权限范围下，共命中 {{ leadTableState.total }} 条线索。</p>
+        </div>
+        <div class="meta-pill">第 {{ leadTableState.page }} / {{ Math.max(leadTableState.totalPages, 1) }} 页</div>
+      </div>
+
+      <div v-if="leads.length" class="page-table-shell">
         <el-table :data="leads" border>
           <el-table-column prop="name" label="线索名称" min-width="180" />
           <el-table-column prop="contactName" label="联系人" min-width="120" />
@@ -79,6 +111,21 @@
             </template>
           </el-table-column>
         </el-table>
+      </div>
+      <el-empty v-else description="当前筛选和数据范围下暂无线索" />
+
+      <div class="pagination-row">
+        <span class="pagination-caption">每页 {{ leadTableState.pageSize }} 条，当前排序：{{ currentLeadSortLabel }}</span>
+        <el-pagination
+          :current-page="leadTableState.page"
+          :page-size="leadTableState.pageSize"
+          :page-sizes="[10, 20, 50]"
+          :total="leadTableState.total"
+          background
+          layout="total, sizes, prev, pager, next"
+          @current-change="handleLeadPageChange"
+          @size-change="handleLeadPageSizeChange"
+        />
       </div>
     </section>
 
@@ -217,28 +264,34 @@
 <script setup lang="ts">
 import { ElMessage } from "element-plus";
 import type { FormInstance, FormRules } from "element-plus";
-import { nextTick, onMounted, reactive, ref, watch } from "vue";
+import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
 
 import { http } from "../api/http";
 import RecordUploadPanel from "../components/RecordUploadPanel.vue";
 import { useViewport } from "../composables/useViewport";
-import type { DictionaryEntry, FollowUp, Lead, User } from "../types/entities";
+import type {
+  DictionaryEntry,
+  FollowUp,
+  Lead,
+  PaginatedResponse,
+  ReminderListItem,
+  SortOrder,
+  User
+} from "../types/entities";
 import { normalizeOptionalTextForCreate, normalizeOptionalTextForUpdate, normalizeRequiredText } from "../utils/form";
 import { getRequestErrorMessage, validateForm } from "../utils/request";
 
-interface PendingReminder {
-  id: string;
-  remindAt: string;
-  owner?: User;
-  lead?: Lead | null;
-  customer?: { name: string } | null;
-}
-
 const leadStatuses = ["NEW", "CONTACTED", "QUALIFIED", "CONVERTED", "CLOSED"];
+const leadSortOptions = [
+  { value: "createdAt:desc", label: "最新创建", sortBy: "createdAt", sortOrder: "desc" },
+  { value: "updatedAt:desc", label: "最近更新", sortBy: "updatedAt", sortOrder: "desc" },
+  { value: "name:asc", label: "名称 A-Z", sortBy: "name", sortOrder: "asc" },
+  { value: "status:asc", label: "状态升序", sortBy: "status", sortOrder: "asc" }
+] as const;
 
 const leads = ref<Lead[]>([]);
 const users = ref<User[]>([]);
-const reminders = ref<PendingReminder[]>([]);
+const reminders = ref<ReminderListItem[]>([]);
 const sourceOptions = ref<DictionaryEntry[]>([]);
 const followUps = ref<FollowUp[]>([]);
 
@@ -258,7 +311,28 @@ const filters = reactive({
   ownerId: ""
 });
 
+const leadTableState = reactive({
+  page: 1,
+  pageSize: 10,
+  total: 0,
+  totalPages: 0,
+  sortBy: "createdAt",
+  sortOrder: "desc" as SortOrder,
+  sortPreset: "createdAt:desc"
+});
+
+const reminderTableState = reactive({
+  page: 1,
+  pageSize: 5,
+  total: 0,
+  totalPages: 0
+});
+
 const { isDesktop, isTabletOrDown } = useViewport();
+
+const currentLeadSortLabel = computed(
+  () => leadSortOptions.find((item) => item.value === leadTableState.sortPreset)?.label ?? "最新创建"
+);
 
 const leadForm = reactive({
   id: "",
@@ -314,16 +388,24 @@ async function loadMeta(): Promise<void> {
 
 async function loadLeads(): Promise<void> {
   try {
-    const { data } = await http.get<Lead[]>("/leads", {
+    const { data } = await http.get<PaginatedResponse<Lead>>("/leads", {
       params: {
         keyword: filters.keyword || undefined,
         source: filters.source || undefined,
         status: filters.status || undefined,
-        ownerId: filters.ownerId || undefined
+        ownerId: filters.ownerId || undefined,
+        page: leadTableState.page,
+        pageSize: leadTableState.pageSize,
+        sortBy: leadTableState.sortBy,
+        sortOrder: leadTableState.sortOrder
       }
     });
 
-    leads.value = data;
+    leads.value = data.items;
+    leadTableState.page = data.page;
+    leadTableState.pageSize = data.pageSize;
+    leadTableState.total = data.total;
+    leadTableState.totalPages = data.totalPages;
   } catch (error) {
     ElMessage.error(getRequestErrorMessage(error, "线索列表加载失败，请稍后重试。"));
   }
@@ -331,8 +413,18 @@ async function loadLeads(): Promise<void> {
 
 async function loadReminders(): Promise<void> {
   try {
-    const { data } = await http.get<PendingReminder[]>("/leads/reminders");
-    reminders.value = data;
+    const { data } = await http.get<PaginatedResponse<ReminderListItem>>("/leads/reminders", {
+      params: {
+        page: reminderTableState.page,
+        pageSize: reminderTableState.pageSize
+      }
+    });
+
+    reminders.value = data.items;
+    reminderTableState.page = data.page;
+    reminderTableState.pageSize = data.pageSize;
+    reminderTableState.total = data.total;
+    reminderTableState.totalPages = data.totalPages;
   } catch (error) {
     ElMessage.error(getRequestErrorMessage(error, "提醒列表加载失败，请稍后重试。"));
   }
@@ -496,9 +588,38 @@ async function submitFollowUp(): Promise<void> {
 watch(
   () => [filters.keyword, filters.source, filters.status, filters.ownerId],
   () => {
+    leadTableState.page = 1;
     void loadLeads();
   }
 );
+
+watch(
+  () => leadTableState.sortPreset,
+  (value) => {
+    const nextSort = leadSortOptions.find((item) => item.value === value) ?? leadSortOptions[0];
+
+    leadTableState.sortBy = nextSort.sortBy;
+    leadTableState.sortOrder = nextSort.sortOrder;
+    leadTableState.page = 1;
+    void loadLeads();
+  }
+);
+
+function handleLeadPageChange(page: number): void {
+  leadTableState.page = page;
+  void loadLeads();
+}
+
+function handleLeadPageSizeChange(pageSize: number): void {
+  leadTableState.pageSize = pageSize;
+  leadTableState.page = 1;
+  void loadLeads();
+}
+
+function handleReminderPageChange(page: number): void {
+  reminderTableState.page = page;
+  void loadReminders();
+}
 
 onMounted(async () => {
   await loadMeta();
@@ -563,7 +684,17 @@ onMounted(async () => {
   gap: 16px;
 }
 
+.list-head p {
+  margin: 6px 0 0;
+  color: #64748b;
+}
+
 .filter-card {
+  display: grid;
+  gap: 16px;
+}
+
+.table-card {
   display: grid;
   gap: 16px;
 }
@@ -586,6 +717,46 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
+.table-meta {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.table-kicker {
+  display: inline-flex;
+  margin-bottom: 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(30, 64, 175, 0.08);
+  color: #1e40af;
+  font-size: 12px;
+  font-family: "Fira Code", monospace;
+  letter-spacing: 0.04em;
+}
+
+.table-meta h3 {
+  margin: 0 0 6px;
+}
+
+.table-meta p,
+.pagination-caption {
+  margin: 0;
+  color: #64748b;
+}
+
+.meta-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(30, 64, 175, 0.08), rgba(245, 158, 11, 0.12));
+  color: #1e3a8a;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .drawer-stack {
   display: grid;
   gap: 16px;
@@ -606,6 +777,18 @@ onMounted(async () => {
   width: 100%;
 }
 
+.pagination-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.mini-pagination {
+  justify-content: flex-end;
+}
+
 @media (max-width: 960px) {
   .reminder-grid {
     grid-template-columns: 1fr;
@@ -615,7 +798,9 @@ onMounted(async () => {
     grid-template-columns: 1fr;
   }
 
-  .toolbar-row {
+  .toolbar-row,
+  .table-meta,
+  .pagination-row {
     flex-direction: column;
     align-items: stretch;
   }
