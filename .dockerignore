@@ -1,0 +1,11 @@
+.git
+.claude
+.codex
+.trae
+node_modules
+apps/*/node_modules
+apps/*/dist
+coverage
+.pnpm-store
+tmp
+

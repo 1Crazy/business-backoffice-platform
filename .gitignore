@@ -1,0 +1,12 @@
+node_modules
+.DS_Store
+dist
+coverage
+.pnpm-store
+.env
+.env.local
+apps/api/.env
+apps/web/.env
+apps/api/uploads
+apps/api/prisma/dev.db
+

@@ -1,0 +1,89 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+:root {
+  color-scheme: light;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(36, 99, 235, 0.12), transparent 32%),
+    linear-gradient(180deg, #f4f8ff 0%, #f8fafc 100%);
+  color: #1e293b;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: transparent;
+}
+
+#app {
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.page-card {
+  min-width: 0;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 12px 40px rgba(15, 23, 42, 0.08);
+  padding: 20px;
+}
+
+.page-table-shell {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.page-table-shell .el-table,
+.page-table-shell .el-table__inner-wrapper,
+.page-table-shell .el-scrollbar__view {
+  min-width: 100%;
+}
+
+.dialog-form .el-form-item {
+  margin-bottom: 18px;
+}
+
+.dialog-form .el-form-item__label {
+  font-weight: 600;
+  color: #334155;
+}
+
+.dialog-form .el-input,
+.dialog-form .el-select,
+.dialog-form .el-textarea,
+.dialog-form .el-date-editor,
+.dialog-form .el-checkbox-group,
+.dialog-form .el-input-number {
+  width: 100%;
+}
+
+.dialog-form .el-checkbox {
+  margin-right: 0;
+}
+
+.entity-dialog .el-dialog {
+  max-width: calc(100vw - 32px);
+}
+
+.entity-dialog .el-dialog__body {
+  padding-top: 12px;
+}
+
+@media (max-width: 960px) {
+  .page-card {
+    padding: 16px;
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "scrm-test",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.30.2",
+  "scripts": {
+    "build": "pnpm -r build",
+    "dev:api": "pnpm --filter @scrm/api start:dev",
+    "dev:web": "pnpm --filter @scrm/web dev",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f --tail=200",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test",
+    "prisma:generate": "pnpm --filter @scrm/api prisma generate",
+    "prisma:migrate": "pnpm --filter @scrm/api prisma migrate dev",
+    "prisma:seed": "pnpm --filter @scrm/api prisma db seed"
+  }
+}

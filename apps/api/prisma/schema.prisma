@@ -1,0 +1,297 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RecordStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum UserStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  CONVERTED
+  CLOSED
+}
+
+enum FollowUpEntityType {
+  LEAD
+  CUSTOMER
+}
+
+enum ReminderStatus {
+  PENDING
+  DONE
+  CANCELLED
+}
+
+enum AuditActionType {
+  SIGN_IN
+  CREATE
+  UPDATE
+  DELETE
+  ENABLE
+  DISABLE
+  ASSIGN
+  CONVERT
+  UPLOAD
+}
+
+enum AttachmentBusinessType {
+  CUSTOMER
+  LEAD
+  OTHER
+}
+
+model Department {
+  id         String       @id @default(cuid())
+  name       String
+  code       String       @unique
+  parentId   String?
+  status     RecordStatus @default(ACTIVE)
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  parent     Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children   Department[] @relation("DepartmentHierarchy")
+  users      User[]
+
+  @@index([parentId])
+  @@index([status])
+}
+
+model User {
+  id                  String           @id @default(cuid())
+  username            String           @unique
+  passwordHash        String
+  displayName         String
+  email               String?
+  phone               String?
+  status              UserStatus       @default(ACTIVE)
+  departmentId        String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  department          Department?      @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  roles               UserRole[]
+  ownedCustomers      Customer[]       @relation("CustomerOwner")
+  ownedLeads          Lead[]           @relation("LeadOwner")
+  followUps           FollowUp[]       @relation("FollowUpCreator")
+  reminders           Reminder[]       @relation("ReminderOwner")
+  auditLogs           AuditLog[]       @relation("AuditActor")
+  uploadedAttachments Attachment[]     @relation("AttachmentUploader")
+
+  @@index([departmentId])
+  @@index([status])
+}
+
+model Role {
+  id          String         @id @default(cuid())
+  name        String
+  code        String         @unique
+  description String?
+  isSystem    Boolean        @default(false)
+  status      RecordStatus   @default(ACTIVE)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+  users       UserRole[]
+  permissions RolePermission[]
+
+  @@index([status])
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  name        String
+  code        String           @unique
+  description String?
+  group       String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  roles       RolePermission[]
+
+  @@index([group])
+}
+
+model UserRole {
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  assignedAt   DateTime   @default(now())
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model Customer {
+  id                 String                @id @default(cuid())
+  name               String
+  contactName        String?
+  phone              String?
+  email              String?
+  source             String?
+  status             String?
+  notes              String?
+  ownerId            String
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  owner              User                  @relation("CustomerOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  tags               CustomerTagOnCustomer[]
+  followUps          FollowUp[]            @relation("CustomerFollowUps")
+  reminders          Reminder[]            @relation("CustomerReminders")
+  attachments        Attachment[]          @relation("CustomerAttachments")
+  convertedFromLeads Lead[]                @relation("LeadConvertedCustomer")
+
+  @@index([ownerId])
+  @@index([source])
+  @@index([status])
+}
+
+model CustomerTag {
+  id        String                @id @default(cuid())
+  name      String                @unique
+  color     String?
+  createdAt DateTime              @default(now())
+  updatedAt DateTime              @updatedAt
+  customers CustomerTagOnCustomer[]
+}
+
+model CustomerTagOnCustomer {
+  customerId String
+  tagId      String
+  customer   Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  tag        CustomerTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([customerId, tagId])
+}
+
+model Lead {
+  id                  String        @id @default(cuid())
+  name                String
+  contactName         String?
+  phone               String?
+  source              String?
+  status              LeadStatus    @default(NEW)
+  notes               String?
+  ownerId             String
+  convertedCustomerId String?
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  owner               User          @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  convertedCustomer   Customer?     @relation("LeadConvertedCustomer", fields: [convertedCustomerId], references: [id], onDelete: SetNull)
+  followUps           FollowUp[]    @relation("LeadFollowUps")
+  reminders           Reminder[]    @relation("LeadReminders")
+  attachments         Attachment[]  @relation("LeadAttachments")
+
+  @@index([ownerId])
+  @@index([source])
+  @@index([status])
+}
+
+model FollowUp {
+  id             String             @id @default(cuid())
+  entityType     FollowUpEntityType
+  content        String
+  nextFollowUpAt DateTime?
+  leadId         String?
+  customerId     String?
+  createdById    String
+  createdAt      DateTime           @default(now())
+  createdBy      User               @relation("FollowUpCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  lead           Lead?              @relation("LeadFollowUps", fields: [leadId], references: [id], onDelete: Cascade)
+  customer       Customer?          @relation("CustomerFollowUps", fields: [customerId], references: [id], onDelete: Cascade)
+  reminder       Reminder?
+
+  @@index([leadId])
+  @@index([customerId])
+}
+
+model Reminder {
+  id         String             @id @default(cuid())
+  entityType FollowUpEntityType
+  remindAt   DateTime
+  status     ReminderStatus     @default(PENDING)
+  leadId     String?
+  customerId String?
+  followUpId String?            @unique
+  ownerId    String
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  lead       Lead?              @relation("LeadReminders", fields: [leadId], references: [id], onDelete: Cascade)
+  customer   Customer?          @relation("CustomerReminders", fields: [customerId], references: [id], onDelete: Cascade)
+  followUp   FollowUp?          @relation(fields: [followUpId], references: [id], onDelete: SetNull)
+  owner      User               @relation("ReminderOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+model AuditLog {
+  id         String          @id @default(cuid())
+  actorId    String?
+  actorName  String?
+  actionType AuditActionType
+  targetType String
+  targetId   String?
+  detail     Json?
+  createdAt  DateTime        @default(now())
+  actor      User?           @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actionType])
+  @@index([targetType])
+}
+
+model DictionaryEntry {
+  id        String   @id @default(cuid())
+  type      String
+  label     String
+  value     String
+  sort      Int      @default(0)
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, value])
+  @@index([type, enabled])
+}
+
+model Attachment {
+  id           String                 @id @default(cuid())
+  businessType AttachmentBusinessType
+  businessId   String
+  fileName     String
+  originalName String
+  mimeType     String
+  size         Int
+  path         String
+  customerId   String?
+  leadId       String?
+  uploadedById String
+  createdAt    DateTime               @default(now())
+  customer     Customer?              @relation("CustomerAttachments", fields: [customerId], references: [id], onDelete: Cascade)
+  lead         Lead?                  @relation("LeadAttachments", fields: [leadId], references: [id], onDelete: Cascade)
+  uploadedBy   User                   @relation("AttachmentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
+
+  @@index([businessType, businessId])
+  @@index([uploadedById])
+}
+
