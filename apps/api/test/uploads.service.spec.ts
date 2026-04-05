@@ -6,21 +6,22 @@ import { UploadsService } from "../src/modules/uploads/uploads.service";
 
 describe("UploadsService", () => {
   it("checks customer ownership before listing attachments", async () => {
-    const attachments = [
-      {
-        id: "attachment-1",
-        businessId: "customer-1"
-      }
-    ];
-    const prisma = {
-      customer: {
-        findUniqueOrThrow: jest.fn().mockResolvedValue({
-          ownerId: "owner-1"
-        })
-      },
-      attachment: {
-        findMany: jest.fn().mockResolvedValue(attachments)
-      }
+    const uploadsRepository = {
+      findCustomerOwnerById: jest.fn().mockResolvedValue({
+        ownerId: "owner-1"
+      }),
+      listByBusiness: jest.fn().mockResolvedValue([
+        {
+          id: "attachment-1",
+          businessType: AttachmentBusinessType.CUSTOMER,
+          businessId: "customer-1",
+          fileName: "stored.pdf",
+          originalName: "contract.pdf",
+          mimeType: "application/pdf",
+          size: 1024,
+          createdAt: new Date("2026-04-05T08:00:00.000Z")
+        }
+      ])
     } as any;
     const dataScopeService = {
       assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
@@ -31,7 +32,7 @@ describe("UploadsService", () => {
       delete: jest.fn()
     } as any;
     const service = new UploadsService(
-      prisma,
+      uploadsRepository,
       {
         create: jest.fn().mockResolvedValue(undefined)
       } as any,
@@ -54,20 +55,19 @@ describe("UploadsService", () => {
       actor
     );
 
-    expect(prisma.customer.findUniqueOrThrow).toHaveBeenCalledWith({
-      where: {
-        id: "customer-1"
-      },
-      select: {
-        ownerId: true
-      }
-    });
+    expect(uploadsRepository.findCustomerOwnerById).toHaveBeenCalledWith("customer-1");
+    expect(uploadsRepository.listByBusiness).toHaveBeenCalledWith(AttachmentBusinessType.CUSTOMER, "customer-1");
     expect(dataScopeService.assertOwnerAccessible).toHaveBeenCalledWith(
       actor,
       "owner-1",
       "You do not have access to this attachment."
     );
-    expect(result).toEqual(attachments);
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: "attachment-1",
+        createdAt: "2026-04-05T08:00:00.000Z"
+      })
+    ]);
   });
 
   it("rejects unsupported attachment types before storage", async () => {
@@ -154,22 +154,18 @@ describe("UploadsService", () => {
 
   it("checks business access before downloading attachments", async () => {
     const stream = Readable.from(["hello"]);
-    const prisma = {
-      customer: {
-        findUniqueOrThrow: jest.fn().mockResolvedValue({
-          ownerId: "owner-1"
-        })
-      },
-      attachment: {
-        findUniqueOrThrow: jest.fn().mockResolvedValue({
-          id: "attachment-1",
-          businessType: AttachmentBusinessType.CUSTOMER,
-          businessId: "customer-1",
-          mimeType: "application/pdf",
-          originalName: "contract.pdf",
-          storageKey: "stored-file.pdf"
-        })
-      }
+    const uploadsRepository = {
+      findCustomerOwnerById: jest.fn().mockResolvedValue({
+        ownerId: "owner-1"
+      }),
+      findAttachmentById: jest.fn().mockResolvedValue({
+        id: "attachment-1",
+        businessType: AttachmentBusinessType.CUSTOMER,
+        businessId: "customer-1",
+        mimeType: "application/pdf",
+        originalName: "contract.pdf",
+        storageKey: "stored-file.pdf"
+      })
     } as any;
     const dataScopeService = {
       assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
@@ -183,7 +179,7 @@ describe("UploadsService", () => {
       delete: jest.fn()
     } as any;
     const service = new UploadsService(
-      prisma,
+      uploadsRepository,
       {
         create: jest.fn().mockResolvedValue(undefined)
       } as any,
@@ -200,11 +196,7 @@ describe("UploadsService", () => {
 
     const result = await service.download("attachment-1", actor);
 
-    expect(prisma.attachment.findUniqueOrThrow).toHaveBeenCalledWith({
-      where: {
-        id: "attachment-1"
-      }
-    });
+    expect(uploadsRepository.findAttachmentById).toHaveBeenCalledWith("attachment-1");
     expect(dataScopeService.assertOwnerAccessible).toHaveBeenCalledWith(
       actor,
       "owner-1",
@@ -225,18 +217,16 @@ describe("UploadsService", () => {
       openReadStream: jest.fn(),
       delete: jest.fn()
     } as any;
-    const prisma = {
-      attachment: {
-        findUniqueOrThrow: jest.fn().mockResolvedValue({
-          id: "attachment-1",
-          businessType: AttachmentBusinessType.CUSTOMER,
-          businessId: "customer-1",
-          storageKey: "stored-file.pdf"
-        })
-      }
+    const uploadsRepository = {
+      findAttachmentById: jest.fn().mockResolvedValue({
+        id: "attachment-1",
+        businessType: AttachmentBusinessType.CUSTOMER,
+        businessId: "customer-1",
+        storageKey: "stored-file.pdf"
+      })
     } as any;
     const service = new UploadsService(
-      prisma,
+      uploadsRepository,
       {
         create: jest.fn().mockResolvedValue(undefined)
       } as any,

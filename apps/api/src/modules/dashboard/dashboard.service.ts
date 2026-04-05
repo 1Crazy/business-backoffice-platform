@@ -3,13 +3,14 @@ import { LeadStatus, type Prisma, ReminderStatus } from "@prisma/client";
 
 import type { AuthUser } from "../../common/auth/auth-user.interface";
 import { DataScopeService } from "../../common/data-scope/data-scope.service";
-import { PrismaService } from "../../common/prisma/prisma.service";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
+import { mapDashboardOverview } from "./mappers/dashboard.mapper";
+import { DashboardRepository } from "./repositories/dashboard.repository";
 
 @Injectable()
 export class DashboardService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly dashboardRepository: DashboardRepository,
     private readonly dataScopeService: DataScopeService
   ) {}
 
@@ -23,62 +24,18 @@ export class DashboardService {
     const ownerFilter = this.buildOwnerScope(ownerIds);
     const followUpScope = this.buildFollowUpScope(ownerIds);
 
-    const [newCustomers, followUpCount, convertedLeads, totalLeads, pendingReminders] = await Promise.all([
-      this.prisma.customer.count({
-        where: {
-          ...ownerFilter,
-          createdAt: {
-            gte: startDate,
-            lte: endDate
-          }
-        }
-      }),
-      this.prisma.followUp.count({
-        where: {
-          ...followUpScope,
-          createdAt: {
-            gte: startDate,
-            lte: endDate
-          }
-        }
-      }),
-      this.prisma.lead.count({
-        where: {
-          ...ownerFilter,
-          status: LeadStatus.CONVERTED,
-          updatedAt: {
-            gte: startDate,
-            lte: endDate
-          }
-        }
-      }),
-      this.prisma.lead.count({
-        where: {
-          ...ownerFilter,
-          createdAt: {
-            gte: startDate,
-            lte: endDate
-          }
-        }
-      }),
-      this.prisma.reminder.count({
-        where: {
-          ...ownerFilter,
-          status: ReminderStatus.PENDING
-        }
-      })
-    ]);
+    const counts = await this.dashboardRepository.getOverviewCounts({
+      ownerFilter,
+      followUpScope,
+      startDate,
+      endDate
+    });
 
-    return {
-      startDate: startDate.toISOString(),
-      endDate: endDate.toISOString(),
-      newCustomers,
-      followUpCount,
-      convertedLeads,
-      totalLeads,
-      conversionRate: totalLeads === 0 ? 0 : Number(((convertedLeads / totalLeads) * 100).toFixed(2)),
-      pendingReminders
-    };
+    return mapDashboardOverview({
+      startDate,
+      endDate,
+      ...counts
+    });
   }
 
   private buildOwnerScope(ownerIds?: string[]): { ownerId?: { in: string[] } } {

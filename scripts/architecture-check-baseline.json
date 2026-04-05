@@ -1,0 +1,14 @@
+{
+  "maxVueLines": {
+    "limit": 250,
+    "allow": []
+  },
+  "presentationHttpImports": {
+    "allow": []
+  },
+  "prismaOutsideRepository": {
+    "allow": [
+      "apps/api/src/common/data-scope/data-scope.service.ts"
+    ]
+  }
+}

@@ -1,6 +1,6 @@
 import { mount } from "@vue/test-utils";
 
-import AppLayout from "./AppLayout.vue";
+import AppLayout from "@/layout/AppLayout.vue";
 
 const { pushMock, getRoutesMock, hasPermissionMock, logoutMock, routeState } = vi.hoisted(() => ({
   pushMock: vi.fn(),
@@ -15,13 +15,13 @@ const { pushMock, getRoutesMock, hasPermissionMock, logoutMock, routeState } = v
   }
 }));
 
-vi.mock("../router", () => ({
+vi.mock("@/router", () => ({
   router: {
     getRoutes: getRoutesMock
   }
 }));
 
-vi.mock("../stores/auth", () => ({
+vi.mock("@/stores/auth", () => ({
   useAuthStore: () => ({
     currentUser: {
       displayName: "系统管理员"

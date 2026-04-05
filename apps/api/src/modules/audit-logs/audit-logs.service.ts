@@ -2,12 +2,12 @@ import { Injectable } from "@nestjs/common";
 import { AuditActionType, Prisma } from "@prisma/client";
 
 import {
-  buildPaginatedResponse,
   getPaginationParams,
   resolveSort
 } from "../../common/pagination/pagination.util";
-import { PrismaService } from "../../common/prisma/prisma.service";
 import { AUDIT_LOG_SORT_FIELDS, type AuditLogSortField, ListAuditLogsDto } from "./dto/list-audit-logs.dto";
+import { mapPaginatedAuditLogs } from "./mappers/audit-logs.mapper";
+import { AuditLogsRepository } from "./repositories/audit-logs.repository";
 
 interface CreateAuditLogInput {
   actorId?: string;
@@ -25,19 +25,10 @@ const AUDIT_LOG_DEFAULT_SORT: { field: AuditLogSortField; order: Prisma.SortOrde
 
 @Injectable()
 export class AuditLogsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly auditLogsRepository: AuditLogsRepository) {}
 
   async create(input: CreateAuditLogInput): Promise<void> {
-    await this.prisma.auditLog.create({
-      data: {
-        actorId: input.actorId,
-        actorName: input.actorName,
-        actionType: input.actionType,
-        targetType: input.targetType,
-        targetId: input.targetId,
-        detail: input.detail
-      }
-    });
+    await this.auditLogsRepository.create(input);
   }
 
   async list(query: ListAuditLogsDto) {
@@ -66,16 +57,8 @@ export class AuditLogsService {
       { [sort.field]: sort.order } as Prisma.AuditLogOrderByWithRelationInput,
       { id: "desc" }
     ];
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.auditLog.findMany({
-        where,
-        orderBy,
-        skip: pagination.skip,
-        take: pagination.take
-      }),
-      this.prisma.auditLog.count({ where })
-    ]);
+    const { items, total } = await this.auditLogsRepository.list(where, orderBy, pagination);
 
-    return buildPaginatedResponse(items, total, pagination, sort);
+    return mapPaginatedAuditLogs(items, total, pagination, sort);
   }
 }

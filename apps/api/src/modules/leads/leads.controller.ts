@@ -1,6 +1,7 @@
 import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 
+import { FollowUpVo } from "../../common/vo/entity.vo";
 import type { AuthUser } from "../../common/auth/auth-user.interface";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { Permissions } from "../../common/decorators/permissions.decorator";
@@ -13,6 +14,7 @@ import { PaginatedLeadsResponseDto } from "./dto/list-leads-response.dto";
 import { ReassignLeadOwnerDto } from "./dto/reassign-lead-owner.dto";
 import { UpdateLeadDto } from "./dto/update-lead.dto";
 import { LeadsService } from "./leads.service";
+import { LeadVo } from "./vo/lead.vo";
 
 @ApiTags("leads")
 @ApiBearerAuth()
@@ -58,42 +60,85 @@ export class LeadsController {
 
   @Get(":id")
   @Permissions("lead:read")
+  @ApiOperation({
+    summary: "查询线索详情"
+  })
+  @ApiOkResponse({
+    type: LeadVo
+  })
   detail(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.leadsService.detail(id, user);
   }
 
   @Post()
   @Permissions("lead:write")
+  @ApiOperation({
+    summary: "创建线索"
+  })
+  @ApiOkResponse({
+    type: LeadVo
+  })
   create(@Body() dto: CreateLeadDto, @CurrentUser() user: AuthUser) {
     return this.leadsService.create(dto, user);
   }
 
   @Patch(":id")
   @Permissions("lead:write")
+  @ApiOperation({
+    summary: "更新线索"
+  })
+  @ApiOkResponse({
+    type: LeadVo
+  })
   update(@Param("id") id: string, @Body() dto: UpdateLeadDto, @CurrentUser() user: AuthUser) {
     return this.leadsService.update(id, dto, user);
   }
 
   @Patch(":id/owner")
   @Permissions("lead:assign")
+  @ApiOperation({
+    summary: "转移线索负责人"
+  })
+  @ApiOkResponse({
+    type: LeadVo
+  })
   reassignOwner(@Param("id") id: string, @Body() dto: ReassignLeadOwnerDto, @CurrentUser() user: AuthUser) {
     return this.leadsService.reassignOwner(id, dto, user);
   }
 
   @Post(":id/convert")
   @Permissions("lead:convert")
+  @ApiOperation({
+    summary: "将线索转为客户"
+  })
+  @ApiOkResponse({
+    type: LeadVo
+  })
   convert(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.leadsService.convert(id, user);
   }
 
   @Get(":id/follow-ups")
   @Permissions("lead:read")
+  @ApiOperation({
+    summary: "查询线索跟进记录"
+  })
+  @ApiOkResponse({
+    type: FollowUpVo,
+    isArray: true
+  })
   listFollowUps(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.leadsService.listFollowUps(id, user);
   }
 
   @Post(":id/follow-ups")
   @Permissions("followup:write")
+  @ApiOperation({
+    summary: "新增线索跟进记录"
+  })
+  @ApiOkResponse({
+    type: FollowUpVo
+  })
   createFollowUp(@Param("id") id: string, @Body() dto: CreateLeadFollowUpDto, @CurrentUser() user: AuthUser) {
     return this.leadsService.createFollowUp(id, dto, user);
   }

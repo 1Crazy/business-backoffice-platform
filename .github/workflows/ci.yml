@@ -40,7 +40,7 @@ jobs:
       - name: Generate Prisma client
         run: pnpm prisma:generate
 
-      - name: Run type checks
+      - name: Run type and architecture checks
         run: pnpm lint
 
       - name: Run tests

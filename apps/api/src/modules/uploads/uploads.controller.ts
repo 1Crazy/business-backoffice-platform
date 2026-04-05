@@ -23,6 +23,7 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { memoryStorage } from "multer";
 import type { Response } from "express";
 
+import { AttachmentVo } from "../../common/vo/entity.vo";
 import type { AuthUser } from "../../common/auth/auth-user.interface";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { Permissions } from "../../common/decorators/permissions.decorator";
@@ -38,6 +39,13 @@ export class UploadsController {
 
   @Get()
   @Permissions("upload:write")
+  @ApiOperation({
+    summary: "查询业务附件列表"
+  })
+  @ApiOkResponse({
+    type: AttachmentVo,
+    isArray: true
+  })
   list(@Query() query: ListUploadsDto, @CurrentUser() user: AuthUser) {
     return this.uploadsService.list(query, user);
   }
@@ -75,6 +83,9 @@ export class UploadsController {
       }
     })
   )
+  @ApiOkResponse({
+    type: AttachmentVo
+  })
   upload(
     @Body("businessType") businessType: AttachmentBusinessType,
     @Body("businessId") businessId: string,

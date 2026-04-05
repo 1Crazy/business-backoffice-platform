@@ -2,28 +2,20 @@ import { DashboardService } from "../src/modules/dashboard/dashboard.service";
 
 describe("DashboardService", () => {
   it("aggregates dashboard counters and conversion rate", async () => {
-    const prisma = {
-      customer: {
-        count: jest.fn().mockResolvedValue(12)
-      },
-      followUp: {
-        count: jest.fn().mockResolvedValue(36)
-      },
-      lead: {
-        count: jest
-          .fn()
-          .mockResolvedValueOnce(6)
-          .mockResolvedValueOnce(20)
-      },
-      reminder: {
-        count: jest.fn().mockResolvedValue(4)
-      }
+    const dashboardRepository = {
+      getOverviewCounts: jest.fn().mockResolvedValue({
+        newCustomers: 12,
+        followUpCount: 36,
+        convertedLeads: 6,
+        totalLeads: 20,
+        pendingReminders: 4
+      })
     } as any;
     const dataScopeService = {
       resolveAccessibleOwnerIds: jest.fn().mockResolvedValue(["user-1", "user-2"])
     } as any;
 
-    const service = new DashboardService(prisma, dataScopeService);
+    const service = new DashboardService(dashboardRepository, dataScopeService);
     const result = await service.overview({}, {
       id: "admin-1",
       username: "admin",
@@ -36,18 +28,14 @@ describe("DashboardService", () => {
     expect(result.followUpCount).toBe(36);
     expect(result.conversionRate).toBe(30);
     expect(result.pendingReminders).toBe(4);
-    expect(prisma.customer.count).toHaveBeenCalledWith(
+    expect(dashboardRepository.getOverviewCounts).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: expect.objectContaining({
+        ownerFilter: {
           ownerId: {
             in: ["user-1", "user-2"]
           }
-        })
-      })
-    );
-    expect(prisma.followUp.count).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: expect.objectContaining({
+        },
+        followUpScope: {
           OR: [
             {
               lead: {
@@ -64,16 +52,8 @@ describe("DashboardService", () => {
               }
             }
           ]
-        })
+        }
       })
     );
-    expect(prisma.reminder.count).toHaveBeenCalledWith({
-      where: {
-        ownerId: {
-          in: ["user-1", "user-2"]
-        },
-        status: "PENDING"
-      }
-    });
   });
 });

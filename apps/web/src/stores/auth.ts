@@ -1,9 +1,9 @@
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
-import { clearStoredSession, getStoredSession, storeSession } from "../auth/session";
-import { http } from "../api/http";
-import type { CurrentUser, LoginResponse } from "../types/auth";
+import { clearStoredSession, getStoredSession, storeSession } from "@/auth/session";
+import { fetchCurrentUserProfile, loginByPassword, logoutCurrentSession } from "@/api/auth.api";
+import type { CurrentUser } from "@/types/auth";
 
 export const useAuthStore = defineStore("auth", () => {
   const initialSession = getStoredSession();
@@ -14,7 +14,8 @@ export const useAuthStore = defineStore("auth", () => {
   const isAuthenticated = computed(() => Boolean(token.value));
 
   async function login(username: string, password: string): Promise<void> {
-    const { data } = await http.post<LoginResponse>("/auth/login", { username, password });
+    const data = await loginByPassword({ username, password });
+
     token.value = data.accessToken;
     refreshToken.value = data.refreshToken;
     currentUser.value = data.user;
@@ -27,14 +28,13 @@ export const useAuthStore = defineStore("auth", () => {
       return;
     }
 
-    const { data } = await http.get<CurrentUser>("/auth/profile");
-    currentUser.value = data;
+    currentUser.value = await fetchCurrentUserProfile();
   }
 
   async function logout(): Promise<void> {
     if (token.value) {
       try {
-        await http.post("/auth/logout");
+        await logoutCurrentSession();
       } catch {
         // 会话已失效时，前端仍需要确保本地状态被清理。
       }

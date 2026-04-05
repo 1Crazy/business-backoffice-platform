@@ -1,7 +1,7 @@
 import axios from "axios";
 
-import { clearStoredSession, getStoredSession, updateAccessToken } from "../auth/session";
-import type { LoginResponse } from "../types/auth";
+import { clearStoredSession, getStoredSession, updateAccessToken } from "@/auth/session";
+import type { LoginResponse } from "@/types/auth";
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api";
 

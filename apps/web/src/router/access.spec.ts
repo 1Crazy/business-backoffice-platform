@@ -1,4 +1,4 @@
-import { resolveFirstAccessiblePath } from "./access";
+import { resolveFirstAccessiblePath } from "@/router/access";
 
 describe("resolveFirstAccessiblePath", () => {
   it("prefers dashboard when available", () => {

@@ -1,35 +1,56 @@
-import { ForbiddenException, type INestApplication } from "@nestjs/common";
+import { ForbiddenException } from "@nestjs/common";
 
 import { LeadsService } from "../src/modules/leads/leads.service";
 
+function buildReminderRecord(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "reminder-1",
+    entityType: "LEAD",
+    status: "PENDING",
+    remindAt: new Date("2026-04-05T10:00:00.000Z"),
+    lead: {
+      id: "lead-1",
+      name: "Acme 潜客",
+      contactName: "王强",
+      phone: "13800000000"
+    },
+    customer: null,
+    followUp: {
+      id: "follow-1",
+      content: "明天回访",
+      nextFollowUpAt: new Date("2026-04-06T10:00:00.000Z")
+    },
+    owner: {
+      id: "user-1",
+      username: "sales",
+      displayName: "销售",
+      email: null,
+      phone: null,
+      status: "ACTIVE",
+      departmentId: "dept-1"
+    },
+    createdAt: new Date("2026-04-05T08:00:00.000Z"),
+    updatedAt: new Date("2026-04-05T09:00:00.000Z"),
+    ...overrides
+  } as any;
+}
+
 describe("LeadsService", () => {
   it("converts an unconverted lead into a customer", async () => {
-    const prisma = {
-      lead: {
-        findUniqueOrThrow: jest.fn().mockResolvedValue({
-          id: "lead-1",
-          name: "Acme 潜客",
-          contactName: "王强",
-          phone: "13800000000",
-          source: "website",
-          notes: "高意向",
-          ownerId: "user-1",
-          status: "NEW",
-          convertedCustomerId: null
-        })
-      },
-      $transaction: jest.fn().mockImplementation(async (callback) =>
-        callback({
-          customer: {
-            create: jest.fn().mockResolvedValue({ id: "customer-1" })
-          },
-          lead: {
-            update: jest.fn().mockResolvedValue(undefined)
-          }
-        })
-      )
+    const leadsRepository = {
+      findSnapshotById: jest.fn().mockResolvedValue({
+        id: "lead-1",
+        name: "Acme 潜客",
+        contactName: "王强",
+        phone: "13800000000",
+        source: "website",
+        notes: "高意向",
+        ownerId: "user-1",
+        status: "NEW",
+        convertedCustomerId: null
+      }),
+      convertLeadToCustomer: jest.fn().mockResolvedValue({ id: "customer-1" })
     } as any;
-
     const auditLogsService = {
       create: jest.fn().mockResolvedValue(undefined)
     } as any;
@@ -38,7 +59,7 @@ describe("LeadsService", () => {
       buildScopedOwnerFilter: jest.fn().mockResolvedValue({})
     } as any;
 
-    const service = new LeadsService(prisma, auditLogsService, dataScopeService);
+    const service = new LeadsService(leadsRepository, auditLogsService, dataScopeService);
     jest.spyOn(service, "detail").mockResolvedValue({
       id: "lead-1",
       convertedCustomerId: "customer-1"
@@ -52,20 +73,20 @@ describe("LeadsService", () => {
       permissions: ["lead:convert"]
     });
 
+    expect(leadsRepository.findSnapshotById).toHaveBeenCalledWith("lead-1");
+    expect(leadsRepository.convertLeadToCustomer).toHaveBeenCalled();
     expect(result.convertedCustomerId).toBe("customer-1");
     expect(auditLogsService.create).toHaveBeenCalled();
   });
 
   it("prevents repeated lead conversion", async () => {
-    const prisma = {
-      lead: {
-        findUniqueOrThrow: jest.fn().mockResolvedValue({
-          id: "lead-1",
-          ownerId: "user-1",
-          status: "CONVERTED",
-          convertedCustomerId: "customer-1"
-        })
-      }
+    const leadsRepository = {
+      findSnapshotById: jest.fn().mockResolvedValue({
+        id: "lead-1",
+        ownerId: "user-1",
+        status: "CONVERTED",
+        convertedCustomerId: "customer-1"
+      })
     } as any;
     const dataScopeService = {
       assertOwnerAccessible: jest.fn().mockResolvedValue(undefined),
@@ -73,7 +94,7 @@ describe("LeadsService", () => {
     } as any;
 
     const service = new LeadsService(
-      prisma,
+      leadsRepository,
       {
         create: jest.fn()
       } as any,
@@ -92,18 +113,11 @@ describe("LeadsService", () => {
   });
 
   it("returns paginated reminders scoped by the shared data scope service", async () => {
-    const items = [
-      {
-        id: "reminder-1",
-        remindAt: "2026-04-05T10:00:00.000Z"
-      }
-    ];
-    const prisma = {
-      reminder: {
-        findMany: jest.fn().mockResolvedValue(items),
-        count: jest.fn().mockResolvedValue(6)
-      },
-      $transaction: jest.fn().mockImplementation(async (operations: Array<Promise<unknown>>) => Promise.all(operations))
+    const leadsRepository = {
+      listPendingReminders: jest.fn().mockResolvedValue({
+        items: [buildReminderRecord()],
+        total: 6
+      })
     } as any;
     const dataScopeService = {
       assertOwnerAccessible: jest.fn().mockResolvedValue(undefined),
@@ -114,7 +128,7 @@ describe("LeadsService", () => {
       })
     } as any;
     const service = new LeadsService(
-      prisma,
+      leadsRepository,
       {
         create: jest.fn().mockResolvedValue(undefined)
       } as any,
@@ -139,21 +153,28 @@ describe("LeadsService", () => {
     );
 
     expect(dataScopeService.buildScopedOwnerFilter).toHaveBeenCalledWith(actor, undefined);
-    expect(prisma.reminder.findMany).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(leadsRepository.listPendingReminders).toHaveBeenCalledWith(
+      {
+        ownerId: {
+          in: ["user-1", "user-2"]
+        },
+        status: "PENDING"
+      },
+      [{ remindAt: "asc" }, { id: "desc" }],
+      {
+        page: 1,
+        pageSize: 2,
         skip: 0,
-        take: 2,
-        orderBy: [{ remindAt: "asc" }, { id: "desc" }],
-        where: {
-          ownerId: {
-            in: ["user-1", "user-2"]
-          },
-          status: "PENDING"
-        }
-      })
+        take: 2
+      }
     );
     expect(result).toMatchObject({
-      items,
+      items: [
+        expect.objectContaining({
+          id: "reminder-1",
+          remindAt: "2026-04-05T10:00:00.000Z"
+        })
+      ],
       page: 1,
       pageSize: 2,
       total: 6,

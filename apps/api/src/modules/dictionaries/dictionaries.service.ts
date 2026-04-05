@@ -2,8 +2,9 @@ import { Injectable } from "@nestjs/common";
 import { AuditActionType } from "@prisma/client";
 
 import type { AuthUser } from "../../common/auth/auth-user.interface";
-import { PrismaService } from "../../common/prisma/prisma.service";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { mapDictionaryEntry } from "./mappers/dictionaries.mapper";
+import { DictionariesRepository } from "./repositories/dictionaries.repository";
 import { CreateDictionaryEntryDto } from "./dto/create-dictionary-entry.dto";
 import { ListDictionariesDto } from "./dto/list-dictionaries.dto";
 import { UpdateDictionaryEntryDto } from "./dto/update-dictionary-entry.dto";
@@ -11,29 +12,23 @@ import { UpdateDictionaryEntryDto } from "./dto/update-dictionary-entry.dto";
 @Injectable()
 export class DictionariesService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly dictionariesRepository: DictionariesRepository,
     private readonly auditLogsService: AuditLogsService
   ) {}
 
   async list(query: ListDictionariesDto) {
-    return this.prisma.dictionaryEntry.findMany({
-      where: {
-        type: query.type,
-        enabled: query.enabled
-      },
-      orderBy: [{ type: "asc" }, { sort: "asc" }]
-    });
+    const entries = await this.dictionariesRepository.list(query.type, query.enabled);
+
+    return entries.map((entry) => mapDictionaryEntry(entry));
   }
 
   async create(dto: CreateDictionaryEntryDto, actor: AuthUser) {
-    const entry = await this.prisma.dictionaryEntry.create({
-      data: {
-        type: dto.type,
-        label: dto.label,
-        value: dto.value,
-        sort: dto.sort ?? 0,
-        enabled: dto.enabled ?? true
-      }
+    const entry = await this.dictionariesRepository.createEntry({
+      type: dto.type,
+      label: dto.label,
+      value: dto.value,
+      sort: dto.sort ?? 0,
+      enabled: dto.enabled ?? true
     });
 
     await this.auditLogsService.create({
@@ -44,19 +39,16 @@ export class DictionariesService {
       targetId: entry.id
     });
 
-    return entry;
+    return mapDictionaryEntry(entry);
   }
 
   async update(id: string, dto: UpdateDictionaryEntryDto, actor: AuthUser) {
-    const entry = await this.prisma.dictionaryEntry.update({
-      where: { id },
-      data: {
-        type: dto.type,
-        label: dto.label,
-        value: dto.value,
-        sort: dto.sort,
-        enabled: dto.enabled
-      }
+    const entry = await this.dictionariesRepository.updateEntry(id, {
+      type: dto.type,
+      label: dto.label,
+      value: dto.value,
+      sort: dto.sort,
+      enabled: dto.enabled
     });
 
     await this.auditLogsService.create({
@@ -67,7 +59,6 @@ export class DictionariesService {
       targetId: entry.id
     });
 
-    return entry;
+    return mapDictionaryEntry(entry);
   }
 }
-

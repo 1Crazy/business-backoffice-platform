@@ -4,9 +4,9 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swa
 import type { AuthUser } from "../../common/auth/auth-user.interface";
 import { CurrentUser } from "../../common/decorators/current-user.decorator";
 import { Permissions } from "../../common/decorators/permissions.decorator";
-import { DashboardOverviewResponseDto } from "./dto/dashboard-overview-response.dto";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { DashboardService } from "./dashboard.service";
+import { DashboardOverviewVo } from "./vo/dashboard-overview.vo";
 
 @ApiTags("dashboard")
 @ApiBearerAuth()
@@ -20,7 +20,7 @@ export class DashboardController {
     summary: "查询看板概览统计"
   })
   @ApiOkResponse({
-    type: DashboardOverviewResponseDto
+    type: DashboardOverviewVo
   })
   overview(@Query() query: DashboardQueryDto, @CurrentUser() user: AuthUser) {
     return this.dashboardService.overview(query, user);

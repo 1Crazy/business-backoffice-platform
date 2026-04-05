@@ -1,0 +1,66 @@
+import { ElMessage } from "element-plus";
+import { computed, onMounted, ref } from "vue";
+
+import { fetchDashboardOverview } from "@/api/dashboard.api";
+import type { DashboardDateRange, DashboardOverview } from "@/types/dashboard";
+import { getRequestErrorMessage } from "@/utils/request";
+
+export function useDashboardOverview() {
+  const dateRange = ref<DashboardDateRange>([]);
+  const overview = ref<DashboardOverview | null>(null);
+
+  const isOverviewEmpty = computed(
+    () =>
+      Boolean(overview.value) &&
+      [
+        overview.value?.newCustomers ?? 0,
+        overview.value?.followUpCount ?? 0,
+        overview.value?.convertedLeads ?? 0,
+        overview.value?.totalLeads ?? 0,
+        overview.value?.pendingReminders ?? 0
+      ].every((value) => value === 0)
+  );
+
+  const cards = computed(() => [
+    {
+      label: "新增客户",
+      value: overview.value?.newCustomers ?? "--",
+      caption: "统计周期内新增的客户档案数"
+    },
+    {
+      label: "跟进次数",
+      value: overview.value?.followUpCount ?? "--",
+      caption: "统计周期内新建的跟进记录数"
+    },
+    {
+      label: "线索转化率",
+      value: overview.value ? `${overview.value.conversionRate}%` : "--",
+      caption: "已转客户线索 / 周期内线索总数"
+    }
+  ]);
+
+  async function loadOverview(): Promise<void> {
+    const [startDate, endDate] = dateRange.value;
+
+    try {
+      overview.value = await fetchDashboardOverview({
+        startDate,
+        endDate
+      });
+    } catch (error) {
+      ElMessage.error(getRequestErrorMessage(error, "看板数据加载失败，请检查后端服务后重试。"));
+    }
+  }
+
+  onMounted(() => {
+    void loadOverview();
+  });
+
+  return {
+    cards,
+    dateRange,
+    isOverviewEmpty,
+    loadOverview,
+    overview
+  };
+}

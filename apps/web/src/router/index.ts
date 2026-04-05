@@ -1,16 +1,16 @@
 import { ElMessage } from "element-plus";
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
 
-import AppLayout from "../layout/AppLayout.vue";
-import AccessControlPage from "../pages/AccessControlPage.vue";
-import DashboardPage from "../pages/DashboardPage.vue";
-import CustomersPage from "../pages/CustomersPage.vue";
-import LeadsPage from "../pages/LeadsPage.vue";
-import LoginPage from "../pages/LoginPage.vue";
-import NoAccessPage from "../pages/NoAccessPage.vue";
-import SystemAdminPage from "../pages/SystemAdminPage.vue";
-import { resolveFirstAccessiblePath } from "./access";
-import { useAuthStore } from "../stores/auth";
+import AppLayout from "@/layout/AppLayout.vue";
+import AccessControlPage from "@/pages/access-control/AccessControlPage.vue";
+import DashboardPage from "@/pages/dashboard/DashboardPage.vue";
+import CustomersPage from "@/pages/customers/CustomersPage.vue";
+import LeadsPage from "@/pages/leads/LeadsPage.vue";
+import LoginPage from "@/pages/login/LoginPage.vue";
+import NoAccessPage from "@/pages/no-access/NoAccessPage.vue";
+import SystemAdminPage from "@/pages/system-administration/SystemAdminPage.vue";
+import { resolveFirstAccessiblePath } from "@/router/access";
+import { useAuthStore } from "@/stores/auth";
 
 const routes: RouteRecordRaw[] = [
   {

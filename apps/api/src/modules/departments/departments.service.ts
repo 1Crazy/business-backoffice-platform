@@ -1,37 +1,31 @@
 import { Injectable } from "@nestjs/common";
 import { AuditActionType, RecordStatus } from "@prisma/client";
 
+import { mapDepartment } from "../../common/mappers/access-control.mapper";
 import type { AuthUser } from "../../common/auth/auth-user.interface";
-import { PrismaService } from "../../common/prisma/prisma.service";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { DepartmentsRepository } from "./repositories/departments.repository";
 import { CreateDepartmentDto } from "./dto/create-department.dto";
 import { UpdateDepartmentDto } from "./dto/update-department.dto";
 
 @Injectable()
 export class DepartmentsService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly departmentsRepository: DepartmentsRepository,
     private readonly auditLogsService: AuditLogsService
   ) {}
 
   async list() {
-    return this.prisma.department.findMany({
-      include: {
-        parent: true
-      },
-      orderBy: {
-        createdAt: "asc"
-      }
-    });
+    const departments = await this.departmentsRepository.list();
+
+    return departments.map((department) => mapDepartment(department));
   }
 
   async create(dto: CreateDepartmentDto, actor: AuthUser) {
-    const department = await this.prisma.department.create({
-      data: {
-        name: dto.name,
-        code: dto.code,
-        parentId: dto.parentId ?? undefined
-      }
+    const department = await this.departmentsRepository.createDepartment({
+      name: dto.name,
+      code: dto.code,
+      parentId: dto.parentId
     });
 
     await this.auditLogsService.create({
@@ -42,17 +36,14 @@ export class DepartmentsService {
       targetId: department.id
     });
 
-    return department;
+    return mapDepartment(department);
   }
 
   async update(id: string, dto: UpdateDepartmentDto, actor: AuthUser) {
-    const department = await this.prisma.department.update({
-      where: { id },
-      data: {
-        name: dto.name,
-        code: dto.code,
-        parentId: dto.parentId === undefined ? undefined : dto.parentId
-      }
+    const department = await this.departmentsRepository.updateDepartment(id, {
+      name: dto.name,
+      code: dto.code,
+      parentId: dto.parentId === undefined ? undefined : dto.parentId
     });
 
     await this.auditLogsService.create({
@@ -63,16 +54,11 @@ export class DepartmentsService {
       targetId: department.id
     });
 
-    return department;
+    return mapDepartment(department);
   }
 
   async toggle(id: string, status: RecordStatus, actor: AuthUser) {
-    const department = await this.prisma.department.update({
-      where: { id },
-      data: {
-        status
-      }
-    });
+    const department = await this.departmentsRepository.updateStatus(id, status);
 
     await this.auditLogsService.create({
       actorId: actor.id,
@@ -82,6 +68,6 @@ export class DepartmentsService {
       targetId: department.id
     });
 
-    return department;
+    return mapDepartment(department);
   }
 }

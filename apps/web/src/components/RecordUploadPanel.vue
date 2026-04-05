@@ -2,18 +2,19 @@
   <section class="upload-panel">
     <div class="upload-head">
       <div>
-        <h3>附件</h3>
-        <p>支持将业务附件关联到当前记录，便于销售跟进时统一查看。</p>
+        <h3>{{ title }}</h3>
+        <p>{{ description }}</p>
       </div>
       <el-upload
         :show-file-list="false"
+        :disabled="uploadDisabled"
         :http-request="handleUpload"
       >
         <el-button type="primary">上传附件</el-button>
       </el-upload>
     </div>
 
-    <el-empty v-if="!attachments.length" description="暂无附件" />
+    <el-empty v-if="!attachments.length" :description="emptyDescription" />
 
     <el-table v-else :data="attachments" border>
       <el-table-column prop="originalName" label="文件名" min-width="220" />
@@ -29,53 +30,32 @@
 </template>
 
 <script setup lang="ts">
-import { ElMessage, type UploadRequestOptions } from "element-plus";
-import { onMounted, ref, watch } from "vue";
+import type { UploadRequestOptions } from "element-plus";
 
-import { http } from "../api/http";
-import type { Attachment } from "../types/entities";
+import type { Attachment } from "@/types/uploads";
 
-const props = defineProps<{
-  businessType: "CUSTOMER" | "LEAD";
-  businessId: string;
+withDefaults(
+  defineProps<{
+    attachments: Attachment[];
+    title?: string;
+    description?: string;
+    emptyDescription?: string;
+    uploadDisabled?: boolean;
+  }>(),
+  {
+    title: "附件",
+    description: "支持将业务附件关联到当前记录，便于销售跟进时统一查看。",
+    emptyDescription: "暂无附件",
+    uploadDisabled: false
+  }
+);
+
+const emit = defineEmits<{
+  upload: [options: UploadRequestOptions];
 }>();
 
-const attachments = ref<Attachment[]>([]);
-
-async function loadAttachments(): Promise<void> {
-  if (!props.businessId) {
-    attachments.value = [];
-    return;
-  }
-
-  const { data } = await http.get<Attachment[]>("/uploads", {
-    params: {
-      businessType: props.businessType,
-      businessId: props.businessId
-    }
-  });
-
-  attachments.value = data;
-}
-
-async function handleUpload(options: UploadRequestOptions): Promise<void> {
-  if (!options.file) {
-    return;
-  }
-
-  const formData = new FormData();
-  formData.append("businessType", props.businessType);
-  formData.append("businessId", props.businessId);
-  formData.append("file", options.file);
-
-  await http.post("/uploads", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data"
-    }
-  });
-
-  ElMessage.success("附件上传成功。");
-  await loadAttachments();
+function handleUpload(options: UploadRequestOptions): void {
+  emit("upload", options);
 }
 
 function formatSize(size: number): string {
@@ -89,17 +69,6 @@ function formatSize(size: number): string {
 
   return `${(size / 1024 / 1024).toFixed(1)} MB`;
 }
-
-watch(
-  () => props.businessId,
-  () => {
-    void loadAttachments();
-  }
-);
-
-onMounted(() => {
-  void loadAttachments();
-});
 </script>
 
 <style scoped>
@@ -124,4 +93,3 @@ onMounted(() => {
   color: #64748b;
 }
 </style>
-

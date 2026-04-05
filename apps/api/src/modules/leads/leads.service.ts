@@ -8,7 +8,6 @@ import {
   getPaginationParams,
   resolveSort
 } from "../../common/pagination/pagination.util";
-import { PrismaService } from "../../common/prisma/prisma.service";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CreateLeadDto } from "./dto/create-lead.dto";
 import { CreateLeadFollowUpDto } from "./dto/create-lead-follow-up.dto";
@@ -16,6 +15,14 @@ import { ListLeadRemindersDto, REMINDER_SORT_FIELDS, type ReminderSortField } fr
 import { LEAD_SORT_FIELDS, type LeadSortField, ListLeadsDto } from "./dto/list-leads.dto";
 import { ReassignLeadOwnerDto } from "./dto/reassign-lead-owner.dto";
 import { UpdateLeadDto } from "./dto/update-lead.dto";
+import {
+  mapLead,
+  mapLeadFollowUp,
+  mapLeadReminder,
+  mapPaginatedLeadReminders,
+  mapPaginatedLeads
+} from "./mappers/leads.mapper";
+import { LeadsRepository } from "./repositories/leads.repository";
 
 const LEAD_DEFAULT_SORT: { field: LeadSortField; order: Prisma.SortOrder } = {
   field: "createdAt",
@@ -30,7 +37,7 @@ const REMINDER_DEFAULT_SORT: { field: ReminderSortField; order: Prisma.SortOrder
 @Injectable()
 export class LeadsService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly leadsRepository: LeadsRepository,
     private readonly auditLogsService: AuditLogsService,
     private readonly dataScopeService: DataScopeService
   ) {}
@@ -55,35 +62,16 @@ export class LeadsService {
       { [sort.field]: sort.order } as Prisma.LeadOrderByWithRelationInput,
       { id: "desc" }
     ];
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.lead.findMany({
-        where,
-        include: {
-          owner: true,
-          convertedCustomer: true
-        },
-        orderBy,
-        skip: pagination.skip,
-        take: pagination.take
-      }),
-      this.prisma.lead.count({ where })
-    ]);
+    const { items, total } = await this.leadsRepository.list(where, orderBy, pagination);
 
-    return buildPaginatedResponse(items, total, pagination, sort);
+    return mapPaginatedLeads(items, total, pagination, sort);
   }
 
   async detail(id: string, actor: AuthUser) {
-    const lead = await this.prisma.lead.findUniqueOrThrow({
-      where: { id },
-      include: {
-        owner: true,
-        convertedCustomer: true,
-        attachments: true
-      }
-    });
+    const lead = await this.leadsRepository.findDetailById(id);
 
     await this.assertLeadAccessible(lead.ownerId, actor);
-    return lead;
+    return mapLead(lead);
   }
 
   async create(dto: CreateLeadDto, actor: AuthUser) {
@@ -95,18 +83,13 @@ export class LeadsService {
       );
     }
 
-    const lead = await this.prisma.lead.create({
-      data: {
-        name: dto.name,
-        contactName: dto.contactName,
-        phone: dto.phone,
-        source: dto.source,
-        notes: dto.notes,
-        ownerId: dto.ownerId ?? actor.id
-      },
-      include: {
-        owner: true
-      }
+    const lead = await this.leadsRepository.createLead({
+      name: dto.name,
+      contactName: dto.contactName,
+      phone: dto.phone,
+      source: dto.source,
+      notes: dto.notes,
+      ownerId: dto.ownerId ?? actor.id
     });
 
     await this.auditLogsService.create({
@@ -117,13 +100,11 @@ export class LeadsService {
       targetId: lead.id
     });
 
-    return lead;
+    return mapLead(lead);
   }
 
   async update(id: string, dto: UpdateLeadDto, actor: AuthUser) {
-    const lead = await this.prisma.lead.findUniqueOrThrow({
-      where: { id }
-    });
+    const lead = await this.leadsRepository.findOwnerById(id);
 
     await this.assertLeadAccessible(lead.ownerId, actor);
 
@@ -135,21 +116,14 @@ export class LeadsService {
       );
     }
 
-    const updated = await this.prisma.lead.update({
-      where: { id },
-      data: {
-        name: dto.name,
-        contactName: dto.contactName,
-        phone: dto.phone,
-        source: dto.source,
-        notes: dto.notes,
-        ownerId: dto.ownerId,
-        status: dto.status
-      },
-      include: {
-        owner: true,
-        convertedCustomer: true
-      }
+    const updated = await this.leadsRepository.updateLead(id, {
+      name: dto.name,
+      contactName: dto.contactName,
+      phone: dto.phone,
+      source: dto.source,
+      notes: dto.notes,
+      ownerId: dto.ownerId,
+      status: dto.status
     });
 
     await this.auditLogsService.create({
@@ -160,13 +134,11 @@ export class LeadsService {
       targetId: updated.id
     });
 
-    return updated;
+    return mapLead(updated);
   }
 
   async reassignOwner(id: string, dto: ReassignLeadOwnerDto, actor: AuthUser) {
-    const lead = await this.prisma.lead.findUniqueOrThrow({
-      where: { id }
-    });
+    const lead = await this.leadsRepository.findOwnerById(id);
 
     await this.assertLeadAccessible(lead.ownerId, actor);
     await this.dataScopeService.assertOwnerAccessible(
@@ -175,15 +147,7 @@ export class LeadsService {
       "You cannot assign leads outside your data scope."
     );
 
-    const updated = await this.prisma.lead.update({
-      where: { id },
-      data: {
-        ownerId: dto.ownerId
-      },
-      include: {
-        owner: true
-      }
-    });
+    const updated = await this.leadsRepository.updateOwner(id, dto.ownerId);
 
     await this.auditLogsService.create({
       actorId: actor.id,
@@ -197,13 +161,11 @@ export class LeadsService {
       }
     });
 
-    return updated;
+    return mapLead(updated);
   }
 
   async convert(id: string, actor: AuthUser) {
-    const lead = await this.prisma.lead.findUniqueOrThrow({
-      where: { id }
-    });
+    const lead = await this.leadsRepository.findSnapshotById(id);
 
     await this.assertLeadAccessible(lead.ownerId, actor);
 
@@ -211,29 +173,7 @@ export class LeadsService {
       throw new ForbiddenException("This lead has already been converted.");
     }
 
-    const customer = await this.prisma.$transaction(async (tx) => {
-      const createdCustomer = await tx.customer.create({
-        data: {
-          name: lead.name,
-          contactName: lead.contactName,
-          phone: lead.phone,
-          source: lead.source,
-          status: "new",
-          notes: lead.notes,
-          ownerId: lead.ownerId
-        }
-      });
-
-      await tx.lead.update({
-        where: { id },
-        data: {
-          status: LeadStatus.CONVERTED,
-          convertedCustomerId: createdCustomer.id
-        }
-      });
-
-      return createdCustomer;
-    });
+    const customer = await this.leadsRepository.convertLeadToCustomer(lead);
 
     await this.auditLogsService.create({
       actorId: actor.id,
@@ -250,63 +190,27 @@ export class LeadsService {
   }
 
   async listFollowUps(id: string, actor: AuthUser) {
-    const lead = await this.prisma.lead.findUniqueOrThrow({
-      where: { id }
-    });
+    const lead = await this.leadsRepository.findOwnerById(id);
 
     await this.assertLeadAccessible(lead.ownerId, actor);
 
-    return this.prisma.followUp.findMany({
-      where: {
-        leadId: id
-      },
-      include: {
-        createdBy: true,
-        reminder: true
-      },
-      orderBy: {
-        createdAt: "desc"
-      }
-    });
+    const followUps = await this.leadsRepository.listFollowUps(id);
+
+    return followUps.map((followUp) => mapLeadFollowUp(followUp));
   }
 
   async createFollowUp(id: string, dto: CreateLeadFollowUpDto, actor: AuthUser) {
-    const lead = await this.prisma.lead.findUniqueOrThrow({
-      where: { id }
-    });
+    const lead = await this.leadsRepository.findOwnerById(id);
 
     await this.assertLeadAccessible(lead.ownerId, actor);
 
-    const followUp = await this.prisma.$transaction(async (tx) => {
-      const created = await tx.followUp.create({
-        data: {
-          entityType: FollowUpEntityType.LEAD,
-          leadId: id,
-          createdById: actor.id,
-          content: dto.content,
-          nextFollowUpAt: dto.nextFollowUpAt ? new Date(dto.nextFollowUpAt) : undefined
-        }
-      });
-
-      if (dto.nextFollowUpAt) {
-        await tx.reminder.create({
-          data: {
-            entityType: FollowUpEntityType.LEAD,
-            leadId: id,
-            followUpId: created.id,
-            ownerId: lead.ownerId,
-            remindAt: new Date(dto.nextFollowUpAt)
-          }
-        });
-      }
-
-      return tx.followUp.findUniqueOrThrow({
-        where: { id: created.id },
-        include: {
-          createdBy: true,
-          reminder: true
-        }
-      });
+    const followUp = await this.leadsRepository.createFollowUp({
+      leadId: id,
+      ownerId: lead.ownerId,
+      createdById: actor.id,
+      content: dto.content,
+      nextFollowUpAt: dto.nextFollowUpAt,
+      entityType: FollowUpEntityType.LEAD
     });
 
     await this.auditLogsService.create({
@@ -317,7 +221,7 @@ export class LeadsService {
       targetId: followUp.id
     });
 
-    return followUp;
+    return mapLeadFollowUp(followUp);
   }
 
   async pendingReminders(query: ListLeadRemindersDto, actor: AuthUser) {
@@ -332,23 +236,9 @@ export class LeadsService {
       { [sort.field]: sort.order } as Prisma.ReminderOrderByWithRelationInput,
       { id: "desc" }
     ];
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.reminder.findMany({
-        where,
-        include: {
-          lead: true,
-          customer: true,
-          followUp: true,
-          owner: true
-        },
-        orderBy,
-        skip: pagination.skip,
-        take: pagination.take
-      }),
-      this.prisma.reminder.count({ where })
-    ]);
+    const { items, total } = await this.leadsRepository.listPendingReminders(where, orderBy, pagination);
 
-    return buildPaginatedResponse(items, total, pagination, sort);
+    return mapPaginatedLeadReminders(items, total, pagination, sort);
   }
 
   private async assertLeadAccessible(ownerId: string, actor: AuthUser) {

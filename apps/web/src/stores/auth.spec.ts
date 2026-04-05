@@ -1,13 +1,13 @@
 import { createPinia, setActivePinia } from "pinia";
 
-import { useAuthStore } from "./auth";
+import { useAuthStore } from "@/stores/auth";
 
 const { postMock, getMock } = vi.hoisted(() => ({
   postMock: vi.fn(),
   getMock: vi.fn()
 }));
 
-vi.mock("../api/http", () => ({
+vi.mock("@/api/http", () => ({
   http: {
     post: postMock,
     get: getMock

@@ -2,14 +2,15 @@ import { createHash, randomBytes } from "crypto";
 
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { JwtService } from "@nestjs/jwt";
-import { AuditActionType, DataScope, UserStatus } from "@prisma/client";
+import { AuditActionType, UserStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 import type { AuthUser } from "../../common/auth/auth-user.interface";
-import { PrismaService } from "../../common/prisma/prisma.service";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
+import { mapAuthUser } from "./mappers/auth.mapper";
+import { AuthRepository } from "./repositories/auth.repository";
 
 const REFRESH_TOKEN_BYTES = 48;
 const REFRESH_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30;
@@ -17,30 +18,13 @@ const REFRESH_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 @Injectable()
 export class AuthService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly authRepository: AuthRepository,
     private readonly jwtService: JwtService,
     private readonly auditLogsService: AuditLogsService
   ) {}
 
   async login(dto: LoginDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { username: dto.username },
-      include: {
-        roles: {
-          include: {
-            role: {
-              include: {
-                permissions: {
-                  include: {
-                    permission: true
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    });
+    const user = await this.authRepository.findUserByUsername(dto.username);
 
     if (!user || user.status !== UserStatus.ACTIVE) {
       await this.auditLogsService.create({
@@ -74,7 +58,7 @@ export class AuthService {
       throw new UnauthorizedException("Invalid credentials.");
     }
 
-    const authUser = this.mapAuthUser(user);
+    const authUser = mapAuthUser(user);
     const session = await this.createUserSession(user.id);
 
     await this.auditLogsService.create({
@@ -97,49 +81,24 @@ export class AuthService {
   }
 
   async refresh(dto: RefreshTokenDto) {
-    const session = await this.prisma.userSession.findUnique({
-      where: {
-        refreshTokenHash: this.hashRefreshToken(dto.refreshToken)
-      },
-      include: {
-        user: {
-          include: {
-            roles: {
-              include: {
-                role: {
-                  include: {
-                    permissions: {
-                      include: {
-                        permission: true
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    });
+    const session = await this.authRepository.findSessionByRefreshTokenHash(this.hashRefreshToken(dto.refreshToken));
 
     if (!session || session.revokedAt || session.expiresAt <= new Date() || session.user.status !== UserStatus.ACTIVE) {
       throw new UnauthorizedException("Session is invalid.");
     }
 
-    const authUser = this.mapAuthUser(session.user, session.id);
+    const authUser = {
+      ...mapAuthUser(session.user),
+      sessionId: session.id
+    };
 
-    await this.prisma.userSession.update({
-      where: { id: session.id },
-      data: {
-        lastSeenAt: new Date()
-      }
-    });
+    await this.authRepository.touchSession(session.id);
 
     return {
       accessToken: await this.signAccessToken(authUser),
       refreshToken: dto.refreshToken,
       sessionExpiresAt: session.expiresAt.toISOString(),
-      user: this.mapAuthUser(session.user)
+      user: mapAuthUser(session.user)
     };
   }
 
@@ -148,16 +107,7 @@ export class AuthService {
       throw new UnauthorizedException("Missing active session.");
     }
 
-    await this.prisma.userSession.updateMany({
-      where: {
-        id: user.sessionId,
-        userId: user.id,
-        revokedAt: null
-      },
-      data: {
-        revokedAt: new Date()
-      }
-    });
+    await this.authRepository.revokeSession(user.sessionId, user.id);
 
     await this.auditLogsService.create({
       actorId: user.id,
@@ -173,26 +123,9 @@ export class AuthService {
   }
 
   async getProfile(userId: string, sessionId?: string): Promise<AuthUser> {
-    const user = await this.prisma.user.findUniqueOrThrow({
-      where: { id: userId },
-      include: {
-        roles: {
-          include: {
-            role: {
-              include: {
-                permissions: {
-                  include: {
-                    permission: true
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    });
+    const user = await this.authRepository.findUserById(userId);
 
-    return this.mapAuthUser(user, sessionId);
+    return mapAuthUser(user);
   }
 
   async validateSessionPayload(payload: AuthUser): Promise<AuthUser> {
@@ -201,29 +134,14 @@ export class AuthService {
     }
 
     const [user, session] = await Promise.all([
-      this.prisma.user.findUnique({
-        where: { id: payload.id },
-        include: {
-          roles: {
-            include: {
-              role: {
-                include: {
-                  permissions: {
-                    include: {
-                      permission: true
-                    }
-                  }
-                }
-              }
-            }
-          }
+      this.authRepository.findUserByUsername(payload.username).then((foundUser) => {
+        if (foundUser?.id === payload.id) {
+          return foundUser;
         }
+
+        return this.authRepository.findUserById(payload.id);
       }),
-      this.prisma.userSession.findUnique({
-        where: {
-          id: payload.sessionId
-        }
-      })
+      this.authRepository.findSessionById(payload.sessionId)
     ]);
 
     if (!user || user.status !== UserStatus.ACTIVE) {
@@ -234,44 +152,9 @@ export class AuthService {
       throw new UnauthorizedException("Session is invalid.");
     }
 
-    return this.mapAuthUser(user, session.id);
-  }
-
-  private mapAuthUser(
-    user: {
-      id: string;
-      username: string;
-      displayName: string;
-      departmentId?: string | null;
-      roles: Array<{
-        role: {
-          code: string;
-          dataScope: DataScope;
-          permissions: Array<{ permission: { code: string } }>;
-        };
-      }>;
-    },
-    sessionId?: string
-  ): AuthUser {
-    const roleCodes = user.roles.map((item: { role: { code: string } }) => item.role.code);
-    const permissions = Array.from(
-      new Set(
-        user.roles.flatMap((item: { role: { permissions: Array<{ permission: { code: string } }> } }) =>
-          item.role.permissions.map((permission: { permission: { code: string } }) => permission.permission.code)
-        )
-      )
-    );
-    const dataScopes = Array.from(new Set(user.roles.map((item: { role: { dataScope: DataScope } }) => item.role.dataScope)));
-
     return {
-      id: user.id,
-      username: user.username,
-      displayName: user.displayName,
-      departmentId: user.departmentId,
-      roleCodes,
-      permissions,
-      dataScopes,
-      sessionId
+      ...mapAuthUser(user),
+      sessionId: session.id
     };
   }
 
@@ -279,14 +162,7 @@ export class AuthService {
     const refreshToken = randomBytes(REFRESH_TOKEN_BYTES).toString("hex");
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
 
-    const session = await this.prisma.userSession.create({
-      data: {
-        userId,
-        refreshTokenHash: this.hashRefreshToken(refreshToken),
-        expiresAt,
-        lastSeenAt: new Date()
-      }
-    });
+    const session = await this.authRepository.createUserSession(userId, this.hashRefreshToken(refreshToken), expiresAt);
 
     return {
       id: session.id,

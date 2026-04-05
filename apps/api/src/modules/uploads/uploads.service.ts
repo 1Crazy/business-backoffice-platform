@@ -10,9 +10,10 @@ import { AttachmentBusinessType, AuditActionType } from "@prisma/client";
 
 import type { AuthUser } from "../../common/auth/auth-user.interface";
 import { DataScopeService } from "../../common/data-scope/data-scope.service";
-import { PrismaService } from "../../common/prisma/prisma.service";
+import { mapAttachment } from "../../common/mappers/entity.mapper";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { ListUploadsDto } from "./dto/list-uploads.dto";
+import { UploadsRepository } from "./repositories/uploads.repository";
 import { ALLOWED_ATTACHMENT_MIME_TYPES, MAX_ATTACHMENT_SIZE_BYTES } from "./uploads.constants";
 import {
   ATTACHMENT_STORAGE_DRIVER,
@@ -28,7 +29,7 @@ interface UploadInput {
 @Injectable()
 export class UploadsService {
   constructor(
-    private readonly prisma: PrismaService,
+    private readonly uploadsRepository: UploadsRepository,
     private readonly auditLogsService: AuditLogsService,
     private readonly dataScopeService: DataScopeService,
     @Inject(ATTACHMENT_STORAGE_DRIVER)
@@ -38,15 +39,9 @@ export class UploadsService {
   async list(query: ListUploadsDto, actor: AuthUser) {
     await this.assertBusinessAccessible(query.businessType, query.businessId, actor);
 
-    return this.prisma.attachment.findMany({
-      where: {
-        businessType: query.businessType,
-        businessId: query.businessId
-      },
-      orderBy: {
-        createdAt: "desc"
-      }
-    });
+    const attachments = await this.uploadsRepository.listByBusiness(query.businessType, query.businessId);
+
+    return attachments.map((attachment) => mapAttachment(attachment));
   }
 
   async create(input: UploadInput, actor: AuthUser) {
@@ -55,20 +50,16 @@ export class UploadsService {
     const storedFile = await this.storageDriver.store(input.file);
 
     try {
-      const attachment = await this.prisma.attachment.create({
-        data: {
-          businessType: input.businessType,
-          businessId: input.businessId,
-          fileName: storedFile.fileName,
-          originalName: input.file.originalname,
-          mimeType: input.file.mimetype,
-          size: input.file.size,
-          storageProvider: storedFile.storageProvider,
-          storageKey: storedFile.storageKey,
-          uploadedById: actor.id,
-          customerId: input.businessType === AttachmentBusinessType.CUSTOMER ? input.businessId : undefined,
-          leadId: input.businessType === AttachmentBusinessType.LEAD ? input.businessId : undefined
-        }
+      const attachment = await this.uploadsRepository.createAttachment({
+        businessType: input.businessType,
+        businessId: input.businessId,
+        fileName: storedFile.fileName,
+        originalName: input.file.originalname,
+        mimeType: input.file.mimetype,
+        size: input.file.size,
+        storageProvider: storedFile.storageProvider,
+        storageKey: storedFile.storageKey,
+        uploadedById: actor.id
       });
 
       await this.auditLogsService.create({
@@ -79,7 +70,7 @@ export class UploadsService {
         targetId: attachment.id
       });
 
-      return attachment;
+      return mapAttachment(attachment);
     } catch (error) {
       await this.storageDriver.delete(storedFile.storageKey);
       throw error;
@@ -87,9 +78,7 @@ export class UploadsService {
   }
 
   async download(id: string, actor: AuthUser) {
-    const attachment = await this.prisma.attachment.findUniqueOrThrow({
-      where: { id }
-    });
+    const attachment = await this.uploadsRepository.findAttachmentById(id);
 
     await this.assertBusinessAccessible(attachment.businessType, attachment.businessId, actor);
 
@@ -109,20 +98,14 @@ export class UploadsService {
     this.assertBusinessPermission(actor, businessType);
 
     if (businessType === AttachmentBusinessType.CUSTOMER) {
-      const customer = await this.prisma.customer.findUniqueOrThrow({
-        where: { id: businessId },
-        select: { ownerId: true }
-      });
+      const customer = await this.uploadsRepository.findCustomerOwnerById(businessId);
 
       await this.dataScopeService.assertOwnerAccessible(actor, customer.ownerId, "You do not have access to this attachment.");
       return;
     }
 
     if (businessType === AttachmentBusinessType.LEAD) {
-      const lead = await this.prisma.lead.findUniqueOrThrow({
-        where: { id: businessId },
-        select: { ownerId: true }
-      });
+      const lead = await this.uploadsRepository.findLeadOwnerById(businessId);
 
       await this.dataScopeService.assertOwnerAccessible(actor, lead.ownerId, "You do not have access to this attachment.");
       return;
