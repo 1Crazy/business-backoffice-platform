@@ -8,7 +8,8 @@
 - `apps/api`：NestJS + JWT/RBAC + Prisma 后端服务
 - `docker-compose.yml`：本地 PostgreSQL、NestJS API、Vue Web 的容器编排配置
 - `apps/api/prisma`：数据库 schema、初始迁移和种子脚本
-- `openspec/changes/bootstrap-scrm-mvp`：本次变更的 OpenSpec 提案、设计、规格和任务
+- `openspec/specs`：当前已经同步完成的主规格
+- `openspec/changes/archive/2026-04-05-bootstrap-scrm-mvp`：已归档的一期 MVP OpenSpec 变更记录
 
 ## 一期范围
 
@@ -33,13 +34,13 @@ pnpm install
 
 ## 本地环境变量
 
-仓库已提供默认开发环境文件：
+仓库已提供环境变量模板文件：
 
-- 根目录 [`.env`](/Users/hong/Documents/my-project/scrm-test/.env)
-- 后端 [`apps/api/.env`](/Users/hong/Documents/my-project/scrm-test/apps/api/.env)
-- 前端 [`apps/web/.env`](/Users/hong/Documents/my-project/scrm-test/apps/web/.env)
+- 根目录 [`.env.example`](/Users/hong/Documents/my-project/scrm-test/.env.example)
+- 后端 [`apps/api/.env.example`](/Users/hong/Documents/my-project/scrm-test/apps/api/.env.example)
+- 前端 [`apps/web/.env.example`](/Users/hong/Documents/my-project/scrm-test/apps/web/.env.example)
 
-如果需要自定义端口、数据库账号或 API 地址，可以按需修改这些文件。
+本地开发时可以基于这些模板生成对应的 `.env` 文件。当前工作区里已经存在可直接运行的本地 `.env`，如果需要自定义端口、数据库账号或 API 地址，可以按需修改。
 
 ## Docker 一键启动
 
@@ -150,8 +151,24 @@ pnpm --filter @scrm/api test
 pnpm --filter @scrm/web test
 ```
 
-## 已知说明
+## 浏览器验证
 
-- 浏览器级 Playwright 冒烟测试流程已经接通到 `webapp-testing` helper，但当前环境里缺少 Python `playwright` 模块，因此还没有完成真正的浏览器脚本执行。
+如果你要在本机执行浏览器级验证，建议先安装 Python Playwright 依赖和 Chromium：
+
+```bash
+python3 -m pip install playwright
+python3 -m playwright install chromium
+```
+
+当前仓库已经完成过以下真实浏览器验证：
+
+- Chromium 登录流程可用
+- Docker 启动后的前后端联调可用
+- `/dashboard`、`/departments`、`/customers`、`/leads`、`/system` 已完成主流程巡检
+- `390 / 768 / 1440` 三档宽度下，主页面已完成响应式回归
+
+## 当前状态
+
 - 当前代码可以正常通过前后端类型检查、构建与单元测试。
 - 当前 Docker 全量启动已经验证通过，前端 `8080`、后端 `3000`、数据库 `5433` 均可访问，默认管理员账号可正常登录。
+- OpenSpec 一期变更 `bootstrap-scrm-mvp` 已同步到主规格并归档。
