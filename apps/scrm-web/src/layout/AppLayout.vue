@@ -86,6 +86,10 @@ function resolveSectionLabel(path: string): string {
     return "客户运营";
   }
 
+  if (path.startsWith("/opportunities")) {
+    return "销售商机";
+  }
+
   if (path.startsWith("/leads")) {
     return "线索跟进";
   }
@@ -104,6 +108,10 @@ function resolveSectionLabel(path: string): string {
 function resolveKicker(path: string): string {
   if (path.startsWith("/customers")) {
     return "客户经营";
+  }
+
+  if (path.startsWith("/opportunities")) {
+    return "销售管道";
   }
 
   if (path.startsWith("/leads")) {

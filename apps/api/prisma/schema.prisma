@@ -32,6 +32,15 @@ enum LeadStatus {
   CLOSED
 }
 
+enum OpportunityStage {
+  DISCOVERY
+  QUALIFICATION
+  PROPOSAL
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
 enum FollowUpEntityType {
   LEAD
   CUSTOMER
@@ -96,29 +105,31 @@ model Department {
 }
 
 model User {
-  id                  String        @id @default(cuid())
-  username            String        @unique
-  passwordHash        String
-  displayName         String
-  email               String?
-  phone               String?
-  status              UserStatus    @default(ACTIVE)
-  departmentId        String?
-  createdAt           DateTime      @default(now())
-  updatedAt           DateTime      @updatedAt
-  department          Department?   @relation(fields: [departmentId], references: [id], onDelete: SetNull)
-  roles               UserRole[]
-  ownedCustomers      Customer[]    @relation("CustomerOwner")
-  ownedLeads          Lead[]        @relation("LeadOwner")
-  followUps           FollowUp[]    @relation("FollowUpCreator")
-  reminders           Reminder[]    @relation("ReminderOwner")
-  auditLogs           AuditLog[]    @relation("AuditActor")
-  uploadedAttachments Attachment[]  @relation("AttachmentUploader")
-  sessions            UserSession[]
-  leaveRequests       LeaveRequest[] @relation("LeaveRequestApplicant")
-  approvalsToHandle   LeaveRequest[] @relation("LeaveRequestApprover")
-  leaveApprovalActions LeaveApprovalAction[] @relation("LeaveApprovalActor")
-  publishedAnnouncements Announcement[] @relation("AnnouncementPublisher")
+  id                        String                    @id @default(cuid())
+  username                  String                    @unique
+  passwordHash              String
+  displayName               String
+  email                     String?
+  phone                     String?
+  status                    UserStatus                @default(ACTIVE)
+  departmentId              String?
+  createdAt                 DateTime                  @default(now())
+  updatedAt                 DateTime                  @updatedAt
+  department                Department?               @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  roles                     UserRole[]
+  ownedCustomers            Customer[]                @relation("CustomerOwner")
+  ownedLeads                Lead[]                    @relation("LeadOwner")
+  ownedOpportunities        Opportunity[]             @relation("OpportunityOwner")
+  followUps                 FollowUp[]                @relation("FollowUpCreator")
+  reminders                 Reminder[]                @relation("ReminderOwner")
+  auditLogs                 AuditLog[]                @relation("AuditActor")
+  uploadedAttachments       Attachment[]              @relation("AttachmentUploader")
+  sessions                  UserSession[]
+  leaveRequests             LeaveRequest[]            @relation("LeaveRequestApplicant")
+  approvalsToHandle         LeaveRequest[]            @relation("LeaveRequestApprover")
+  leaveApprovalActions      LeaveApprovalAction[]     @relation("LeaveApprovalActor")
+  opportunityStageHistories OpportunityStageHistory[] @relation("OpportunityStageHistoryCreator")
+  publishedAnnouncements    Announcement[]            @relation("AnnouncementPublisher")
 
   @@index([departmentId])
   @@index([status])
@@ -192,6 +203,7 @@ model Customer {
   followUps          FollowUp[]              @relation("CustomerFollowUps")
   reminders          Reminder[]              @relation("CustomerReminders")
   attachments        Attachment[]            @relation("CustomerAttachments")
+  opportunities      Opportunity[]
   convertedFromLeads Lead[]                  @relation("LeadConvertedCustomer")
 
   @@index([ownerId])
@@ -218,26 +230,70 @@ model CustomerTagOnCustomer {
 }
 
 model Lead {
-  id                  String       @id @default(cuid())
+  id                  String        @id @default(cuid())
   name                String
   contactName         String?
   phone               String?
   source              String?
-  status              LeadStatus   @default(NEW)
+  status              LeadStatus    @default(NEW)
   notes               String?
   ownerId             String
   convertedCustomerId String?
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
-  owner               User         @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: Restrict)
-  convertedCustomer   Customer?    @relation("LeadConvertedCustomer", fields: [convertedCustomerId], references: [id], onDelete: SetNull)
-  followUps           FollowUp[]   @relation("LeadFollowUps")
-  reminders           Reminder[]   @relation("LeadReminders")
-  attachments         Attachment[] @relation("LeadAttachments")
+  createdAt           DateTime      @default(now())
+  updatedAt           DateTime      @updatedAt
+  owner               User          @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  convertedCustomer   Customer?     @relation("LeadConvertedCustomer", fields: [convertedCustomerId], references: [id], onDelete: SetNull)
+  followUps           FollowUp[]    @relation("LeadFollowUps")
+  reminders           Reminder[]    @relation("LeadReminders")
+  attachments         Attachment[]  @relation("LeadAttachments")
+  sourceOpportunities Opportunity[] @relation("LeadSourceOpportunity")
 
   @@index([ownerId])
   @@index([source])
   @@index([status])
+}
+
+model Opportunity {
+  id                String                    @id @default(cuid())
+  name              String
+  customerId        String
+  sourceLeadId      String?
+  ownerId           String
+  stage             OpportunityStage          @default(DISCOVERY)
+  expectedAmount    Decimal                   @db.Decimal(18, 2)
+  expectedCloseDate DateTime
+  nextAction        String
+  notes             String?
+  closedAt          DateTime?
+  lostReason        String?
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  customer          Customer                  @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  sourceLead        Lead?                     @relation("LeadSourceOpportunity", fields: [sourceLeadId], references: [id], onDelete: SetNull)
+  owner             User                      @relation("OpportunityOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  stageHistory      OpportunityStageHistory[]
+
+  @@index([ownerId])
+  @@index([customerId])
+  @@index([sourceLeadId])
+  @@index([createdAt])
+  @@index([stage, expectedCloseDate])
+  @@index([stage, closedAt])
+}
+
+model OpportunityStageHistory {
+  id            String            @id @default(cuid())
+  opportunityId String
+  fromStage     OpportunityStage?
+  toStage       OpportunityStage
+  comment       String?
+  createdById   String
+  createdAt     DateTime          @default(now())
+  opportunity   Opportunity       @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
+  createdBy     User              @relation("OpportunityStageHistoryCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@index([opportunityId, createdAt])
+  @@index([createdById])
 }
 
 model FollowUp {
@@ -312,19 +368,19 @@ model UserSession {
 }
 
 model LeaveRequest {
-  id         String             @id @default(cuid())
+  id          String                @id @default(cuid())
   applicantId String
-  approverId String
-  leaveType  String
-  startAt    DateTime
-  endAt      DateTime
-  reason     String
-  status     LeaveRequestStatus @default(PENDING)
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
-  applicant  User               @relation("LeaveRequestApplicant", fields: [applicantId], references: [id], onDelete: Restrict)
-  approver   User               @relation("LeaveRequestApprover", fields: [approverId], references: [id], onDelete: Restrict)
-  actions    LeaveApprovalAction[]
+  approverId  String
+  leaveType   String
+  startAt     DateTime
+  endAt       DateTime
+  reason      String
+  status      LeaveRequestStatus    @default(PENDING)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  applicant   User                  @relation("LeaveRequestApplicant", fields: [applicantId], references: [id], onDelete: Restrict)
+  approver    User                  @relation("LeaveRequestApprover", fields: [approverId], references: [id], onDelete: Restrict)
+  actions     LeaveApprovalAction[]
 
   @@index([applicantId, createdAt])
   @@index([approverId, status])
@@ -332,14 +388,14 @@ model LeaveRequest {
 }
 
 model LeaveApprovalAction {
-  id            String                 @id @default(cuid())
+  id             String                 @id @default(cuid())
   leaveRequestId String
-  actorId       String
-  decision      ApprovalActionDecision
-  comment       String?
-  createdAt     DateTime               @default(now())
-  leaveRequest  LeaveRequest           @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
-  actor         User                   @relation("LeaveApprovalActor", fields: [actorId], references: [id], onDelete: Restrict)
+  actorId        String
+  decision       ApprovalActionDecision
+  comment        String?
+  createdAt      DateTime               @default(now())
+  leaveRequest   LeaveRequest           @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
+  actor          User                   @relation("LeaveApprovalActor", fields: [actorId], references: [id], onDelete: Restrict)
 
   @@index([leaveRequestId, createdAt])
   @@index([actorId])

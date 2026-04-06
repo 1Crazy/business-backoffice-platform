@@ -7,7 +7,14 @@ export function mapDashboardOverview(input: {
   convertedLeads: number;
   totalLeads: number;
   pendingReminders: number;
+  newOpportunities: number;
+  pipelineForecastAmount: number;
+  wonOpportunities: number;
+  wonAmount: number;
+  lostOpportunities: number;
 }) {
+  const closedOpportunityCount = input.wonOpportunities + input.lostOpportunities;
+
   return {
     startDate: input.startDate.toISOString(),
     endDate: input.endDate.toISOString(),
@@ -16,6 +23,12 @@ export function mapDashboardOverview(input: {
     convertedLeads: input.convertedLeads,
     totalLeads: input.totalLeads,
     conversionRate: input.totalLeads === 0 ? 0 : Number(((input.convertedLeads / input.totalLeads) * 100).toFixed(2)),
-    pendingReminders: input.pendingReminders
+    pendingReminders: input.pendingReminders,
+    newOpportunities: input.newOpportunities,
+    pipelineForecastAmount: input.pipelineForecastAmount,
+    wonOpportunities: input.wonOpportunities,
+    wonAmount: input.wonAmount,
+    opportunityWinRate:
+      closedOpportunityCount === 0 ? 0 : Number(((input.wonOpportunities / closedOpportunityCount) * 100).toFixed(2))
   };
 }

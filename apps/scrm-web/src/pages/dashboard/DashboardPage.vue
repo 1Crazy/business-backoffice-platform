@@ -25,7 +25,7 @@
       </section>
 
       <section class="stats-skeleton-grid">
-        <article v-for="item in 3" :key="item" class="page-card dashboard-skeleton stat-skeleton-card">
+        <article v-for="item in 5" :key="item" class="page-card dashboard-skeleton stat-skeleton-card">
           <span class="ui-skeleton ui-skeleton-line short" />
           <span class="ui-skeleton ui-skeleton-line medium skeleton-value" />
           <span class="ui-skeleton ui-skeleton-line long" />
@@ -83,7 +83,7 @@ const { cards, dateRange, isLoading, isOverviewEmpty, isRefreshing, loadOverview
 }
 
 .stats-skeleton-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
 }
 
 .skeleton-title {

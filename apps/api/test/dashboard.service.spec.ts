@@ -8,7 +8,12 @@ describe("DashboardService", () => {
         followUpCount: 36,
         convertedLeads: 6,
         totalLeads: 20,
-        pendingReminders: 4
+        pendingReminders: 4,
+        newOpportunities: 9,
+        pipelineForecastAmount: 188000,
+        wonOpportunities: 5,
+        wonAmount: 132000,
+        lostOpportunities: 3
       })
     } as any;
     const dataScopeService = {
@@ -28,6 +33,11 @@ describe("DashboardService", () => {
     expect(result.followUpCount).toBe(36);
     expect(result.conversionRate).toBe(30);
     expect(result.pendingReminders).toBe(4);
+    expect(result.newOpportunities).toBe(9);
+    expect(result.pipelineForecastAmount).toBe(188000);
+    expect(result.wonOpportunities).toBe(5);
+    expect(result.wonAmount).toBe(132000);
+    expect(result.opportunityWinRate).toBe(62.5);
     expect(dashboardRepository.getOverviewCounts).toHaveBeenCalledWith(
       expect.objectContaining({
         ownerFilter: {

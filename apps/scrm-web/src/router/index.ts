@@ -13,6 +13,7 @@ const CustomersPage = () => import("@/pages/customers/CustomersPage.vue");
 const LeadsPage = () => import("@/pages/leads/LeadsPage.vue");
 const LoginPage = () => import("@/pages/login/LoginPage.vue");
 const NoAccessPage = () => import("@/pages/no-access/NoAccessPage.vue");
+const OpportunitiesPage = () => import("@/pages/opportunities/OpportunitiesPage.vue");
 const SystemAdminPage = () => import("@/pages/system-administration/SystemAdminPage.vue");
 
 const routes: RouteRecordRaw[] = [
@@ -63,6 +64,15 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: "客户中心",
           permission: "customer:read"
+        }
+      },
+      {
+        path: "opportunities",
+        name: "opportunities",
+        component: OpportunitiesPage,
+        meta: {
+          title: "商机管理",
+          permission: "opportunity:read"
         }
       },
       {

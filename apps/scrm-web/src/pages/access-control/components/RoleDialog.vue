@@ -98,6 +98,7 @@ const GROUP_LABELS: Record<string, string> = {
   directory: "组织通讯录",
   leave: "请假申请",
   lead: "线索中心",
+  opportunity: "商机管理",
   system: "系统管理",
   workspace: "工作台"
 };

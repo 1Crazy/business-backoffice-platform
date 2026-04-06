@@ -9,6 +9,10 @@ describe("resolveFirstAccessiblePath", () => {
     expect(resolveFirstAccessiblePath(["customer:read"])).toBe("/customers");
   });
 
+  it("resolves the opportunity page when only opportunity permission is granted", () => {
+    expect(resolveFirstAccessiblePath(["opportunity:read"])).toBe("/opportunities");
+  });
+
   it("returns null when no page permission is available", () => {
     expect(resolveFirstAccessiblePath([])).toBeNull();
   });

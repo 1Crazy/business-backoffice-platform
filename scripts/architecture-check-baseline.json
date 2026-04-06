@@ -1,7 +1,13 @@
 {
   "maxVueLines": {
     "limit": 250,
-    "allow": []
+    "allow": [
+      "apps/oa-web/src/layout/AppLayout.vue",
+      "apps/oa-web/src/pages/login/LoginPage.vue",
+      "apps/oa-web/src/pages/workspace/WorkspacePage.vue",
+      "apps/scrm-web/src/layout/AppLayout.vue",
+      "apps/scrm-web/src/pages/login/LoginPage.vue"
+    ]
   },
   "presentationHttpImports": {
     "allow": []

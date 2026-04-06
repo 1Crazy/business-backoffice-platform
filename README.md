@@ -2,7 +2,7 @@
 
 这是一个基于 `Vue 3 + TypeScript` 前端、`NestJS + Prisma` 后端、`PostgreSQL` 数据库的多应用后台平台仓库。当前已经落地 `scrm-web` 与 `oa-web` 两个后台前端，并复用统一的账号、角色权限、会话身份与组织架构体系。
 
-当前仓库已经完成一期 SCRM MVP、二期平台硬化以及 OA 首批办公协作闭环，能够覆盖认证、客户、线索、跟进、看板、请假审批、公告通知、组织通讯录、审计与附件等核心后台流程。
+当前仓库已经完成一期 SCRM MVP、二期平台硬化、商机管理能力以及 OA 首批办公协作闭环，能够覆盖认证、客户、线索、商机、跟进、看板、请假审批、公告通知、组织通讯录、审计与附件等核心后台流程。
 
 当前仓库已经包含：
 
@@ -22,8 +22,9 @@
 - 账号登录、角色权限、菜单和接口授权
 - 部门、员工、角色与权限管理
 - 客户中心：客户档案、标签、来源、状态、归属人
+- 商机管理：商机创建、编辑、详情、归属人转交、阶段推进、赢单/输单收口、阶段轨迹
 - 线索与跟进：线索分配、线索转客户、跟进记录、待办提醒
-- 运营看板：新增客户、跟进次数、线索转化率
+- 运营看板：新增客户、跟进次数、线索转化率、新增商机、进行中预计金额、赢单数量、赢单金额、赢单率
 - OA 办公协作：工作台、待我审批、我发起的申请、请假申请、公告通知、组织通讯录
 - 系统管理：字典配置、审计日志、附件上传
 - 二期平台硬化：会话续期与退出、统一数据范围、分页列表、附件下载鉴权、仓库级 CI
@@ -159,6 +160,18 @@ pnpm prisma:seed
 - 当前默认会把 PostgreSQL 映射到宿主机 `5433`，用于避开常见的本机 `5432` 端口占用问题
 - 如果你使用 `pnpm docker:up`，这些数据库初始化动作会在 API 容器启动时自动执行
 
+商机权限补充：
+
+- `opportunity:read`：查看商机列表、详情与阶段轨迹
+- `opportunity:write`：创建、编辑、推进阶段、赢单/输单收口
+- `opportunity:assign`：重新分配商机负责人
+
+默认角色授权补充：
+
+- `super-admin`：默认拥有全部商机权限与全局数据范围
+- `sales-manager`：默认拥有商机读写与分配权限，数据范围继承部门级规则
+- `sales-member`：默认拥有商机读写权限，数据范围继承本人级规则
+
 默认管理员账号：
 
 - 用户名：`admin`
@@ -256,8 +269,35 @@ GitHub Actions 也会执行同样的校验流程，工作流文件位于 [`.gith
 
 - `GET /api/customers`
 - `GET /api/leads`
+- `GET /api/sales-opportunities`
 - `GET /api/leads/reminders`
 - `GET /api/audit-logs`
+
+商机主接口：
+
+- `POST /api/sales-opportunities`
+- `PATCH /api/sales-opportunities/:id`
+- `GET /api/sales-opportunities/:id`
+- `PATCH /api/sales-opportunities/:id/owner`
+- `PATCH /api/sales-opportunities/:id/stage`
+- `PATCH /api/sales-opportunities/:id/mark-won`
+- `PATCH /api/sales-opportunities/:id/mark-lost`
+
+商机指标口径：
+
+- 新增商机数按 `createdAt` 统计
+- 进行中商机预计金额按当前进行中状态且 `expectedCloseDate` 落入时间范围统计
+- 赢单商机数与赢单金额按 `closedAt` 统计
+- 赢单率按同一时间范围内 `赢单数 / (赢单数 + 输单数)` 计算
+
+## 商机验证路径
+
+本次商机能力联调建议至少覆盖以下路径：
+
+- 使用 `sales-manager` 或 `sales-member` 账号登录 `scrm-web`
+- 进入“商机管理”页面，完成商机创建、编辑、重新分配、阶段推进与赢单/输单收口
+- 打开商机详情抽屉，确认阶段轨迹按时间顺序可见
+- 返回“运营看板”，确认新增商机、进行中预计金额、赢单数量、赢单金额和赢单率与相同时间范围内的业务数据口径一致
 
 会话接口：
 

@@ -4,13 +4,23 @@
     <div class="intro-copy">
       <span class="intro-kicker">决策辅助</span>
       <h2>数据解读</h2>
-      <p>这个区域保留给销售主管快速判断节奏。新增客户、线索转化、跟进强度和待办提醒会在这里形成一个更容易扫读的判断层。</p>
+      <p>这个区域保留给销售主管快速判断节奏。新增商机、当前预测、赢单结果和待办提醒会在这里组成更完整的销售经营视图。</p>
     </div>
     <div class="insight-grid">
       <article class="insight-item">
-        <span>线索总量</span>
-        <strong>{{ overview?.totalLeads ?? 0 }}</strong>
-        <p>当前时间范围内进入漏斗的线索数量。</p>
+        <span>管道金额</span>
+        <strong>{{ formatAmount(overview?.pipelineForecastAmount ?? 0) }}</strong>
+        <p>按预计成交时间统计的进行中商机金额。</p>
+      </article>
+      <article class="insight-item">
+        <span>赢单数量</span>
+        <strong>{{ overview?.wonOpportunities ?? 0 }}</strong>
+        <p>按收口时间统计的赢单商机数量。</p>
+      </article>
+      <article class="insight-item">
+        <span>赢单金额</span>
+        <strong>{{ formatAmount(overview?.wonAmount ?? 0) }}</strong>
+        <p>同周期赢单商机沉淀下来的总金额。</p>
       </article>
       <article class="insight-item">
         <span>已转客户</span>
@@ -28,6 +38,7 @@
 
 <script setup lang="ts">
 import type { DashboardOverview } from "@/types/dashboard";
+import { formatAmount } from "@/utils/display";
 
 defineProps<{
   overview: DashboardOverview | null;
@@ -62,7 +73,7 @@ defineProps<{
 
 .insight-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 14px;
 }
 

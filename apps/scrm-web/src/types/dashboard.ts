@@ -8,6 +8,11 @@ export interface DashboardOverview {
   totalLeads: number;
   conversionRate: number;
   pendingReminders: number;
+  newOpportunities: number;
+  pipelineForecastAmount: number;
+  wonOpportunities: number;
+  wonAmount: number;
+  opportunityWinRate: number;
 }
 
 export type DashboardDateRange = [string, string] | [];

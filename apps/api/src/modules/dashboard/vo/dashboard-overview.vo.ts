@@ -43,4 +43,29 @@ format: "date-time"
     description: "pendingReminders 字段。"
   })
   pendingReminders!: number;
+
+  @ApiProperty({
+    description: "newOpportunities 字段。"
+  })
+  newOpportunities!: number;
+
+  @ApiProperty({
+    description: "pipelineForecastAmount 字段。"
+  })
+  pipelineForecastAmount!: number;
+
+  @ApiProperty({
+    description: "wonOpportunities 字段。"
+  })
+  wonOpportunities!: number;
+
+  @ApiProperty({
+    description: "wonAmount 字段。"
+  })
+  wonAmount!: number;
+
+  @ApiProperty({
+    description: "opportunityWinRate 字段。"
+  })
+  opportunityWinRate!: number;
 }

@@ -4,6 +4,7 @@ import { computed, onMounted, ref } from "vue";
 
 import { fetchDashboardOverview } from "@/api/dashboard.api";
 import type { DashboardDateRange, DashboardOverview } from "@/types/dashboard";
+import { formatAmount } from "@/utils/display";
 import { getRequestErrorMessage } from "@/utils/request";
 
 export function useDashboardOverview() {
@@ -20,7 +21,11 @@ export function useDashboardOverview() {
         overview.value?.followUpCount ?? 0,
         overview.value?.convertedLeads ?? 0,
         overview.value?.totalLeads ?? 0,
-        overview.value?.pendingReminders ?? 0
+        overview.value?.pendingReminders ?? 0,
+        overview.value?.newOpportunities ?? 0,
+        overview.value?.pipelineForecastAmount ?? 0,
+        overview.value?.wonOpportunities ?? 0,
+        overview.value?.wonAmount ?? 0
       ].every((value) => value === 0)
   );
 
@@ -34,6 +39,21 @@ export function useDashboardOverview() {
       label: "跟进次数",
       value: overview.value?.followUpCount ?? "--",
       caption: "统计周期内新建的跟进记录数"
+    },
+    {
+      label: "新增商机",
+      value: overview.value?.newOpportunities ?? "--",
+      caption: "按创建时间进入销售管道的新商机数量"
+    },
+    {
+      label: "进行中预计金额",
+      value: overview.value ? formatAmount(overview.value.pipelineForecastAmount) : "--",
+      caption: "按预计成交时间统计的进行中商机金额"
+    },
+    {
+      label: "商机赢单率",
+      value: overview.value ? `${overview.value.opportunityWinRate}%` : "--",
+      caption: "同周期赢单数 / 赢单数与输单数之和"
     },
     {
       label: "线索转化率",
