@@ -56,6 +56,25 @@ function readFile(filePath) {
   return fs.readFileSync(filePath, "utf8");
 }
 
+function getFrontendAppDirs() {
+  const appsDir = path.join(repoRoot, "apps");
+
+  if (!fs.existsSync(appsDir)) {
+    return [];
+  }
+
+  return fs
+    .readdirSync(appsDir, { withFileTypes: true })
+    .filter((entry) => entry.isDirectory() && entry.name.endsWith("-web"))
+    .map((entry) => path.join(appsDir, entry.name));
+}
+
+function getFrontendSrcDirs() {
+  return getFrontendAppDirs()
+    .map((appDir) => path.join(appDir, "src"))
+    .filter((srcDir) => fs.existsSync(srcDir));
+}
+
 function isAllowlisted(ruleName, file) {
   return baseline[ruleName]?.allow?.includes(file);
 }
@@ -72,47 +91,53 @@ function checkStaleAllowlist(ruleName) {
 }
 
 function checkVueLineLimit() {
-  // 这里故意只检查 `.vue` 文件，因为当前规则是针对页面/组件体量，而不是普通工具模块。
+  // 多个前端应用共享同一套复杂度约束；所有 `apps/*-web` 下的 `.vue` 文件都要被扫描。
   const limit = baseline.maxVueLines.limit;
-  const files = walkFiles(path.join(repoRoot, "apps", "web", "src"), (filePath) => filePath.endsWith(".vue"));
 
-  for (const filePath of files) {
-    const file = relativePath(filePath);
-    const lineCount = readFile(filePath).split(/\r?\n/).length;
+  for (const srcDir of getFrontendSrcDirs()) {
+    const files = walkFiles(srcDir, (filePath) => filePath.endsWith(".vue"));
 
-    if (lineCount <= limit || isAllowlisted("maxVueLines", file)) {
-      continue;
+    for (const filePath of files) {
+      const file = relativePath(filePath);
+      const lineCount = readFile(filePath).split(/\r?\n/).length;
+
+      if (lineCount <= limit || isAllowlisted("maxVueLines", file)) {
+        continue;
+      }
+
+      addFailure("maxVueLines", file, `Vue file has ${lineCount} lines, exceeding limit ${limit}.`);
     }
-
-    addFailure("maxVueLines", file, `Vue file has ${lineCount} lines, exceeding limit ${limit}.`);
   }
 }
 
 function checkPresentationHttpImports() {
-  // 页面、布局和展示组件都属于“展示层”；它们可以调用领域 API 或 composable，但不能直接触底层 HTTP 客户端。
-  const roots = [
-    path.join(repoRoot, "apps", "web", "src", "pages"),
-    path.join(repoRoot, "apps", "web", "src", "layout"),
-    path.join(repoRoot, "apps", "web", "src", "components")
-  ];
+  // 页面、布局和展示组件都属于“展示层”；每个前端应用都必须通过本应用的 api/composable 分层访问数据。
   const importPattern = /from\s+["'][^"']*api\/http["']|from\s+["']axios["']/;
 
-  for (const root of roots) {
-    const files = walkFiles(root, (filePath) => filePath.endsWith(".vue") || filePath.endsWith(".ts"));
+  for (const appDir of getFrontendAppDirs()) {
+    const roots = [
+      path.join(appDir, "src", "pages"),
+      path.join(appDir, "src", "layout"),
+      path.join(appDir, "src", "components")
+    ];
 
-    for (const filePath of files) {
-      const file = relativePath(filePath);
-      const content = readFile(filePath);
+    for (const root of roots) {
+      const files = walkFiles(root, (filePath) => filePath.endsWith(".vue") || filePath.endsWith(".ts"));
 
-      if (!importPattern.test(content) || isAllowlisted("presentationHttpImports", file)) {
-        continue;
+      for (const filePath of files) {
+        const file = relativePath(filePath);
+        const content = readFile(filePath);
+
+        if (!importPattern.test(content) || isAllowlisted("presentationHttpImports", file)) {
+          continue;
+        }
+
+        addFailure(
+          "presentationHttpImports",
+          file,
+          "Presentation-layer file imports api/http or axios directly. Move requests into the frontend app's src/api or composables."
+        );
       }
-
-      addFailure(
-        "presentationHttpImports",
-        file,
-        "Presentation-layer file imports api/http or axios directly. Move requests into apps/web/src/api or composables."
-      );
     }
   }
 }

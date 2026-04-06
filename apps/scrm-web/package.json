@@ -1,5 +1,5 @@
 {
-  "name": "@scrm/web",
+  "name": "scrm-web",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -26,4 +26,3 @@
     "vue-tsc": "^2.1.10"
   }
 }
-

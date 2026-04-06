@@ -47,10 +47,10 @@ services:
       retries: 10
       start_period: 60s
 
-  web:
+  scrm-web:
     build:
       context: .
-      dockerfile: apps/web/Dockerfile
+      dockerfile: apps/scrm-web/Dockerfile
       args:
         VITE_API_BASE_URL: /api
     container_name: scrm-web

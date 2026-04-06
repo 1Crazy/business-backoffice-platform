@@ -105,7 +105,7 @@ importers:
         specifier: ^5.7.2
         version: 5.9.3
 
-  apps/web:
+  apps/scrm-web:
     dependencies:
       '@element-plus/icons-vue':
         specifier: ^2.3.1

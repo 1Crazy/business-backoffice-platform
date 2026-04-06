@@ -4,12 +4,14 @@
 
 当前仓库已经包含：
 
-- `apps/web`：Vue 3 + Vite + Pinia + Vue Router + Element Plus 后台前端
+- `apps/scrm-web`：Vue 3 + Vite + Pinia + Vue Router + Element Plus 的当前 SCRM 后台前端
 - `apps/api`：NestJS + JWT/RBAC + Prisma 后端服务
-- `docker-compose.yml`：本地 PostgreSQL、NestJS API、Vue Web 的容器编排配置
+- `docker-compose.yml`：本地 PostgreSQL、NestJS API、SCRM Web 的容器编排配置
 - `apps/api/prisma`：数据库 schema、初始迁移和种子脚本
 - `openspec/specs`：当前已经同步完成的主规格
 - `openspec/changes/archive/2026-04-05-bootstrap-scrm-mvp`：已归档的一期 MVP OpenSpec 变更记录
+
+前端工作区命名约定为 `apps/<domain>-web`。当前已经落地的是 `apps/scrm-web`，后续如需新增 OA 前端，将按同一规则接入，例如 `apps/oa-web`。
 
 ## 当前能力范围
 
@@ -48,7 +50,7 @@ pnpm install
 
 - 根目录 [`.env.example`](/Users/hong/Documents/my-project/scrm-test/.env.example)
 - 后端 [`apps/api/.env.example`](/Users/hong/Documents/my-project/scrm-test/apps/api/.env.example)
-- 前端 [`apps/web/.env.example`](/Users/hong/Documents/my-project/scrm-test/apps/web/.env.example)
+- 前端 [`apps/scrm-web/.env.example`](/Users/hong/Documents/my-project/scrm-test/apps/scrm-web/.env.example)
 - 开发说明 [`docs/development.md`](/Users/hong/Documents/my-project/scrm-test/docs/development.md)
 
 本地开发时可以基于这些模板生成对应的 `.env` 文件。当前工作区里已经存在可直接运行的本地 `.env`，如果需要自定义端口、数据库账号或 API 地址，可以按需修改。
@@ -57,7 +59,7 @@ pnpm install
 
 - 根目录 `.env` 主要服务于 `docker-compose.yml`，除数据库变量外，建议同时配置 `JWT_SECRET`。
 - `apps/api/.env` 当前需要 `PORT`、`JWT_SECRET` 和 `DATABASE_URL`。
-- `apps/web/.env` 当前需要 `VITE_API_BASE_URL`。
+- `apps/scrm-web/.env` 当前需要 `VITE_API_BASE_URL`。
 
 ## Docker 一键启动
 
@@ -118,7 +120,7 @@ pnpm dev:full
 
 ```bash
 pnpm docker:infra
-pnpm dev:web
+pnpm dev:scrm-web
 ```
 
 常用辅助命令：
@@ -131,7 +133,7 @@ pnpm docker:infra:down
 使用建议：
 
 - `pnpm docker:infra`：只启动 PostgreSQL，适合本地热更新开发。
-- `pnpm dev:full`：并行启动本地 API 和 Web，适合高频改代码。
+- `pnpm dev:full`：并行启动本地 API 和 `scrm-web`，适合高频改代码。
 - `pnpm docker:up`：全量构建并启动数据库、API、Web，更适合联调、验收和近部署环境验证，而不是日常每次改代码都执行。
 
 ## Prisma 初始化
@@ -181,7 +183,7 @@ pnpm dev:api
 前端：
 
 ```bash
-pnpm dev:web
+pnpm dev:scrm-web
 ```
 
 停止开发用数据库：
@@ -208,21 +210,21 @@ pnpm docker:infra:down
 
 ```bash
 pnpm --filter @scrm/api lint
-pnpm --filter @scrm/web lint
+pnpm --filter scrm-web lint
 ```
 
 构建：
 
 ```bash
 pnpm --filter @scrm/api build
-pnpm --filter @scrm/web build
+pnpm --filter scrm-web build
 ```
 
 测试：
 
 ```bash
 pnpm --filter @scrm/api test
-pnpm --filter @scrm/web test
+pnpm --filter scrm-web test
 ```
 
 仓库级校验：

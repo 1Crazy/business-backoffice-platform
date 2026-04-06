@@ -2,16 +2,18 @@
 import { ElMessage } from "element-plus";
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
 
-import AppLayout from "@/layout/AppLayout.vue";
-import AccessControlPage from "@/pages/access-control/AccessControlPage.vue";
-import DashboardPage from "@/pages/dashboard/DashboardPage.vue";
-import CustomersPage from "@/pages/customers/CustomersPage.vue";
-import LeadsPage from "@/pages/leads/LeadsPage.vue";
-import LoginPage from "@/pages/login/LoginPage.vue";
-import NoAccessPage from "@/pages/no-access/NoAccessPage.vue";
-import SystemAdminPage from "@/pages/system-administration/SystemAdminPage.vue";
 import { resolveFirstAccessiblePath } from "@/router/access";
 import { useAuthStore } from "@/stores/auth";
+
+// 页面按路由入口懒加载，避免登录页首次进入时把整套后台业务代码一次性打进主包。
+const AppLayout = () => import("@/layout/AppLayout.vue");
+const AccessControlPage = () => import("@/pages/access-control/AccessControlPage.vue");
+const DashboardPage = () => import("@/pages/dashboard/DashboardPage.vue");
+const CustomersPage = () => import("@/pages/customers/CustomersPage.vue");
+const LeadsPage = () => import("@/pages/leads/LeadsPage.vue");
+const LoginPage = () => import("@/pages/login/LoginPage.vue");
+const NoAccessPage = () => import("@/pages/no-access/NoAccessPage.vue");
+const SystemAdminPage = () => import("@/pages/system-administration/SystemAdminPage.vue");
 
 const routes: RouteRecordRaw[] = [
   {

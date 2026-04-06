@@ -8,10 +8,11 @@
 
 ### 前端分层
 
+- 前端工作区统一采用 `apps/<domain>-web` 命名；当前 SCRM 前端位于 `apps/scrm-web`，未来新增 OA 等前端也遵循相同规则。
 - 页面组件只负责页面组装、路由上下文和顶层交互编排，不直接承载复杂业务流程。
-- 所有接口请求统一放到 `apps/web/src/api` 的领域模块中；页面、布局和展示组件不得直接导入 `api/http`。
-- 所有可复用逻辑统一放到 `apps/web/src/composables`，优先按业务场景命名，例如 `useCustomersList`、`useLeadFollowUps`。
-- 所有类型声明统一放到 `apps/web/src/types` 的领域文件中，禁止继续向单一“大而全”的类型文件无节制追加内容。
+- 所有接口请求统一放到应用内的 `apps/<domain>-web/src/api` 领域模块中；页面、布局和展示组件不得直接导入 `api/http`。
+- 所有可复用逻辑统一放到应用内的 `apps/<domain>-web/src/composables`，优先按业务场景命名，例如 `useCustomersList`、`useLeadFollowUps`。
+- 所有类型声明统一放到应用内的 `apps/<domain>-web/src/types` 领域文件中，禁止继续向单一“大而全”的类型文件无节制追加内容。
 - 展示组件只通过 `props` 和 `emits` 协作，不直接请求接口。
 - 单个 Vue 文件超过 `250` 行必须继续拆分；拆分优先级依次为：section/dialog/drawer 子组件、composable、领域 API。
 - 禁止在模板里写复杂表达式；复杂筛选、映射、格式化和条件分支必须下沉到 `computed`、辅助函数或显式 props。
@@ -76,7 +77,7 @@
 - `JWT_SECRET`
 - `DATABASE_URL`
 
-前端 `apps/web/.env`：
+前端 `apps/scrm-web/.env`：
 
 - `VITE_API_BASE_URL`
 
@@ -164,14 +165,14 @@ pnpm dev:full
 
 - `pnpm docker:infra` 只启动 PostgreSQL，适合本地热更新开发前的基础设施准备。
 - `pnpm dev:full` 会并行启动本地 API 与 Web，适合作为默认日常开发入口。
-- 如果只改前端，可以保留数据库容器，仅执行 `pnpm dev:web`。
+- 如果只改当前 SCRM 前端，可以保留数据库容器，仅执行 `pnpm dev:scrm-web`。
 - `pnpm docker:up` 仍保留给全量联调、验收和近部署环境验证，不建议作为每次改代码后的默认入口。
 
 分别启动单个服务：
 
 ```bash
 pnpm dev:api
-pnpm dev:web
+pnpm dev:scrm-web
 ```
 
 查看或停止开发用数据库：
