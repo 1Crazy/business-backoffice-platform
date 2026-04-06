@@ -18,7 +18,11 @@
             </el-tag>
           </template>
         </el-table-column>
-        <el-table-column prop="status" label="状态" width="120" />
+        <el-table-column label="状态" width="120">
+          <template #default="{ row }">
+            {{ formatAccessStatus(row.status) }}
+          </template>
+        </el-table-column>
         <el-table-column label="操作" width="220">
           <template #default="{ row }">
             <el-button text @click="$emit('edit', row)">编辑</el-button>
@@ -32,6 +36,7 @@
 
 <script setup lang="ts">
 import type { Role } from "@/types/access-control";
+import { formatAccessStatus } from "@/utils/display";
 
 defineProps<{
   roles: Role[];

@@ -29,7 +29,7 @@ const { announcement } = useAnnouncementDetailPage();
   display: flex;
   flex-wrap: wrap;
   gap: 16px;
-  color: #64748b;
+  color: var(--app-text-tertiary);
   font-size: 12px;
 }
 
@@ -37,18 +37,19 @@ h2 {
   margin: 16px 0 10px;
   font-size: clamp(28px, 4vw, 38px);
   line-height: 1.18;
+  letter-spacing: -0.04em;
 }
 
 .summary {
   margin: 0;
-  color: #334155;
+  color: var(--app-text-primary);
   font-size: 16px;
   line-height: 1.8;
 }
 
 .content {
   margin-top: 24px;
-  color: #475569;
+  color: var(--app-text-secondary);
   line-height: 1.9;
   white-space: pre-wrap;
 }

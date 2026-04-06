@@ -42,6 +42,7 @@ export function useAccessControlPage() {
   const users = ref<User[]>([]);
   const roles = ref<Role[]>([]);
   const permissionCatalog = ref<PermissionItem[]>([]);
+  const isLoading = ref(true);
 
   const departmentDialogVisible = ref(false);
   const userDialogVisible = ref(false);
@@ -205,6 +206,10 @@ export function useAccessControlPage() {
   }
 
   async function loadData(): Promise<void> {
+    if (departments.value.length === 0 && users.value.length === 0 && roles.value.length === 0) {
+      isLoading.value = true;
+    }
+
     try {
       const data = await fetchAccessControlData();
 
@@ -214,6 +219,8 @@ export function useAccessControlPage() {
       permissionCatalog.value = data.permissionCatalog;
     } catch (error) {
       ElMessage.error(getRequestErrorMessage(error, "权限与组织数据加载失败，请稍后重试。"));
+    } finally {
+      isLoading.value = false;
     }
   }
 
@@ -364,6 +371,7 @@ export function useAccessControlPage() {
     departmentForm,
     departmentRules,
     departments,
+    isLoading,
     loadData,
     openDepartmentDialog,
     openRoleDialog,

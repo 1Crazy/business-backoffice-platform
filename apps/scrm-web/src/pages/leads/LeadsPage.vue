@@ -2,6 +2,7 @@
 <template>
   <div class="page-stack">
     <LeadReminderSection
+      :loading="isReminderLoading"
       :reminders="reminders"
       :table-state="reminderTableState"
       @refresh="loadReminders"
@@ -10,6 +11,7 @@
 
     <LeadsFilterSection
       :filters="filters"
+      :loading="isMetaLoading"
       :source-options="sourceOptions"
       :users="users"
       :lead-statuses="leadStatuses"
@@ -22,8 +24,11 @@
 
     <LeadsTableSection
       :leads="leads"
+      :loading="isLeadTableLoading"
+      :refreshing="isLeadTableRefreshing"
       :table-state="leadTableState"
       :current-sort-label="currentLeadSortLabel"
+      :source-options="sourceOptions"
       :is-desktop="isDesktop"
       @edit="openLeadDialog"
       @assign="openOwnerDialog"
@@ -91,6 +96,10 @@ const {
   handleReminderPageChange,
   handleUploadAttachment,
   isDesktop,
+  isLeadTableLoading,
+  isLeadTableRefreshing,
+  isMetaLoading,
+  isReminderLoading,
   isTabletOrDown,
   leadDialogVisible,
   leadForm,

@@ -4,14 +4,20 @@
     <LayoutSidebarNav :active-path="route.path" :items="visibleItems" />
 
     <main class="main">
-      <header class="topbar">
+      <header class="topbar page-card">
         <div class="topbar-copy">
-          <div class="page-title">{{ currentTitle }}</div>
-          <div class="page-caption">聚焦客户与销售运营的一期 SCRM MVP</div>
+          <div class="topbar-kicker">{{ currentKicker }}</div>
+          <div class="title-row">
+            <div class="page-title">{{ currentTitle }}</div>
+            <span class="page-chip">{{ currentSectionLabel }}</span>
+          </div>
         </div>
         <div class="topbar-actions">
-          <span class="user-name">{{ authStore.currentUser?.displayName }}</span>
-          <el-button text @click="handleLogout">退出登录</el-button>
+          <div class="user-summary">
+            <span class="user-name">{{ authStore.currentUser?.displayName ?? "系统管理员" }}</span>
+            <span class="user-caption">运营控制台账号</span>
+          </div>
+          <el-button text class="logout-button" @click="handleLogout">退出</el-button>
         </div>
       </header>
 
@@ -61,6 +67,8 @@ const visibleItems = computed(() =>
 );
 
 const currentTitle = computed(() => route.meta.title?.toString() ?? "SCRM 控制台");
+const currentSectionLabel = computed(() => resolveSectionLabel(route.path));
+const currentKicker = computed(() => resolveKicker(route.path));
 
 function handleNavigate(path: string): void {
   if (path !== route.path) {
@@ -72,91 +80,217 @@ async function handleLogout(): Promise<void> {
   await authStore.logout();
   await routerInstance.push("/login");
 }
+
+function resolveSectionLabel(path: string): string {
+  if (path.startsWith("/customers")) {
+    return "客户运营";
+  }
+
+  if (path.startsWith("/leads")) {
+    return "线索跟进";
+  }
+
+  if (path.startsWith("/departments")) {
+    return "权限治理";
+  }
+
+  if (path.startsWith("/system")) {
+    return "平台设置";
+  }
+
+  return "运营总览";
+}
+
+function resolveKicker(path: string): string {
+  if (path.startsWith("/customers")) {
+    return "客户经营";
+  }
+
+  if (path.startsWith("/leads")) {
+    return "线索漏斗";
+  }
+
+  if (path.startsWith("/departments")) {
+    return "权限治理";
+  }
+
+  if (path.startsWith("/system")) {
+    return "平台管理";
+  }
+
+  return "销售运营";
+}
 </script>
 
 <style scoped>
 .layout-shell {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
-  min-height: 100vh;
+  grid-template-columns: 232px minmax(0, 1fr);
+  height: var(--app-shell-min-height, 100vh);
+  min-height: var(--app-shell-min-height, 100vh);
+  align-items: stretch;
+  overflow: hidden;
 }
 
 .main {
-  padding: 20px;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr);
+  min-height: 0;
+  padding: 16px 18px 18px 0;
   min-width: 0;
+  overflow: hidden;
 }
 
 .topbar {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 20px;
-  margin-bottom: 20px;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: 20px;
 }
 
 .topbar-copy {
   min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.topbar-kicker {
+  display: inline-flex;
+  color: var(--app-accent-strong);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
 }
 
 .page-title {
-  font-size: clamp(22px, 3vw, 28px);
+  font-size: clamp(20px, 2.1vw, 26px);
   font-weight: 700;
-  color: #0f172a;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  color: var(--app-text-primary);
 }
 
-.page-caption {
-  margin-top: 6px;
-  color: #64748b;
-  line-height: 1.6;
+.page-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--app-accent-soft);
+  color: var(--app-accent-strong);
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .topbar-actions {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 6px 10px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.user-summary {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+  padding: 8px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(95, 125, 170, 0.16);
+  background: rgba(255, 255, 255, 0.86);
 }
 
 .user-name {
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.user-caption {
+  color: var(--app-text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.logout-button {
+  padding-inline: 8px;
 }
 
 .content {
   min-width: 0;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-gutter: stable;
+  overscroll-behavior: contain;
+}
+
+.content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.content::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(95, 125, 170, 0.3);
 }
 
 @media (max-width: 1024px) {
   .layout-shell {
     grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
   }
 
   .main {
-    padding: 16px;
+    min-height: auto;
+    grid-template-rows: auto auto auto;
+    padding: 14px 16px 16px;
+    overflow: visible;
   }
 
-  .user-name {
-    display: none;
+  .topbar {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .topbar-actions {
+    justify-content: space-between;
+  }
+
+  .content {
+    overflow: visible;
+    padding-right: 0;
+    scrollbar-gutter: auto;
   }
 }
 
 @media (max-width: 640px) {
   .main {
-    padding: 14px;
+    padding: 12px;
   }
 
   .topbar {
-    gap: 14px;
-    margin-bottom: 16px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
   }
 
   .topbar-actions {
-    width: 100%;
-    justify-content: space-between;
+    flex-wrap: wrap;
+  }
+
+  .user-summary {
+    flex: 1 1 auto;
   }
 }
 </style>

@@ -34,6 +34,7 @@
     <div class="toolbar-row">
       <p>把客户资料、标签、归属和跟进放在同一张工作台里，销售切换成本会更低。</p>
       <div class="toolbar-actions">
+        <span v-if="loading" class="loading-badge">筛选项同步中</span>
         <el-button @click="$emit('refresh')">刷新</el-button>
         <el-button @click="$emit('create-tag')">新建标签</el-button>
         <el-button type="primary" @click="$emit('create-customer')">新增客户</el-button>
@@ -51,6 +52,7 @@ import type { DictionaryEntry } from "@/types/dictionaries";
 
 const props = defineProps<{
   filters: CustomerFilters;
+  loading?: boolean;
   sourceOptions: DictionaryEntry[];
   statusOptions: DictionaryEntry[];
   users: User[];
@@ -104,7 +106,7 @@ const localSortPreset = computed({
 
 .toolbar-row p {
   margin: 0;
-  color: #64748b;
+  color: var(--app-text-secondary);
 }
 
 .toolbar-actions {

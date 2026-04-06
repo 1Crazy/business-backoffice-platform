@@ -1,8 +1,13 @@
 <!-- 公告列表页面：负责组装公告列表并跳转到详情。 -->
 <template>
-  <section class="page-card">
-    <h2 class="page-section-title">公告通知</h2>
-    <p class="page-section-caption">把制度更新、节奏提醒和协作通知收拢到一个可快速浏览的列表里。</p>
+  <section class="page-card page-shell">
+    <div class="section-head">
+      <div>
+        <span class="page-kicker">组织动态</span>
+        <h2 class="page-section-title">公告通知</h2>
+      </div>
+      <p class="page-section-caption">把制度更新、节奏提醒和协作通知收拢到一个可快速浏览的列表里。</p>
+    </div>
 
     <div v-if="announcements.length" class="announcement-list">
       <RouterLink v-for="item in announcements" :key="item.id" :to="`/announcements/${item.id}`" class="announcement-item">
@@ -25,6 +30,23 @@ const { announcements } = useAnnouncementsPage();
 </script>
 
 <style scoped>
+.page-shell {
+  display: grid;
+  gap: 18px;
+}
+
+.section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.section-head .page-section-caption {
+  max-width: 420px;
+  margin: 0;
+}
+
 .announcement-list {
   display: grid;
   gap: 14px;
@@ -34,9 +56,16 @@ const { announcements } = useAnnouncementsPage();
   display: grid;
   gap: 10px;
   padding: 18px;
-  border-radius: 16px;
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
+  border-radius: 22px;
+  border: 1px solid rgba(125, 148, 171, 0.14);
+  background: rgba(255, 255, 255, 0.74);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.announcement-item:hover {
+  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.18);
+  box-shadow: 0 18px 30px rgba(23, 32, 43, 0.05);
 }
 
 .announcement-head {
@@ -47,17 +76,18 @@ const { announcements } = useAnnouncementsPage();
 
 .announcement-head span,
 .announcement-foot {
-  color: #64748b;
+  color: var(--app-text-tertiary);
   font-size: 12px;
 }
 
 .announcement-item p {
   margin: 0;
-  color: #475569;
+  color: var(--app-text-secondary);
   line-height: 1.7;
 }
 
 @media (max-width: 640px) {
+  .section-head,
   .announcement-head {
     flex-direction: column;
   }

@@ -1,20 +1,27 @@
 <!-- 待我审批页面：负责组装审批列表和通过/驳回操作。 -->
 <template>
-  <section class="page-card">
-    <h2 class="page-section-title">待我审批</h2>
-    <p class="page-section-caption">把当前轮到你处理的请假申请集中展示，避免在消息和表单之间来回跳转。</p>
+  <section class="page-card table-page">
+    <div class="section-head">
+      <div>
+        <span class="page-kicker">待办流程</span>
+        <h2 class="page-section-title">待我审批</h2>
+      </div>
+      <p class="page-section-caption">把当前轮到你处理的请假申请集中展示，避免在消息和表单之间来回跳转。</p>
+    </div>
 
     <div class="page-table-shell">
       <el-table :data="approvals" border>
         <el-table-column prop="applicantName" label="申请人" min-width="120" />
-        <el-table-column prop="leaveType" label="请假类型" min-width="120" />
+        <el-table-column label="请假类型" min-width="120">
+          <template #default="{ row }">{{ formatLeaveType(row.leaveType) }}</template>
+        </el-table-column>
         <el-table-column label="请假时间" min-width="220">
           <template #default="{ row }">{{ row.startAt }} ~ {{ row.endAt }}</template>
         </el-table-column>
         <el-table-column prop="reason" label="事由" min-width="240" />
         <el-table-column label="状态" width="120">
           <template #default="{ row }">
-            <span class="status-pill pending">{{ row.status }}</span>
+            <span class="status-pill pending">{{ formatLeaveStatus(row.status) }}</span>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="220">
@@ -32,6 +39,32 @@
 
 <script setup lang="ts">
 import { useApprovalsInboxPage } from "@/composables/approvals/useApprovalsInboxPage";
+import { formatLeaveStatus, formatLeaveType } from "@/utils/display";
 
 const { approvals, decide, processingId } = useApprovalsInboxPage();
 </script>
+
+<style scoped>
+.table-page {
+  display: grid;
+  gap: 18px;
+}
+
+.section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.section-head .page-section-caption {
+  max-width: 440px;
+  margin: 0;
+}
+
+@media (max-width: 640px) {
+  .section-head {
+    flex-direction: column;
+  }
+}
+</style>

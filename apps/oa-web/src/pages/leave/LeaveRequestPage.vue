@@ -1,9 +1,14 @@
 <!-- 请假申请页面：负责组装请假表单和最近申请记录。 -->
 <template>
   <div class="page-grid">
-    <section class="page-card">
-      <h2 class="page-section-title">发起请假申请</h2>
-      <p class="page-section-caption">首期先收口最常见的请假申请场景，后续再扩展到更多办公流程。</p>
+    <section class="page-card form-card">
+      <div class="section-head">
+        <div>
+          <span class="page-kicker">请假流程</span>
+          <h2 class="page-section-title">发起请假申请</h2>
+        </div>
+        <p class="page-section-caption">首期先收口最常见的请假申请场景，后续再扩展到更多办公流程。</p>
+      </div>
 
       <el-form
         :ref="setFormRef"
@@ -36,14 +41,19 @@
     </section>
 
     <section class="page-card">
-      <h2 class="page-section-title">最近申请</h2>
-      <p class="page-section-caption">提交后可以在这里快速回看最近的申请状态。</p>
+      <div class="section-head compact">
+        <div>
+          <span class="page-kicker">最近申请</span>
+          <h2 class="page-section-title">最近申请</h2>
+        </div>
+        <p class="page-section-caption">提交后可以在这里快速回看最近的申请状态。</p>
+      </div>
 
       <div v-if="recentRequests.length" class="recent-list">
         <article v-for="item in recentRequests" :key="item.id" class="recent-item">
           <div class="recent-row">
-            <strong>{{ item.leaveType }}</strong>
-            <span class="status-pill" :class="item.status.toLowerCase()">{{ item.status }}</span>
+            <strong>{{ formatLeaveType(item.leaveType) }}</strong>
+            <span class="status-pill" :class="item.status.toLowerCase()">{{ formatLeaveStatus(item.status) }}</span>
           </div>
           <p>{{ item.startAt }} ~ {{ item.endAt }}</p>
         </article>
@@ -55,6 +65,7 @@
 
 <script setup lang="ts">
 import { useLeaveRequestPage } from "@/composables/leave/useLeaveRequestPage";
+import { formatLeaveStatus, formatLeaveType } from "@/utils/display";
 
 const { form, recentRequests, rules, setFormRef, submit, submitting } = useLeaveRequestPage();
 </script>
@@ -66,6 +77,23 @@ const { form, recentRequests, rules, setFormRef, submit, submitting } = useLeave
   grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
 }
 
+.form-card {
+  display: grid;
+  gap: 18px;
+}
+
+.section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.section-head .page-section-caption {
+  max-width: 360px;
+  margin: 0;
+}
+
 .recent-list {
   display: grid;
   gap: 12px;
@@ -73,9 +101,9 @@ const { form, recentRequests, rules, setFormRef, submit, submitting } = useLeave
 
 .recent-item {
   padding: 14px 16px;
-  border-radius: 16px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(125, 148, 171, 0.14);
 }
 
 .recent-row {
@@ -86,13 +114,17 @@ const { form, recentRequests, rules, setFormRef, submit, submitting } = useLeave
 
 .recent-item p {
   margin: 10px 0 0;
-  color: #64748b;
+  color: var(--app-text-tertiary);
   font-size: 13px;
 }
 
 @media (max-width: 960px) {
   .page-grid {
     grid-template-columns: 1fr;
+  }
+
+  .section-head {
+    flex-direction: column;
   }
 }
 </style>

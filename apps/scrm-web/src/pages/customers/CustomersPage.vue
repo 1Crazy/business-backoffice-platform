@@ -3,6 +3,7 @@
   <div class="page-stack">
     <CustomersFilterSection
       :filters="filters"
+      :loading="isMetaLoading"
       :source-options="sourceOptions"
       :status-options="statusOptions"
       :users="users"
@@ -17,8 +18,12 @@
 
     <CustomersTableSection
       :customers="customers"
+      :loading="isTableLoading"
+      :refreshing="isTableRefreshing"
       :table-state="customerTableState"
       :current-sort-label="currentCustomerSortLabel"
+      :source-options="sourceOptions"
+      :status-options="statusOptions"
       :is-desktop="isDesktop"
       @edit="openCustomerDialog"
       @transfer="openOwnerDialog"
@@ -98,6 +103,9 @@ const {
   handleCustomerPageSizeChange,
   handleUploadAttachment,
   isDesktop,
+  isMetaLoading,
+  isTableLoading,
+  isTableRefreshing,
   isTabletOrDown,
   loadCustomers,
   openCustomerDialog,

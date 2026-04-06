@@ -16,12 +16,17 @@ const EMPTY_OVERVIEW: WorkspaceOverview = {
 
 export function useWorkspacePage() {
   const overview = ref<WorkspaceOverview>(EMPTY_OVERVIEW);
+  const isLoading = ref(true);
 
   async function loadData(): Promise<void> {
+    isLoading.value = true;
+
     try {
       overview.value = await fetchWorkspaceOverview();
     } catch (error) {
       ElMessage.error(getRequestErrorMessage(error, "OA 工作台数据加载失败，请稍后重试。"));
+    } finally {
+      isLoading.value = false;
     }
   }
 
@@ -30,6 +35,7 @@ export function useWorkspacePage() {
   });
 
   return {
+    isLoading,
     loadData,
     overview
   };

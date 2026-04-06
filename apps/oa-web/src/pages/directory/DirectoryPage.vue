@@ -2,8 +2,13 @@
 <template>
   <div class="page-grid">
     <section class="page-card filter-card">
-      <h2 class="page-section-title">组织通讯录</h2>
-      <p class="page-section-caption">按部门查看同事信息，先覆盖最常用的内部联络查询场景。</p>
+      <div class="section-head">
+        <div>
+          <span class="page-kicker">组织检索</span>
+          <h2 class="page-section-title">组织通讯录</h2>
+        </div>
+        <p class="page-section-caption">按部门查看同事信息，先覆盖最常用的内部联络查询场景。</p>
+      </div>
 
       <el-select v-model="selectedDepartmentId" placeholder="查看全部部门成员" clearable>
         <el-option v-for="item in departments" :key="item.id" :label="item.name" :value="item.id" />
@@ -41,6 +46,18 @@ const { departments, members, selectedDepartmentId } = useDirectoryPage();
   gap: 14px;
 }
 
+.section-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.section-head .page-section-caption {
+  max-width: 420px;
+  margin: 0;
+}
+
 .member-grid {
   display: grid;
   gap: 16px;
@@ -51,6 +68,9 @@ const { departments, members, selectedDepartmentId } = useDirectoryPage();
   display: grid;
   gap: 8px;
   justify-items: start;
+  background:
+    linear-gradient(135deg, rgba(15, 118, 110, 0.08), transparent 68%),
+    rgba(255, 255, 255, 0.84);
 }
 
 .member-avatar {
@@ -59,8 +79,8 @@ const { departments, members, selectedDepartmentId } = useDirectoryPage();
   display: grid;
   place-items: center;
   border-radius: 16px;
-  background: #ccfbf1;
-  color: #0f766e;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent-strong);
   font-size: 20px;
   font-weight: 700;
 }
@@ -72,11 +92,17 @@ const { departments, members, selectedDepartmentId } = useDirectoryPage();
 }
 
 .member-meta {
-  color: #64748b;
+  color: var(--app-text-secondary);
 }
 
 .member-contact {
-  color: #334155;
+  color: var(--app-text-primary);
   font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .section-head {
+    flex-direction: column;
+  }
 }
 </style>

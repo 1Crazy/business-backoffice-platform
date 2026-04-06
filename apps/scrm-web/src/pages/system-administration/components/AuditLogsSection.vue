@@ -1,18 +1,33 @@
 <!-- 复用组件：负责承载跨页面共享的展示或交互骨架，通过 props / emits 与页面协作。 -->
 <template>
   <section>
+    <template v-if="loading">
+      <div class="table-skeleton">
+        <div class="table-skeleton-row">
+          <span class="ui-skeleton ui-skeleton-line medium" />
+          <span class="ui-skeleton ui-skeleton-line long" />
+        </div>
+        <div v-for="item in 4" :key="item" class="table-skeleton-row">
+          <span class="ui-skeleton ui-skeleton-line medium" />
+          <span class="ui-skeleton ui-skeleton-line short" />
+          <span class="ui-skeleton ui-skeleton-line long" />
+          <span class="ui-skeleton ui-skeleton-line medium" />
+        </div>
+      </div>
+    </template>
+    <template v-else>
     <el-form class="audit-filter-form" label-position="top">
       <el-form-item label="操作人">
         <el-input v-model="filter.actorName" placeholder="按操作人筛选" class="filter-input" />
       </el-form-item>
       <el-form-item label="动作类型">
         <el-select v-model="filter.actionType" clearable placeholder="全部动作">
-          <el-option v-for="item in auditActionOptions" :key="item" :label="item" :value="item" />
+          <el-option v-for="item in auditActionOptions" :key="item" :label="formatAuditActionType(item)" :value="item" />
         </el-select>
       </el-form-item>
       <el-form-item label="对象类型">
         <el-select v-model="filter.targetType" clearable placeholder="全部对象">
-          <el-option v-for="item in auditTargetTypeOptions" :key="item" :label="item" :value="item" />
+          <el-option v-for="item in auditTargetTypeOptions" :key="item" :label="formatAuditTargetType(item)" :value="item" />
         </el-select>
       </el-form-item>
       <el-form-item label="时间范围">
@@ -40,18 +55,26 @@
 
     <div class="table-meta">
       <div>
-        <span class="table-kicker">Audit Trail</span>
+        <span class="table-kicker">操作审计</span>
         <h3>审计结果</h3>
-        <p>当前筛选下共 {{ tableState.total }} 条日志，便于按动作与时间区间快速追溯。</p>
+        <p>结果已按动作、对象和时间区间同步更新，便于快速追溯关键操作。</p>
       </div>
-      <div class="meta-pill">第 {{ tableState.page }} / {{ Math.max(tableState.totalPages, 1) }} 页</div>
+      <div class="meta-pill">{{ refreshing ? "结果同步中" : `排序：${currentSortLabel}` }}</div>
     </div>
 
     <div v-if="auditLogs.length" class="page-table-shell">
       <el-table :data="auditLogs" border>
         <el-table-column prop="actorName" label="操作人" min-width="160" />
-        <el-table-column prop="actionType" label="动作" min-width="140" />
-        <el-table-column prop="targetType" label="对象类型" min-width="140" />
+        <el-table-column label="动作" min-width="140">
+          <template #default="{ row }">
+            {{ formatAuditActionType(row.actionType) }}
+          </template>
+        </el-table-column>
+        <el-table-column label="对象类型" min-width="140">
+          <template #default="{ row }">
+            {{ formatAuditTargetType(row.targetType) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="targetId" label="对象 ID" min-width="220" />
         <el-table-column prop="createdAt" label="时间" min-width="180" />
       </el-table>
@@ -59,7 +82,6 @@
     <el-empty v-else description="当前筛选条件下暂无审计日志" />
 
     <div class="pagination-row">
-      <span class="pagination-caption">每页 {{ tableState.pageSize }} 条，当前排序：{{ currentSortLabel }}</span>
       <el-pagination
         :current-page="tableState.page"
         :page-size="tableState.pageSize"
@@ -71,6 +93,7 @@
         @size-change="$emit('page-size-change', $event)"
       />
     </div>
+    </template>
   </section>
 </template>
 
@@ -79,6 +102,7 @@ import { computed } from "vue";
 
 import type { AuditLog } from "@/types/audit-logs";
 import type { AuditLogFilters, AuditLogTableState } from "@/types/system-administration";
+import { formatAuditActionType, formatAuditTargetType } from "@/utils/display";
 
 const props = defineProps<{
   filter: AuditLogFilters;
@@ -86,6 +110,8 @@ const props = defineProps<{
   auditActionOptions: readonly string[];
   auditTargetTypeOptions: readonly string[];
   auditSortOptions: ReadonlyArray<{ value: string; label: string }>;
+  loading?: boolean;
+  refreshing?: boolean;
   tableState: AuditLogTableState;
   currentSortLabel: string;
 }>();
@@ -117,6 +143,20 @@ const localSortPreset = computed({
   margin: 0;
   min-width: 0;
   color: #64748b;
+}
+
+.table-skeleton {
+  display: grid;
+  gap: 12px;
+}
+
+.table-skeleton-row {
+  display: grid;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  border: 1px solid rgba(95, 125, 170, 0.14);
+  background: rgba(248, 251, 255, 0.62);
 }
 
 .filter-input,
@@ -158,36 +198,39 @@ const localSortPreset = computed({
   border-radius: 999px;
   background: rgba(30, 64, 175, 0.08);
   color: #1e40af;
-  font-size: 12px;
-  font-family: "Fira Code", monospace;
-  letter-spacing: 0.04em;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
 .table-meta h3 {
   margin: 0 0 6px;
 }
 
-.table-meta p,
-.pagination-caption {
+.table-meta p {
   margin: 0;
   color: #64748b;
+  line-height: 1.6;
+  font-size: 13px;
 }
 
 .meta-pill {
   display: inline-flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 7px 11px;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(30, 64, 175, 0.08), rgba(245, 158, 11, 0.12));
+  background: rgba(30, 64, 175, 0.08);
   color: #1e3a8a;
   font-weight: 600;
   white-space: nowrap;
+  font-size: 12px;
 }
 
 .pagination-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
   gap: 16px;
   flex-wrap: wrap;
   margin-top: 16px;

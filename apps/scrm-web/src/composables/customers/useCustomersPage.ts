@@ -56,6 +56,9 @@ export function useCustomersPage() {
   const sourceOptions = ref<DictionaryEntry[]>([]);
   const statusOptions = ref<DictionaryEntry[]>([]);
   const followUps = ref<FollowUp[]>([]);
+  const isMetaLoading = ref(true);
+  const isTableLoading = ref(true);
+  const isTableRefreshing = ref(false);
 
   const customerDialogVisible = ref(false);
   const tagDialogVisible = ref(false);
@@ -249,6 +252,8 @@ export function useCustomersPage() {
   }
 
   async function loadMeta(): Promise<void> {
+    isMetaLoading.value = true;
+
     try {
       const data = await fetchCustomerMeta();
 
@@ -258,10 +263,20 @@ export function useCustomersPage() {
       statusOptions.value = data.statusOptions;
     } catch (error) {
       ElMessage.error(getRequestErrorMessage(error, "客户基础数据加载失败，请稍后重试。"));
+    } finally {
+      isMetaLoading.value = false;
     }
   }
 
   async function loadCustomers(): Promise<void> {
+    const shouldShowSkeleton = customers.value.length === 0;
+
+    if (shouldShowSkeleton) {
+      isTableLoading.value = true;
+    } else {
+      isTableRefreshing.value = true;
+    }
+
     try {
       const data = await fetchCustomers(buildCustomerListQuery());
 
@@ -272,6 +287,9 @@ export function useCustomersPage() {
       customerTableState.totalPages = data.totalPages;
     } catch (error) {
       ElMessage.error(getRequestErrorMessage(error, "客户列表加载失败，请稍后重试。"));
+    } finally {
+      isTableLoading.value = false;
+      isTableRefreshing.value = false;
     }
   }
 
@@ -477,7 +495,10 @@ export function useCustomersPage() {
     handleCustomerPageSizeChange,
     handleUploadAttachment,
     isDesktop,
+    isMetaLoading,
     isTabletOrDown,
+    isTableLoading,
+    isTableRefreshing,
     openCustomerDialog,
     openFollowUpDrawer,
     openOwnerDialog,

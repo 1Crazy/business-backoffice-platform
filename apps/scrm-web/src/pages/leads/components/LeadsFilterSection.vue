@@ -12,7 +12,7 @@
       </el-form-item>
       <el-form-item label="状态">
         <el-select v-model="filters.status" clearable placeholder="全部状态">
-          <el-option v-for="item in leadStatuses" :key="item" :label="item" :value="item" />
+          <el-option v-for="item in leadStatuses" :key="item" :label="formatLeadStatus(item)" :value="item" />
         </el-select>
       </el-form-item>
       <el-form-item label="归属人">
@@ -29,6 +29,7 @@
     <div class="toolbar-row">
       <p>线索页把“分配、转化、跟进、提醒”压缩到一条工作路径里，减少销售切换页面的次数。</p>
       <div class="toolbar-actions">
+        <span v-if="loading" class="loading-badge">筛选项同步中</span>
         <el-button @click="$emit('refresh')">刷新</el-button>
         <el-button type="primary" @click="$emit('create-lead')">新增线索</el-button>
       </div>
@@ -42,9 +43,11 @@ import { computed } from "vue";
 import type { User } from "@/types/access-control";
 import type { DictionaryEntry } from "@/types/dictionaries";
 import type { Lead, LeadFilters } from "@/types/leads";
+import { formatLeadStatus } from "@/utils/display";
 
 const props = defineProps<{
   filters: LeadFilters;
+  loading?: boolean;
   sourceOptions: DictionaryEntry[];
   users: User[];
   leadStatuses: Lead["status"][];
@@ -96,7 +99,7 @@ const localSortPreset = computed({
 
 .toolbar-row p {
   margin: 0;
-  color: #64748b;
+  color: var(--app-text-secondary);
 }
 
 .toolbar-actions {

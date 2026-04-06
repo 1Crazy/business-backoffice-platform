@@ -1,0 +1,44 @@
+import { describe, expect, it, vi } from "vitest";
+import { ref } from "vue";
+import { mount, RouterLinkStub } from "@vue/test-utils";
+
+import WorkspacePage from "./WorkspacePage.vue";
+
+vi.mock("@/composables/workspace/useWorkspacePage", () => ({
+  useWorkspacePage: () => ({
+    overview: ref({
+      pendingApprovalCount: 12,
+      myRequestCount: 4,
+      activeAnnouncementCount: 7,
+      directoryDepartmentCount: 18,
+      recentAnnouncements: [
+        {
+          id: "announcement-1",
+          title: "五一节假期值班排班发布",
+          summary: "请负责人在今天 18:00 前完成确认。",
+          publishedAt: "2026-04-05 10:30",
+          publishedByName: "行政中心"
+        }
+      ]
+    })
+  })
+}));
+
+describe("WorkspacePage", () => {
+  it("renders the upgraded workspace hero, metrics, and announcement list", () => {
+    const wrapper = mount(WorkspacePage, {
+      global: {
+        stubs: {
+          RouterLink: RouterLinkStub,
+          "el-empty": true
+        }
+      }
+    });
+
+    expect(wrapper.text()).toContain("办公工作台");
+    expect(wrapper.text()).toContain("待我审批");
+    expect(wrapper.text()).toContain("12");
+    expect(wrapper.text()).toContain("最近公告");
+    expect(wrapper.text()).toContain("五一节假期值班排班发布");
+  });
+});

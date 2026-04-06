@@ -2,7 +2,7 @@
 <template>
   <nav class="page-card mobile-nav-card mobile-nav" aria-label="快捷导航">
     <div class="mobile-nav-copy">
-      <span>快捷导航</span>
+      <span>办公协同</span>
       <strong>{{ currentTitle }}</strong>
     </div>
     <div class="mobile-nav-links">
@@ -38,8 +38,10 @@ defineEmits<{
 <style scoped>
 .mobile-nav-card {
   display: none;
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  border-radius: 18px;
 }
 
 .mobile-nav-copy {
@@ -50,45 +52,50 @@ defineEmits<{
 }
 
 .mobile-nav-copy span {
-  color: #64748b;
-  font-size: 13px;
+  color: var(--app-text-tertiary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .mobile-nav-copy strong {
-  color: #0f172a;
+  color: var(--app-text-primary);
   font-size: 14px;
 }
 
 .mobile-nav-links {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   overflow-x: auto;
-  padding: 4px 2px 2px;
+  padding: 2px 2px 0;
   scrollbar-width: thin;
 }
 
 .mobile-nav-link {
   border: none;
   border-radius: 999px;
-  padding: 10px 16px;
-  background: #e2e8f0;
-  color: #334155;
+  padding: 8px 12px;
+  background: rgba(245, 239, 229, 0.9);
+  color: var(--app-text-secondary);
   font: inherit;
   font-weight: 600;
+  font-size: 13px;
   white-space: nowrap;
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
 }
 
 .mobile-nav-link:hover {
-  background: #ccfbf1;
-  color: #0f766e;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent-strong);
   transform: translateY(-1px);
 }
 
 .mobile-nav-link.active {
-  background: #0f766e;
+  background: linear-gradient(135deg, var(--app-accent) 0%, var(--app-accent-strong) 100%);
   color: white;
+  box-shadow: 0 14px 28px rgba(15, 118, 110, 0.18);
 }
 
 @media (max-width: 1024px) {

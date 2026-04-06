@@ -55,6 +55,9 @@ const auditSortOptions = [
 export function useSystemAdministrationPage() {
   const dictionaryEntries = ref<DictionaryEntry[]>([]);
   const auditLogs = ref<AuditLog[]>([]);
+  const isDictionaryLoading = ref(true);
+  const isAuditLoading = ref(true);
+  const isAuditRefreshing = ref(false);
 
   const dictionaryDialogVisible = ref(false);
   const dictionaryFormRef = ref<FormInstance>();
@@ -94,6 +97,9 @@ export function useSystemAdministrationPage() {
   const currentAuditSortLabel = computed(
     () => auditSortOptions.find((item) => item.value === auditTableState.sortPreset)?.label ?? "最新日志"
   );
+  const isInitialLoading = computed(
+    () => (isDictionaryLoading.value || isAuditLoading.value) && dictionaryEntries.value.length === 0 && auditLogs.value.length === 0
+  );
 
   function setDictionaryFormRef(instance: FormInstance | undefined): void {
     dictionaryFormRef.value = instance;
@@ -110,14 +116,26 @@ export function useSystemAdministrationPage() {
   }
 
   async function loadDictionaries(): Promise<void> {
+    isDictionaryLoading.value = true;
+
     try {
       dictionaryEntries.value = await fetchDictionaries();
     } catch (error) {
       ElMessage.error(getRequestErrorMessage(error, "字典数据加载失败，请稍后重试。"));
+    } finally {
+      isDictionaryLoading.value = false;
     }
   }
 
   async function loadAuditLogs(): Promise<void> {
+    const shouldShowSkeleton = auditLogs.value.length === 0;
+
+    if (shouldShowSkeleton) {
+      isAuditLoading.value = true;
+    } else {
+      isAuditRefreshing.value = true;
+    }
+
     try {
       const [startDate, endDate] = auditFilter.dateRange ?? [];
       const data = await fetchAuditLogs({
@@ -139,6 +157,9 @@ export function useSystemAdministrationPage() {
       auditTableState.totalPages = data.totalPages;
     } catch (error) {
       ElMessage.error(getRequestErrorMessage(error, "审计日志加载失败，请稍后重试。"));
+    } finally {
+      isAuditLoading.value = false;
+      isAuditRefreshing.value = false;
     }
   }
 
@@ -225,6 +246,10 @@ export function useSystemAdministrationPage() {
     dictionaryRules,
     handleAuditPageChange,
     handleAuditPageSizeChange,
+    isAuditLoading,
+    isAuditRefreshing,
+    isDictionaryLoading,
+    isInitialLoading,
     loadAuditLogs,
     openDictionaryDialog,
     setDictionaryFormRef,

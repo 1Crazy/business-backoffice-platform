@@ -8,9 +8,13 @@
 
     <div class="page-table-shell">
       <el-table :data="dictionaryEntries" border>
-        <el-table-column prop="type" label="类型" min-width="160" />
+        <el-table-column label="业务类型" min-width="160">
+          <template #default="{ row }">
+            {{ formatDictionaryType(row.type) }}
+          </template>
+        </el-table-column>
         <el-table-column prop="label" label="标签" min-width="160" />
-        <el-table-column prop="value" label="值" min-width="160" />
+        <el-table-column prop="value" label="编码值" min-width="160" />
         <el-table-column prop="sort" label="排序" width="100" />
         <el-table-column label="状态" width="120">
           <template #default="{ row }">
@@ -29,6 +33,7 @@
 
 <script setup lang="ts">
 import type { DictionaryEntry } from "@/types/dictionaries";
+import { formatDictionaryType } from "@/utils/display";
 
 defineProps<{
   dictionaryEntries: DictionaryEntry[];

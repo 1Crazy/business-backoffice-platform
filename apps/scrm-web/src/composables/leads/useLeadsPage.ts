@@ -49,6 +49,10 @@ export function useLeadsPage() {
   const reminders = ref<ReminderListItem[]>([]);
   const sourceOptions = ref<DictionaryEntry[]>([]);
   const followUps = ref<FollowUp[]>([]);
+  const isMetaLoading = ref(true);
+  const isLeadTableLoading = ref(true);
+  const isLeadTableRefreshing = ref(false);
+  const isReminderLoading = ref(true);
 
   const leadDialogVisible = ref(false);
   const ownerDialogVisible = ref(false);
@@ -202,6 +206,8 @@ export function useLeadsPage() {
   }
 
   async function loadMeta(): Promise<void> {
+    isMetaLoading.value = true;
+
     try {
       const data = await fetchLeadMeta();
 
@@ -209,10 +215,20 @@ export function useLeadsPage() {
       sourceOptions.value = data.sourceOptions;
     } catch (error) {
       ElMessage.error(getRequestErrorMessage(error, "线索基础数据加载失败，请稍后重试。"));
+    } finally {
+      isMetaLoading.value = false;
     }
   }
 
   async function loadLeads(): Promise<void> {
+    const shouldShowSkeleton = leads.value.length === 0;
+
+    if (shouldShowSkeleton) {
+      isLeadTableLoading.value = true;
+    } else {
+      isLeadTableRefreshing.value = true;
+    }
+
     try {
       const data = await fetchLeads(buildLeadListQuery());
 
@@ -223,10 +239,15 @@ export function useLeadsPage() {
       leadTableState.totalPages = data.totalPages;
     } catch (error) {
       ElMessage.error(getRequestErrorMessage(error, "线索列表加载失败，请稍后重试。"));
+    } finally {
+      isLeadTableLoading.value = false;
+      isLeadTableRefreshing.value = false;
     }
   }
 
   async function loadReminders(): Promise<void> {
+    isReminderLoading.value = true;
+
     try {
       const data = await fetchLeadReminders(reminderTableState.page, reminderTableState.pageSize);
 
@@ -237,6 +258,8 @@ export function useLeadsPage() {
       reminderTableState.totalPages = data.totalPages;
     } catch (error) {
       ElMessage.error(getRequestErrorMessage(error, "提醒列表加载失败，请稍后重试。"));
+    } finally {
+      isReminderLoading.value = false;
     }
   }
 
@@ -432,6 +455,10 @@ export function useLeadsPage() {
     handleReminderPageChange,
     handleUploadAttachment,
     isDesktop,
+    isLeadTableLoading,
+    isLeadTableRefreshing,
+    isMetaLoading,
+    isReminderLoading,
     isTabletOrDown,
     leadDialogVisible,
     leadForm,

@@ -9,6 +9,8 @@ import { getRequestErrorMessage } from "@/utils/request";
 export function useDashboardOverview() {
   const dateRange = ref<DashboardDateRange>([]);
   const overview = ref<DashboardOverview | null>(null);
+  const isLoading = ref(true);
+  const isRefreshing = ref(false);
 
   const isOverviewEmpty = computed(
     () =>
@@ -42,6 +44,13 @@ export function useDashboardOverview() {
 
   async function loadOverview(): Promise<void> {
     const [startDate, endDate] = dateRange.value;
+    const shouldShowSkeleton = !overview.value;
+
+    if (shouldShowSkeleton) {
+      isLoading.value = true;
+    } else {
+      isRefreshing.value = true;
+    }
 
     try {
       overview.value = await fetchDashboardOverview({
@@ -50,6 +59,9 @@ export function useDashboardOverview() {
       });
     } catch (error) {
       ElMessage.error(getRequestErrorMessage(error, "看板数据加载失败，请检查后端服务后重试。"));
+    } finally {
+      isLoading.value = false;
+      isRefreshing.value = false;
     }
   }
 
@@ -60,7 +72,9 @@ export function useDashboardOverview() {
   return {
     cards,
     dateRange,
+    isLoading,
     isOverviewEmpty,
+    isRefreshing,
     loadOverview,
     overview
   };

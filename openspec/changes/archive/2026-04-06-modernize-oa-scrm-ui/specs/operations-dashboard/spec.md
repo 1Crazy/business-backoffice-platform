@@ -1,8 +1,5 @@
-# operations-dashboard Specification
+## MODIFIED Requirements
 
-## Purpose
-TBD - created by archiving change bootstrap-scrm-mvp. Update Purpose after archive.
-## Requirements
 ### Requirement: 看板展示核心销售运营指标
 系统 SHALL 提供看板视图，在选定时间范围内以适合运营分析的控制台方式汇总新增客户数、跟进次数、已转化线索数、线索总数、待处理提醒数和线索转化率。上述指标 SHALL 使用与业务列表一致的筛选口径和归属范围计算，并在页面结构上优先呈现筛选区、核心 KPI 区和洞察区，以支持销售主管快速扫读与判断。
 
@@ -18,6 +15,8 @@ TBD - created by archiving change bootstrap-scrm-mvp. Update Purpose after archi
 - **WHEN** 用户以同一时间范围和数据范围查看看板与业务列表
 - **THEN** 系统使用一致的归属范围和统计口径计算这些指标
 
+## ADDED Requirements
+
 ### Requirement: 看板提供适合运营分析的现代数据控制台界面
 看板界面 SHALL 采用高信息密度但可快速扫读的现代数据控制台风格。页面 MUST 提供稳定的筛选条、重点 KPI 卡、洞察说明区和清晰的视觉强调层级，并通过颜色、间距和标题节奏帮助用户在数秒内定位异常数字、关键趋势和后续动作。
 
@@ -28,18 +27,3 @@ TBD - created by archiving change bootstrap-scrm-mvp. Update Purpose after archi
 #### Scenario: 看板在不同宽度下保持数据可读性
 - **WHEN** 用户在桌面宽度或窄屏宽度访问看板
 - **THEN** 筛选条、指标卡和洞察区按断点重排，但关键数据和模块优先级保持一致，不因布局压缩而失去可读性
-
-### Requirement: 看板指标遵守数据权限范围
-系统 SHALL 按照当前登录用户的数据访问权限范围收口看板指标，并支持本人、本部门、子部门和全局等角色范围模型。
-
-#### Scenario: 销售成员仅查看本人数据
-- **WHEN** 销售成员打开看板
-- **THEN** 除非被授予更广范围权限，否则系统仅统计该销售成员本人归属的数据
-
-#### Scenario: 主管查看子部门范围数据
-- **WHEN** 具备子部门范围可见性的主管打开看板
-- **THEN** 系统统计该主管所在部门及其下级部门范围内归属的数据
-
-#### Scenario: 全局范围角色查看全量数据
-- **WHEN** 具备全局数据范围的管理员打开看板
-- **THEN** 系统统计当前租户内全部归属数据

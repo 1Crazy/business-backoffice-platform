@@ -36,7 +36,7 @@
         <el-col v-if="form.id" :xs="24" :sm="12">
           <el-form-item label="状态" prop="status">
             <el-select v-model="form.status" class="full-width" placeholder="请选择线索状态">
-              <el-option v-for="item in leadStatuses" :key="item" :label="item" :value="item" />
+              <el-option v-for="item in leadStatuses" :key="item" :label="formatLeadStatus(item)" :value="item" />
             </el-select>
           </el-form-item>
         </el-col>
@@ -66,6 +66,7 @@ import { computed } from "vue";
 import type { User } from "@/types/access-control";
 import type { DictionaryEntry } from "@/types/dictionaries";
 import type { Lead, LeadFormModel } from "@/types/leads";
+import { formatLeadStatus } from "@/utils/display";
 
 const props = defineProps<{
   visible: boolean;

@@ -2,15 +2,39 @@
 <template>
   <div class="login-shell">
     <section class="hero">
-      <div class="hero-chip">Office Automation MVP</div>
-      <h1>把审批、公告与组织协作收束到一个清爽的办公入口</h1>
-      <p>
-        这一版先聚焦工作台、请假审批、公告通知和组织通讯录，让员工在同一套统一身份下完成日常办公协作。
-      </p>
+      <div class="hero-chip">统一员工门户</div>
+      <div class="hero-brand">
+        <span class="hero-mark">OA</span>
+        <div>
+          <strong>OA 办公台</strong>
+          <span>办公流转、组织公告与协同联络的统一入口</span>
+        </div>
+      </div>
+      <h1>把审批、公告与组织协作收束到一个更有秩序的办公门户</h1>
+      <p>这一版先聚焦工作台、请假审批、公告通知和组织通讯录，让员工用同一套身份完成日常办公流转与信息同步。</p>
+      <div class="hero-grid">
+        <article class="hero-card">
+          <span>流程集中</span>
+          <strong>审批 / 请假 / 公告</strong>
+          <p>高频办公动作集中在一个入口，不再来回切换。</p>
+        </article>
+        <article class="hero-card">
+          <span>统一身份</span>
+          <strong>统一员工身份</strong>
+          <p>沿用平台账号体系进入 OA，不再维护割裂的登录身份。</p>
+        </article>
+      </div>
     </section>
 
     <section class="page-card form-panel">
-      <div class="panel-title">OA 登录</div>
+      <div class="panel-kicker">安全登录</div>
+      <div class="panel-head">
+        <div>
+          <div class="panel-title">OA 登录</div>
+          <div class="panel-caption">使用统一员工账号进入审批、公告与办公协同门户。</div>
+        </div>
+        <div class="identity-pill">统一账号</div>
+      </div>
       <el-form
         ref="loginFormRef"
         :model="form"
@@ -31,7 +55,11 @@
           登录系统
         </el-button>
       </el-form>
-      <div class="hint">统一账号体系仍复用平台种子账号：`admin / Admin123456!`</div>
+      <div class="hint">统一账号体系仍复用平台种子账号。</div>
+      <div class="credential-card">
+        <span>体验账号</span>
+        <strong>admin / Admin123456!</strong>
+      </div>
     </section>
   </div>
 </template>
@@ -96,46 +124,161 @@ defineExpose({
 .login-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(360px, 480px);
-  gap: 28px;
+  grid-template-columns: minmax(0, 1.25fr) minmax(360px, 500px);
+  gap: 32px;
   align-items: center;
   padding: 40px;
 }
 
 .hero {
-  padding: 48px;
+  display: grid;
+  gap: 22px;
+  padding: 36px 48px;
 }
 
 .hero-chip {
   display: inline-flex;
+  width: fit-content;
   padding: 8px 14px;
   border-radius: 999px;
-  background: rgba(37, 99, 235, 0.12);
-  color: #0f766e;
-  font-weight: 600;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent-strong);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.hero-mark {
+  width: 60px;
+  height: 60px;
+  display: grid;
+  place-items: center;
+  border-radius: 22px;
+  background: linear-gradient(135deg, var(--app-accent) 0%, var(--app-accent-strong) 100%);
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.hero-brand strong,
+.hero-brand span {
+  display: block;
+}
+
+.hero-brand strong {
+  font-size: 15px;
+}
+
+.hero-brand span {
+  margin-top: 4px;
+  color: var(--app-text-secondary);
+  font-size: 13px;
 }
 
 .hero h1 {
-  margin: 22px 0 16px;
+  margin: 0;
   font-size: clamp(36px, 5vw, 62px);
-  line-height: 1.08;
-  color: #0f172a;
+  line-height: 1.03;
+  letter-spacing: -0.05em;
+  color: var(--app-text-primary);
 }
 
 .hero p {
-  max-width: 620px;
+  max-width: 640px;
+  margin: 0;
   font-size: 17px;
   line-height: 1.8;
-  color: #475569;
+  color: var(--app-text-secondary);
+}
+
+.hero-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  max-width: 640px;
+}
+
+.hero-card {
+  padding: 18px 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(125, 148, 171, 0.14);
+  box-shadow: 0 18px 32px rgba(23, 32, 43, 0.04);
+}
+
+.hero-card span {
+  display: block;
+  color: var(--app-text-tertiary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero-card strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 18px;
+  line-height: 1.4;
+}
+
+.hero-card p {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--app-text-secondary);
+  line-height: 1.7;
 }
 
 .form-panel {
-  margin-right: 40px;
+  margin-right: 24px;
+  display: grid;
+  gap: 18px;
+}
+
+.panel-kicker {
+  color: var(--app-text-tertiary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .panel-title {
-  margin-bottom: 18px;
   font-size: 24px;
+  font-weight: 700;
+}
+
+.panel-caption {
+  margin-top: 6px;
+  color: var(--app-text-secondary);
+  line-height: 1.7;
+  font-size: 13px;
+}
+
+.identity-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--app-accent-strong);
+  font-size: 12px;
   font-weight: 700;
 }
 
@@ -149,8 +292,27 @@ defineExpose({
 }
 
 .hint {
-  margin-top: 14px;
-  color: #64748b;
+  color: var(--app-text-secondary);
+  font-size: 13px;
+}
+
+.credential-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: rgba(245, 239, 229, 0.78);
+  border: 1px solid rgba(125, 148, 171, 0.12);
+}
+
+.credential-card span {
+  color: var(--app-text-secondary);
+  font-size: 12px;
+}
+
+.credential-card strong {
   font-size: 13px;
 }
 
@@ -166,6 +328,19 @@ defineExpose({
 
   .form-panel {
     margin-right: 0;
+  }
+
+  .hero-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .hero-brand,
+  .panel-head,
+  .credential-card {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>
