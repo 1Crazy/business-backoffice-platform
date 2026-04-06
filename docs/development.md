@@ -61,6 +61,7 @@
 - 当前已知遗留例外集中记录在 `scripts/architecture-check-baseline.json`。
 - 新增遗留例外前必须先完成代码评审，并同步更新 OpenSpec 变更说明；默认只允许减少例外，不允许无说明扩张。
 - 当前脚本主要覆盖可静态检测的规则；中文注释质量、Swagger 说明完整度、模板复杂度和单方法职责边界仍需结合上面的 review checklist 人工确认。
+- 仓库脚本必须清晰区分“基础设施容器”“本地热更新开发”“全量 Docker 联调”三类入口，避免开发者为日常改代码反复重建前后端镜像。
 
 ## 环境变量
 
@@ -152,14 +153,35 @@ pnpm prisma:migrate
 pnpm prisma:seed
 ```
 
-启动前后端：
+推荐日常开发流程：
+
+```bash
+pnpm docker:infra
+pnpm dev:full
+```
+
+说明：
+
+- `pnpm docker:infra` 只启动 PostgreSQL，适合本地热更新开发前的基础设施准备。
+- `pnpm dev:full` 会并行启动本地 API 与 Web，适合作为默认日常开发入口。
+- 如果只改前端，可以保留数据库容器，仅执行 `pnpm dev:web`。
+- `pnpm docker:up` 仍保留给全量联调、验收和近部署环境验证，不建议作为每次改代码后的默认入口。
+
+分别启动单个服务：
 
 ```bash
 pnpm dev:api
 pnpm dev:web
 ```
 
-或使用 Docker 全量联调：
+查看或停止开发用数据库：
+
+```bash
+pnpm docker:infra:logs
+pnpm docker:infra:down
+```
+
+需要全量 Docker 联调时，再执行：
 
 ```bash
 pnpm docker:up

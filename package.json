@@ -6,8 +6,12 @@
   "scripts": {
     "architecture:check": "node scripts/architecture-check.cjs",
     "build": "pnpm -r build",
-    "dev:api": "pnpm --filter @scrm/api start:dev",
+    "dev:api": "pnpm --filter @scrm/api dev",
+    "dev:full": "pnpm --filter @scrm/api --filter @scrm/web --parallel --stream run dev",
     "dev:web": "pnpm --filter @scrm/web dev",
+    "docker:infra": "docker compose up -d postgres",
+    "docker:infra:down": "docker compose stop postgres",
+    "docker:infra:logs": "docker compose logs -f --tail=200 postgres",
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f --tail=200",

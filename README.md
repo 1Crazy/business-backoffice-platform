@@ -103,6 +103,37 @@ pnpm docker:logs
 - API 容器执行 `prisma db seed`
 - Web 容器通过 Nginx 提供静态页面，并同源反向代理 `/api`
 
+## 推荐开发工作流
+
+日常开发默认不需要每次都走全量 Docker。推荐把数据库和应用热更新拆开：
+
+日常前后端开发：
+
+```bash
+pnpm docker:infra
+pnpm dev:full
+```
+
+只改前端时：
+
+```bash
+pnpm docker:infra
+pnpm dev:web
+```
+
+常用辅助命令：
+
+```bash
+pnpm docker:infra:logs
+pnpm docker:infra:down
+```
+
+使用建议：
+
+- `pnpm docker:infra`：只启动 PostgreSQL，适合本地热更新开发。
+- `pnpm dev:full`：并行启动本地 API 和 Web，适合高频改代码。
+- `pnpm docker:up`：全量构建并启动数据库、API、Web，更适合联调、验收和近部署环境验证，而不是日常每次改代码都执行。
+
 ## Prisma 初始化
 
 ```bash
@@ -132,6 +163,15 @@ pnpm prisma:seed
 
 ## 启动开发环境
 
+推荐日常开发：
+
+```bash
+pnpm docker:infra
+pnpm dev:full
+```
+
+分别启动单个服务时：
+
 后端：
 
 ```bash
@@ -144,12 +184,23 @@ pnpm dev:api
 pnpm dev:web
 ```
 
+停止开发用数据库：
+
+```bash
+pnpm docker:infra:down
+```
+
 默认地址：
 
 - 前端：`http://localhost:5173`
 - 后端：`http://localhost:3000/api`
 - Swagger：`http://localhost:3000/docs`
 - PostgreSQL：`localhost:5433`
+
+补充说明：
+
+- `pnpm dev:full` 使用本地热更新链路，不会重新构建前后端镜像。
+- `pnpm docker:up` 仍然保留，用于全量联调和容器化验证。
 
 ## 构建与测试
 
