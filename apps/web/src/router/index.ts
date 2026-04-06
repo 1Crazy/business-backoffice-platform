@@ -1,3 +1,4 @@
+/** 路由层：负责页面导航、访问控制和首屏跳转规则。 */
 import { ElMessage } from "element-plus";
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
 

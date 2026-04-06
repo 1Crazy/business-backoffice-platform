@@ -1,3 +1,4 @@
+/** 场景 composable：负责页面状态、请求编排和错误反馈策略的复用。 */
 import { ElMessage } from "element-plus";
 import type { FormInstance, FormRules, UploadRequestOptions } from "element-plus";
 import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
@@ -184,6 +185,7 @@ export function useCustomersPage() {
   }
 
   function buildCustomerListQuery(): CustomerListQuery {
+    // 空字符串在筛选接口里应当表示“不筛选”，这里统一转成 undefined，避免把空值误发给后端。
     return {
       keyword: filters.keyword || undefined,
       source: filters.source || undefined,
@@ -291,6 +293,7 @@ export function useCustomersPage() {
 
     customerDialogVisible.value = true;
     await nextTick();
+    // 对话框内容复用同一个表单实例，因此每次打开后都要主动清理上一次残留的校验状态。
     customerFormRef.value?.clearValidate();
   }
 

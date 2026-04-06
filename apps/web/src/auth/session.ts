@@ -1,3 +1,4 @@
+/** 会话存储能力：负责把登录态在浏览器持久化，并为鉴权链路提供统一读写入口。 */
 const ACCESS_TOKEN_KEY = "scrm-token";
 const REFRESH_TOKEN_KEY = "scrm-refresh-token";
 const SESSION_EXPIRES_AT_KEY = "scrm-session-expires-at";

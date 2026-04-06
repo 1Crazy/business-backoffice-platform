@@ -1,38 +1,55 @@
+/** audit-logs 模块 VO：负责 Swagger 与接口返回契约，避免直接暴露持久化结构。 */
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { AuditActionType } from "@prisma/client";
 
-import { PaginatedResponseDto } from "../../../common/pagination/paginated-response.dto";
+import { PaginatedResponseDto } from "@/common/pagination/paginated-response.dto";
 
 export class AuditLogVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "记录 ID。"
+  })
   id!: string;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({
+    description: "操作人 ID。",
+nullable: true
+  })
   actorId?: string | null;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({
+    description: "操作人名称。",
+nullable: true
+  })
   actorName?: string | null;
 
   @ApiProperty({
-    enum: AuditActionType
+    description: "审计动作类型。",
+enum: AuditActionType
   })
   actionType!: AuditActionType;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "审计目标类型。"
+  })
   targetType!: string;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({
+    description: "审计目标 ID。",
+nullable: true
+  })
   targetId?: string | null;
 
   @ApiPropertyOptional({
-    type: "object",
+    description: "附加明细。",
+type: "object",
     additionalProperties: true,
     nullable: true
   })
   detail?: Record<string, unknown> | null;
 
   @ApiProperty({
-    format: "date-time"
+    description: "创建时间。",
+format: "date-time"
   })
   createdAt!: string;
 }

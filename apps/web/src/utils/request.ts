@@ -1,3 +1,4 @@
+/** 前端工具函数：负责提炼跨页面复用的数据归一化和请求辅助逻辑。 */
 import type { FormInstance } from "element-plus";
 
 export function getRequestErrorMessage(error: unknown, fallback: string): string {

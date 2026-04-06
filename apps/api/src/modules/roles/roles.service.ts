@@ -1,8 +1,9 @@
+/** roles 模块 service：负责业务编排、副作用协同和权限相关流程，数据库访问统一下沉到 repository。 */
 import { Injectable } from "@nestjs/common";
 import { AuditActionType, DataScope, RecordStatus } from "@prisma/client";
 
-import { mapPermission, mapRole } from "../../common/mappers/access-control.mapper";
-import type { AuthUser } from "../../common/auth/auth-user.interface";
+import { mapPermission, mapRole } from "@/common/mappers/access-control.mapper";
+import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { RolesRepository } from "./repositories/roles.repository";
 import { CreateRoleDto } from "./dto/create-role.dto";

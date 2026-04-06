@@ -1,3 +1,4 @@
+/** 前端 store：负责跨页面共享的会话或状态管理，避免页面重复维护同一份全局状态。 */
 import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 

@@ -1,3 +1,4 @@
+/** 分页基础设施：负责统一分页入参、排序规则和分页响应契约。 */
 import { Type } from "class-transformer";
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { IsIn, IsInt, IsOptional, IsString, Max, Min } from "class-validator";

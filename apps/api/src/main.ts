@@ -1,3 +1,4 @@
+/** 应用入口：负责初始化 NestJS 容器、全局中间件和 Swagger 文档。 */
 import "reflect-metadata";
 
 import { ValidationPipe } from "@nestjs/common";

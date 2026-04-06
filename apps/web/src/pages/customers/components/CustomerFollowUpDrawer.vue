@@ -1,3 +1,4 @@
+<!-- 复用组件：负责承载跨页面共享的展示或交互骨架，通过 props / emits 与页面协作。 -->
 <template>
   <el-drawer v-model="drawerVisible" :size="isTabletOrDown ? '100%' : '58%'" :title="customer?.name ?? '客户跟进'">
     <div class="drawer-stack">

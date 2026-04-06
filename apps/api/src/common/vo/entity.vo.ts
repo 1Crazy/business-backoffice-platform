@@ -1,77 +1,104 @@
+/** 共享 VO：负责多个业务模块复用的接口返回契约定义。 */
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { AttachmentBusinessType, ReminderStatus } from "@prisma/client";
 
 import { UserSummaryVo } from "./access-control.vo";
 
 export class AttachmentVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "记录 ID。"
+  })
   id!: string;
 
   @ApiProperty({
+    description: "附件所属业务类型。",
     enum: AttachmentBusinessType
   })
   businessType!: AttachmentBusinessType;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "业务实体 ID。"
+  })
   businessId!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "存储文件名。"
+  })
   fileName!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "原始文件名。"
+  })
   originalName!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "文件 MIME 类型。"
+  })
   mimeType!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "文件大小，单位字节。"
+  })
   size!: number;
 
   @ApiProperty({
-    format: "date-time"
+    description: "创建时间。",
+format: "date-time"
   })
   createdAt!: string;
 }
 
 export class ReminderVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "记录 ID。"
+  })
   id!: string;
 
   @ApiProperty({
-    format: "date-time"
+    description: "提醒时间。",
+format: "date-time"
   })
   remindAt!: string;
 
   @ApiProperty({
-    enum: ReminderStatus
+    description: "状态。",
+enum: ReminderStatus
   })
   status!: ReminderStatus;
 }
 
 export class FollowUpVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "记录 ID。"
+  })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "内容。"
+  })
   content!: string;
 
   @ApiPropertyOptional({
-    format: "date-time",
+    description: "下次跟进时间。",
+format: "date-time",
     nullable: true
   })
   nextFollowUpAt?: string | null;
 
   @ApiProperty({
-    format: "date-time"
+    description: "创建时间。",
+format: "date-time"
   })
   createdAt!: string;
 
   @ApiProperty({
+    description: "跟进记录创建人摘要信息。",
     type: () => UserSummaryVo
   })
   createdBy!: UserSummaryVo;
 
   @ApiPropertyOptional({
+    description: "与当前跟进关联的提醒信息；未创建提醒时为空。",
     type: () => ReminderVo,
     nullable: true
   })

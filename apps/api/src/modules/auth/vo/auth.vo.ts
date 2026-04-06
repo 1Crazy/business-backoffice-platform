@@ -1,17 +1,27 @@
+/** auth 模块 VO：负责 Swagger 与接口返回契约，避免直接暴露持久化结构。 */
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { DataScope } from "@prisma/client";
 
 export class CurrentUserVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "记录 ID。"
+  })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "登录用户名。"
+  })
   username!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "显示名称。"
+  })
   displayName!: string;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({
+    description: "所属部门 ID。",
+nullable: true
+  })
   departmentId?: string | null;
 
   @ApiProperty({
@@ -32,14 +42,19 @@ export class CurrentUserVo {
 }
 
 export class LoginResponseVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "访问令牌。"
+  })
   accessToken!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "刷新令牌。"
+  })
   refreshToken!: string;
 
   @ApiProperty({
-    format: "date-time"
+    description: "当前会话过期时间。",
+format: "date-time"
   })
   sessionExpiresAt!: string;
 
@@ -50,6 +65,8 @@ export class LoginResponseVo {
 }
 
 export class LogoutResponseVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "success 字段。"
+  })
   success!: boolean;
 }

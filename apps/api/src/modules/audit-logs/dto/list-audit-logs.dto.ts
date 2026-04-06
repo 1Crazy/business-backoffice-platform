@@ -1,8 +1,9 @@
+/** audit-logs 模块 DTO：负责接口入参校验和类型约束，不承载业务副作用。 */
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { AuditActionType } from "@prisma/client";
 import { IsDateString, IsEnum, IsOptional, IsString } from "class-validator";
 
-import { PaginationQueryDto } from "../../../common/pagination/pagination-query.dto";
+import { PaginationQueryDto } from "@/common/pagination/pagination-query.dto";
 
 export const AUDIT_LOG_SORT_FIELDS = ["createdAt", "actionType", "targetType", "actorName"] as const;
 

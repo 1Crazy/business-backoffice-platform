@@ -1,3 +1,4 @@
+/** audit-logs 模块装配：负责聚合该领域的 controller、service 与跨模块依赖。 */
 import { Global, Module } from "@nestjs/common";
 
 import { AuditLogsController } from "./audit-logs.controller";

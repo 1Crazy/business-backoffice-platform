@@ -1,3 +1,4 @@
+/** 领域类型定义：负责维护当前子域的请求、响应和表单模型契约。 */
 import type { User } from "@/types/access-control";
 import type { Customer } from "@/types/customers";
 import type { Lead } from "@/types/leads";

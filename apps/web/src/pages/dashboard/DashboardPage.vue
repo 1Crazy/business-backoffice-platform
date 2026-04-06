@@ -1,3 +1,4 @@
+<!-- dashboard 页面壳层：负责页面组装、路由上下文对接和顶层交互编排，具体请求与状态下沉到 composable。 -->
 <template>
   <div class="dashboard">
     <DashboardToolbarSection v-model="dateRange" @change="loadOverview" />

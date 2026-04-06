@@ -1,13 +1,14 @@
+/** customers 模块 service：负责业务编排、副作用协同和权限相关流程，数据库访问统一下沉到 repository。 */
 import { Injectable } from "@nestjs/common";
 import { AuditActionType, FollowUpEntityType, Prisma } from "@prisma/client";
 
-import type { AuthUser } from "../../common/auth/auth-user.interface";
-import { DataScopeService } from "../../common/data-scope/data-scope.service";
+import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { DataScopeService } from "@/common/data-scope/data-scope.service";
 import {
   buildPaginatedResponse,
   getPaginationParams,
   resolveSort
-} from "../../common/pagination/pagination.util";
+} from "@/common/pagination/pagination.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CreateCustomerDto } from "./dto/create-customer.dto";
 import { CreateCustomerFollowUpDto } from "./dto/create-customer-follow-up.dto";
@@ -38,6 +39,7 @@ export class CustomersService {
   ) {}
 
   async list(query: ListCustomersDto, actor: AuthUser) {
+    // 列表查询始终先经过数据范围过滤，再叠加页面筛选，避免前端通过组合参数绕过权限边界。
     const ownerFilter = await this.dataScopeService.buildScopedOwnerFilter(actor, query.ownerId);
     const pagination = getPaginationParams(query);
     const sort = resolveSort(query, CUSTOMER_SORT_FIELDS, CUSTOMER_DEFAULT_SORT);
@@ -94,6 +96,7 @@ export class CustomersService {
       source: dto.source,
       status: dto.status,
       notes: dto.notes,
+      // 创建时未显式指定负责人，就默认归到当前操作人，避免产生无归属数据。
       ownerId: dto.ownerId ?? actor.id,
       tagIds: dto.tagIds
     });
@@ -122,6 +125,7 @@ export class CustomersService {
       );
     }
 
+    // 更新接口允许显式传 null 清空可选字段，因此这里不能再套用创建时的“缺省即忽略”语义。
     const customer = await this.customersRepository.updateCustomer(id, {
       name: dto.name,
       contactName: dto.contactName,
@@ -228,6 +232,7 @@ export class CustomersService {
 
     await this.assertCustomerAccessible(customer.ownerId, actor);
 
+    // 跟进记录需要继承当前客户归属人，后续提醒与数据范围校验都依赖这个 ownerId。
     const followUp = await this.customersRepository.createFollowUp({
       customerId: id,
       ownerId: customer.ownerId,

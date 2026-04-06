@@ -1,3 +1,4 @@
+/** 路由层：负责页面导航、访问控制和首屏跳转规则。 */
 interface AccessibleRouteDefinition {
   path: string;
   permission?: string;

@@ -1,3 +1,4 @@
+/** uploads 模块存储驱动：负责抽象或实现底层附件存储能力。 */
 import type { Readable } from "stream";
 
 import type { AttachmentStorageProvider } from "@prisma/client";

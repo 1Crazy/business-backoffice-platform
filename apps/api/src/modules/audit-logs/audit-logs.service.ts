@@ -1,10 +1,11 @@
+/** audit-logs 模块 service：负责业务编排、副作用协同和权限相关流程，数据库访问统一下沉到 repository。 */
 import { Injectable } from "@nestjs/common";
 import { AuditActionType, Prisma } from "@prisma/client";
 
 import {
   getPaginationParams,
   resolveSort
-} from "../../common/pagination/pagination.util";
+} from "@/common/pagination/pagination.util";
 import { AUDIT_LOG_SORT_FIELDS, type AuditLogSortField, ListAuditLogsDto } from "./dto/list-audit-logs.dto";
 import { mapPaginatedAuditLogs } from "./mappers/audit-logs.mapper";
 import { AuditLogsRepository } from "./repositories/audit-logs.repository";

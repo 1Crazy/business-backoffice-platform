@@ -1,3 +1,4 @@
+/** HTTP 基础设施：负责统一请求实例、鉴权头注入和会话续期策略。 */
 import axios from "axios";
 
 import { clearStoredSession, getStoredSession, updateAccessToken } from "@/auth/session";
@@ -15,6 +16,7 @@ const refreshHttp = axios.create({
   timeout: 20000
 });
 
+// 同一时间只允许一个刷新令牌请求在飞，避免多个 401 并发时把本地会话状态相互覆盖。
 let refreshPromise: Promise<string | null> | null = null;
 
 http.interceptors.request.use((config) => {
@@ -38,6 +40,7 @@ http.interceptors.response.use(
       throw error;
     }
 
+    // 登录和刷新接口自身出现 401 时不能再次递归刷新，否则会形成死循环。
     if (requestUrl?.includes("/auth/login") || requestUrl?.includes("/auth/refresh")) {
       throw error;
     }

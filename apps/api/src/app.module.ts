@@ -1,3 +1,4 @@
+/** 根模块：负责聚合全局基础设施与各业务模块，为应用启动提供统一装配入口。 */
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";

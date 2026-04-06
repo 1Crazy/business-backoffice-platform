@@ -117,6 +117,27 @@ function checkPresentationHttpImports() {
   }
 }
 
+function checkBackendDeepRelativeImports() {
+  // 后端允许同目录和单层近邻相对路径，但跨层依赖统一收敛到 `@/`，避免继续累积 `../../` 噪音。
+  const files = walkFiles(path.join(repoRoot, "apps", "api", "src"), (filePath) => filePath.endsWith(".ts"));
+  const importPattern = /from\s+["'](\.\.\/){2,}[^"']+["']/;
+
+  for (const filePath of files) {
+    const file = relativePath(filePath);
+    const content = readFile(filePath);
+
+    if (!importPattern.test(content)) {
+      continue;
+    }
+
+    addFailure(
+      "backendDeepRelativeImports",
+      file,
+      "Backend source file uses a multi-level relative import. Use @/ alias for cross-directory imports inside apps/api/src."
+    );
+  }
+}
+
 function checkControllerOrmAccess() {
   // controller 允许引用 Prisma 的枚举类型，但不允许直接持有或调用 ORM 客户端。
   const files = walkFiles(path.join(repoRoot, "apps", "api", "src"), (filePath) => filePath.endsWith("controller.ts"));
@@ -199,6 +220,7 @@ checkStaleAllowlist("prismaOutsideRepository");
 
 checkVueLineLimit();
 checkPresentationHttpImports();
+checkBackendDeepRelativeImports();
 checkControllerOrmAccess();
 checkPrismaUsagePlacement();
 printResults();

@@ -1,3 +1,4 @@
+/** 领域类型定义：负责维护当前子域的请求、响应和表单模型契约。 */
 import type { User } from "@/types/access-control";
 import type { FollowUpFormModel } from "@/types/follow-ups";
 import type { PaginatedQuery, SortOrder } from "@/types/pagination";

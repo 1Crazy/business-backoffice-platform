@@ -1,8 +1,9 @@
+/** audit-logs 模块 repository：负责 audit-logs 领域的 Prisma 查询、写入与关联装载。 */
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
-import type { PaginationParams } from "../../../common/pagination/pagination.util";
-import { PrismaService } from "../../../common/prisma/prisma.service";
+import type { PaginationParams } from "@/common/pagination/pagination.util";
+import { PrismaService } from "@/common/prisma/prisma.service";
 
 export type AuditLogRecord = Prisma.AuditLogGetPayload<Record<string, never>>;
 

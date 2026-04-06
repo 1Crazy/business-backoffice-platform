@@ -1,3 +1,4 @@
+/** 场景 composable：负责页面状态、请求编排和错误反馈策略的复用。 */
 import { computed, onMounted, onUnmounted, ref } from "vue";
 
 export function useViewport() {

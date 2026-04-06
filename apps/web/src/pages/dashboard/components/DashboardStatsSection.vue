@@ -1,3 +1,4 @@
+<!-- 复用组件：负责承载跨页面共享的展示或交互骨架，通过 props / emits 与页面协作。 -->
 <template>
   <div class="stats-grid">
     <article v-for="card in cards" :key="card.label" class="page-card stat-card">

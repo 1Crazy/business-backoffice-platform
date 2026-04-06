@@ -1,3 +1,4 @@
+<!-- 布局组件：负责应用级导航与壳层结构，具体业务内容通过路由视图承载。 -->
 <template>
   <div class="layout-shell">
     <LayoutSidebarNav :active-path="route.path" :items="visibleItems" />

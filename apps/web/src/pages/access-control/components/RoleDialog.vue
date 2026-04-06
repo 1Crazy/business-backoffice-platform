@@ -1,3 +1,4 @@
+<!-- 复用组件：负责承载跨页面共享的展示或交互骨架，通过 props / emits 与页面协作。 -->
 <template>
   <el-dialog v-model="dialogVisible" :title="form.id ? '编辑角色' : '新增角色'" width="720px" class="entity-dialog">
     <el-form

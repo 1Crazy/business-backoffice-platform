@@ -1,3 +1,4 @@
+/** 鉴权守卫：负责在 controller 入口统一执行认证与权限校验。 */
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 

@@ -1,7 +1,8 @@
+/** audit-logs 模块控制器：负责路由声明、参数接收和权限边界，不直接处理持久化细节。 */
 import { Controller, Get, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 
-import { Permissions } from "../../common/decorators/permissions.decorator";
+import { Permissions } from "@/common/decorators/permissions.decorator";
 import { PaginatedAuditLogsResponseDto } from "./dto/list-audit-logs-response.dto";
 import { AUDIT_LOG_SORT_FIELDS, ListAuditLogsDto } from "./dto/list-audit-logs.dto";
 import { AuditLogsService } from "./audit-logs.service";
@@ -15,7 +16,8 @@ export class AuditLogsController {
   @Get()
   @Permissions("audit-log:read")
   @ApiOperation({
-    summary: "分页查询审计日志"
+    summary: "分页查询审计日志",
+    description: "分页查询审计日志。"
   })
   @ApiQuery({
     name: "sortBy",

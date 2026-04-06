@@ -1,8 +1,9 @@
+/** dashboard 模块 service：负责业务编排、副作用协同和权限相关流程，数据库访问统一下沉到 repository。 */
 import { Injectable } from "@nestjs/common";
 import { LeadStatus, type Prisma, ReminderStatus } from "@prisma/client";
 
-import type { AuthUser } from "../../common/auth/auth-user.interface";
-import { DataScopeService } from "../../common/data-scope/data-scope.service";
+import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { DataScopeService } from "@/common/data-scope/data-scope.service";
 import { DashboardQueryDto } from "./dto/dashboard-query.dto";
 import { mapDashboardOverview } from "./mappers/dashboard.mapper";
 import { DashboardRepository } from "./repositories/dashboard.repository";

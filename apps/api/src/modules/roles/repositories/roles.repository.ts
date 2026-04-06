@@ -1,7 +1,8 @@
+/** roles 模块 repository：负责 roles 领域的 Prisma 查询、写入与关联装载。 */
 import { Injectable } from "@nestjs/common";
 import { Prisma, type RecordStatus } from "@prisma/client";
 
-import { PrismaService } from "../../../common/prisma/prisma.service";
+import { PrismaService } from "@/common/prisma/prisma.service";
 
 const roleInclude = Prisma.validator<Prisma.RoleInclude>()({
   permissions: {

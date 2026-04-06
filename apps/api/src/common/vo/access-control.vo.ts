@@ -1,170 +1,235 @@
+/** 共享 VO：负责多个业务模块复用的接口返回契约定义。 */
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { DataScope, RecordStatus, UserStatus } from "@prisma/client";
 
 export class DepartmentParentVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "记录 ID。"
+  })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "名称。"
+  })
   name!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "编码。"
+  })
   code!: string;
 
   @ApiProperty({
+    description: "部门状态。",
     enum: RecordStatus
   })
   status!: RecordStatus;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({
+    description: "上级部门 ID；为空时表示顶级部门。",
+    nullable: true
+  })
   parentId?: string | null;
 }
 
 export class DepartmentVo extends DepartmentParentVo {
   @ApiPropertyOptional({
+    description: "上级部门摘要信息；顶级部门为空。",
     type: () => DepartmentParentVo,
     nullable: true
   })
   parent?: DepartmentParentVo | null;
 
   @ApiProperty({
-    format: "date-time"
+    description: "创建时间。",
+format: "date-time"
   })
   createdAt!: string;
 
   @ApiProperty({
-    format: "date-time"
+    description: "更新时间。",
+format: "date-time"
   })
   updatedAt!: string;
 }
 
 export class PermissionVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "记录 ID。"
+  })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "名称。"
+  })
   name!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "编码。"
+  })
   code!: string;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({
+    description: "权限说明。",
+    nullable: true
+  })
   description?: string | null;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "权限分组。"
+  })
   group!: string;
 
   @ApiProperty({
-    format: "date-time"
+    description: "创建时间。",
+format: "date-time"
   })
   createdAt!: string;
 
   @ApiProperty({
-    format: "date-time"
+    description: "更新时间。",
+format: "date-time"
   })
   updatedAt!: string;
 }
 
 export class RolePermissionRelationVo {
   @ApiProperty({
+    description: "权限详情。",
     type: () => PermissionVo
   })
   permission!: PermissionVo;
 }
 
 export class RoleVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "记录 ID。"
+  })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "名称。"
+  })
   name!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "编码。"
+  })
   code!: string;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({
+    description: "角色说明。",
+    nullable: true
+  })
   description?: string | null;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "是否为系统内置角色。"
+  })
   isSystem!: boolean;
 
   @ApiProperty({
-    enum: RecordStatus
+    description: "状态。",
+enum: RecordStatus
   })
   status!: RecordStatus;
 
   @ApiProperty({
-    enum: DataScope
+    description: "数据范围。",
+enum: DataScope
   })
   dataScope!: DataScope;
 
   @ApiProperty({
+    description: "角色绑定的权限列表。",
     type: () => [RolePermissionRelationVo]
   })
   permissions!: RolePermissionRelationVo[];
 
   @ApiProperty({
-    format: "date-time"
+    description: "创建时间。",
+format: "date-time"
   })
   createdAt!: string;
 
   @ApiProperty({
-    format: "date-time"
+    description: "更新时间。",
+format: "date-time"
   })
   updatedAt!: string;
 }
 
 export class UserRoleRelationVo {
   @ApiProperty({
+    description: "角色摘要信息。",
     type: () => RoleVo
   })
   role!: RoleVo;
 }
 
 export class UserSummaryVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "记录 ID。"
+  })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "登录用户名。"
+  })
   username!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "显示名称。"
+  })
   displayName!: string;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({
+    description: "电子邮箱。",
+nullable: true
+  })
   email?: string | null;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({
+    description: "联系电话。",
+nullable: true
+  })
   phone?: string | null;
 
   @ApiProperty({
-    enum: UserStatus
+    description: "状态。",
+enum: UserStatus
   })
   status!: UserStatus;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({
+    description: "所属部门 ID；为空表示未绑定部门。",
+    nullable: true
+  })
   departmentId?: string | null;
 }
 
 export class UserVo extends UserSummaryVo {
   @ApiPropertyOptional({
+    description: "所属部门摘要信息；为空表示未绑定部门。",
     type: () => DepartmentParentVo,
     nullable: true
   })
   department?: DepartmentParentVo | null;
 
   @ApiProperty({
+    description: "当前用户绑定的角色列表。",
     type: () => [UserRoleRelationVo]
   })
   roles!: UserRoleRelationVo[];
 
   @ApiProperty({
-    format: "date-time"
+    description: "创建时间。",
+format: "date-time"
   })
   createdAt!: string;
 
   @ApiProperty({
-    format: "date-time"
+    description: "更新时间。",
+format: "date-time"
   })
   updatedAt!: string;
 }

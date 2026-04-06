@@ -1,3 +1,4 @@
+/** 场景 composable：负责页面状态、请求编排和错误反馈策略的复用。 */
 import { ElMessage } from "element-plus";
 import type { FormInstance, FormRules } from "element-plus";
 import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";

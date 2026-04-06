@@ -1,10 +1,11 @@
+/** leads 模块控制器：负责路由声明、参数接收和权限边界，不直接处理持久化细节。 */
 import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 
-import { FollowUpVo } from "../../common/vo/entity.vo";
-import type { AuthUser } from "../../common/auth/auth-user.interface";
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { Permissions } from "../../common/decorators/permissions.decorator";
+import { FollowUpVo } from "@/common/vo/entity.vo";
+import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { CurrentUser } from "@/common/decorators/current-user.decorator";
+import { Permissions } from "@/common/decorators/permissions.decorator";
 import { CreateLeadDto } from "./dto/create-lead.dto";
 import { CreateLeadFollowUpDto } from "./dto/create-lead-follow-up.dto";
 import { ListLeadRemindersDto, REMINDER_SORT_FIELDS } from "./dto/list-lead-reminders.dto";
@@ -25,7 +26,8 @@ export class LeadsController {
   @Get()
   @Permissions("lead:read")
   @ApiOperation({
-    summary: "分页查询线索列表"
+    summary: "分页查询线索列表",
+    description: "分页查询线索列表。"
   })
   @ApiQuery({
     name: "sortBy",
@@ -43,7 +45,8 @@ export class LeadsController {
   @Get("reminders")
   @Permissions("lead:read")
   @ApiOperation({
-    summary: "分页查询待办提醒"
+    summary: "分页查询待办提醒",
+    description: "分页查询待办提醒。"
   })
   @ApiQuery({
     name: "sortBy",
@@ -61,7 +64,8 @@ export class LeadsController {
   @Get(":id")
   @Permissions("lead:read")
   @ApiOperation({
-    summary: "查询线索详情"
+    summary: "查询线索详情",
+    description: "查询线索详情。"
   })
   @ApiOkResponse({
     type: LeadVo
@@ -73,7 +77,8 @@ export class LeadsController {
   @Post()
   @Permissions("lead:write")
   @ApiOperation({
-    summary: "创建线索"
+    summary: "创建线索",
+    description: "创建线索。"
   })
   @ApiOkResponse({
     type: LeadVo
@@ -85,7 +90,8 @@ export class LeadsController {
   @Patch(":id")
   @Permissions("lead:write")
   @ApiOperation({
-    summary: "更新线索"
+    summary: "更新线索",
+    description: "更新线索。"
   })
   @ApiOkResponse({
     type: LeadVo
@@ -97,7 +103,8 @@ export class LeadsController {
   @Patch(":id/owner")
   @Permissions("lead:assign")
   @ApiOperation({
-    summary: "转移线索负责人"
+    summary: "转移线索负责人",
+    description: "转移线索负责人。"
   })
   @ApiOkResponse({
     type: LeadVo
@@ -109,7 +116,8 @@ export class LeadsController {
   @Post(":id/convert")
   @Permissions("lead:convert")
   @ApiOperation({
-    summary: "将线索转为客户"
+    summary: "将线索转为客户",
+    description: "将线索转为客户。"
   })
   @ApiOkResponse({
     type: LeadVo
@@ -121,7 +129,8 @@ export class LeadsController {
   @Get(":id/follow-ups")
   @Permissions("lead:read")
   @ApiOperation({
-    summary: "查询线索跟进记录"
+    summary: "查询线索跟进记录",
+    description: "查询线索跟进记录。"
   })
   @ApiOkResponse({
     type: FollowUpVo,
@@ -134,7 +143,8 @@ export class LeadsController {
   @Post(":id/follow-ups")
   @Permissions("followup:write")
   @ApiOperation({
-    summary: "新增线索跟进记录"
+    summary: "新增线索跟进记录",
+    description: "新增线索跟进记录。"
   })
   @ApiOkResponse({
     type: FollowUpVo

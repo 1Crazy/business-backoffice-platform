@@ -1,3 +1,4 @@
+/** 分页基础设施：负责统一分页入参、排序规则和分页响应契约。 */
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 import { SORT_ORDERS, type SortOrder } from "./pagination-query.dto";

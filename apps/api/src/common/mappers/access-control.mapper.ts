@@ -1,3 +1,4 @@
+/** 共享 mapper：负责在数据库结果、公共领域对象和对外契约之间做统一转换。 */
 import { toIsoString } from "./date-time.mapper";
 
 interface DepartmentParentRecord {

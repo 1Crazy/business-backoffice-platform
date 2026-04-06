@@ -1,8 +1,9 @@
+/** leads 模块 repository：负责 leads 领域的 Prisma 查询、写入与关联装载。 */
 import { Injectable } from "@nestjs/common";
 import { Prisma, type FollowUpEntityType, type LeadStatus, type ReminderStatus } from "@prisma/client";
 
-import type { PaginationParams } from "../../../common/pagination/pagination.util";
-import { PrismaService } from "../../../common/prisma/prisma.service";
+import type { PaginationParams } from "@/common/pagination/pagination.util";
+import { PrismaService } from "@/common/prisma/prisma.service";
 
 const leadListInclude = Prisma.validator<Prisma.LeadInclude>()({
   owner: true,

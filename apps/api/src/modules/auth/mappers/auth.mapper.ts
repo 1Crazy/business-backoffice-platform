@@ -1,6 +1,7 @@
+/** auth 模块 mapper：负责把持久化结果转换为对外契约或上层可消费的数据结构。 */
 import { DataScope } from "@prisma/client";
 
-import type { AuthUser } from "../../../common/auth/auth-user.interface";
+import type { AuthUser } from "@/common/auth/auth-user.interface";
 import type { AuthUserRecord } from "../repositories/auth.repository";
 
 export function mapAuthUser(user: AuthUserRecord): AuthUser {

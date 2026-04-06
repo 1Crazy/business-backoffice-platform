@@ -1,10 +1,11 @@
+/** customers 模块控制器：负责路由声明、参数接收和权限边界，不直接处理持久化细节。 */
 import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 
-import { FollowUpVo } from "../../common/vo/entity.vo";
-import type { AuthUser } from "../../common/auth/auth-user.interface";
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { Permissions } from "../../common/decorators/permissions.decorator";
+import { FollowUpVo } from "@/common/vo/entity.vo";
+import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { CurrentUser } from "@/common/decorators/current-user.decorator";
+import { Permissions } from "@/common/decorators/permissions.decorator";
 import { CreateCustomerDto } from "./dto/create-customer.dto";
 import { CreateCustomerFollowUpDto } from "./dto/create-customer-follow-up.dto";
 import { CreateCustomerTagDto } from "./dto/create-customer-tag.dto";
@@ -25,7 +26,8 @@ export class CustomersController {
   @Get()
   @Permissions("customer:read")
   @ApiOperation({
-    summary: "分页查询客户列表"
+    summary: "分页查询客户列表",
+    description: "分页查询客户列表。"
   })
   @ApiQuery({
     name: "sortBy",
@@ -43,7 +45,8 @@ export class CustomersController {
   @Get("tags")
   @Permissions("customer:read")
   @ApiOperation({
-    summary: "查询客户标签列表"
+    summary: "查询客户标签列表",
+    description: "查询客户标签列表。"
   })
   @ApiOkResponse({
     type: CustomerTagVo,
@@ -56,7 +59,8 @@ export class CustomersController {
   @Post("tags")
   @Permissions("customer:write")
   @ApiOperation({
-    summary: "创建客户标签"
+    summary: "创建客户标签",
+    description: "创建客户标签。"
   })
   @ApiOkResponse({
     type: CustomerTagVo
@@ -68,7 +72,8 @@ export class CustomersController {
   @Get(":id")
   @Permissions("customer:read")
   @ApiOperation({
-    summary: "查询客户详情"
+    summary: "查询客户详情",
+    description: "查询客户详情。"
   })
   @ApiOkResponse({
     type: CustomerVo
@@ -80,7 +85,8 @@ export class CustomersController {
   @Post()
   @Permissions("customer:write")
   @ApiOperation({
-    summary: "创建客户"
+    summary: "创建客户",
+    description: "创建客户。"
   })
   @ApiOkResponse({
     type: CustomerVo
@@ -92,7 +98,8 @@ export class CustomersController {
   @Patch(":id")
   @Permissions("customer:write")
   @ApiOperation({
-    summary: "更新客户"
+    summary: "更新客户",
+    description: "更新客户。"
   })
   @ApiOkResponse({
     type: CustomerVo
@@ -104,7 +111,8 @@ export class CustomersController {
   @Patch(":id/tags")
   @Permissions("customer:write")
   @ApiOperation({
-    summary: "更新客户标签"
+    summary: "更新客户标签",
+    description: "更新客户标签。"
   })
   @ApiOkResponse({
     type: CustomerVo
@@ -116,7 +124,8 @@ export class CustomersController {
   @Patch(":id/owner")
   @Permissions("customer:assign")
   @ApiOperation({
-    summary: "转移客户负责人"
+    summary: "转移客户负责人",
+    description: "转移客户负责人。"
   })
   @ApiOkResponse({
     type: CustomerVo
@@ -132,7 +141,8 @@ export class CustomersController {
   @Get(":id/follow-ups")
   @Permissions("customer:read")
   @ApiOperation({
-    summary: "查询客户跟进记录"
+    summary: "查询客户跟进记录",
+    description: "查询客户跟进记录。"
   })
   @ApiOkResponse({
     type: FollowUpVo,
@@ -145,7 +155,8 @@ export class CustomersController {
   @Post(":id/follow-ups")
   @Permissions("followup:write")
   @ApiOperation({
-    summary: "新增客户跟进记录"
+    summary: "新增客户跟进记录",
+    description: "新增客户跟进记录。"
   })
   @ApiOkResponse({
     type: FollowUpVo

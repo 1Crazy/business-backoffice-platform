@@ -1,3 +1,4 @@
+/** uploads 模块 service：负责业务编排、副作用协同和权限相关流程，数据库访问统一下沉到 repository。 */
 import {
   BadRequestException,
   ForbiddenException,
@@ -8,9 +9,9 @@ import {
 } from "@nestjs/common";
 import { AttachmentBusinessType, AuditActionType } from "@prisma/client";
 
-import type { AuthUser } from "../../common/auth/auth-user.interface";
-import { DataScopeService } from "../../common/data-scope/data-scope.service";
-import { mapAttachment } from "../../common/mappers/entity.mapper";
+import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { DataScopeService } from "@/common/data-scope/data-scope.service";
+import { mapAttachment } from "@/common/mappers/entity.mapper";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { ListUploadsDto } from "./dto/list-uploads.dto";
 import { UploadsRepository } from "./repositories/uploads.repository";
@@ -72,6 +73,7 @@ export class UploadsService {
 
       return mapAttachment(attachment);
     } catch (error) {
+      // 先落存储、再写数据库时，任何仓储失败都必须回滚物理文件，避免产生孤儿附件。
       await this.storageDriver.delete(storedFile.storageKey);
       throw error;
     }
@@ -115,6 +117,7 @@ export class UploadsService {
   }
 
   private assertBusinessPermission(actor: AuthUser, businessType: AttachmentBusinessType): void {
+    // 附件除了数据范围，还要求具备业务读取权限，避免通过下载接口绕过页面上的功能权限控制。
     const requiredPermission =
       businessType === AttachmentBusinessType.CUSTOMER
         ? "customer:read"
@@ -136,6 +139,7 @@ export class UploadsService {
       throw new PayloadTooLargeException("Attachment exceeds the maximum allowed size.");
     }
 
+    // MIME 校验放在 service 层是为了保证无论从控制器还是未来其他入口上传，都共享同一条安全边界。
     if (!ALLOWED_ATTACHMENT_MIME_TYPES.includes(file.mimetype as (typeof ALLOWED_ATTACHMENT_MIME_TYPES)[number])) {
       throw new UnsupportedMediaTypeException("Attachment type is not supported.");
     }

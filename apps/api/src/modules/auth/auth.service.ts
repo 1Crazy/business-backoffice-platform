@@ -1,3 +1,4 @@
+/** auth 模块 service：负责业务编排、副作用协同和权限相关流程，数据库访问统一下沉到 repository。 */
 import { createHash, randomBytes } from "crypto";
 
 import { Injectable, UnauthorizedException } from "@nestjs/common";
@@ -5,7 +6,7 @@ import { JwtService } from "@nestjs/jwt";
 import { AuditActionType, UserStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
-import type { AuthUser } from "../../common/auth/auth-user.interface";
+import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";

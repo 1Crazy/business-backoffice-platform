@@ -1,8 +1,9 @@
+/** departments 模块 service：负责业务编排、副作用协同和权限相关流程，数据库访问统一下沉到 repository。 */
 import { Injectable } from "@nestjs/common";
 import { AuditActionType, RecordStatus } from "@prisma/client";
 
-import { mapDepartment } from "../../common/mappers/access-control.mapper";
-import type { AuthUser } from "../../common/auth/auth-user.interface";
+import { mapDepartment } from "@/common/mappers/access-control.mapper";
+import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { DepartmentsRepository } from "./repositories/departments.repository";
 import { CreateDepartmentDto } from "./dto/create-department.dto";

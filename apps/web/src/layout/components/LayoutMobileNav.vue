@@ -1,3 +1,4 @@
+<!-- 布局组件：负责应用级导航与壳层结构，具体业务内容通过路由视图承载。 -->
 <template>
   <nav class="page-card mobile-nav-card mobile-nav" aria-label="快捷导航">
     <div class="mobile-nav-copy">

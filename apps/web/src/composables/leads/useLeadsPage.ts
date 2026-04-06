@@ -1,3 +1,4 @@
+/** 场景 composable：负责页面状态、请求编排和错误反馈策略的复用。 */
 import { ElMessage } from "element-plus";
 import type { FormInstance, FormRules, UploadRequestOptions } from "element-plus";
 import { computed, nextTick, onMounted, reactive, ref, watch } from "vue";
@@ -187,6 +188,7 @@ export function useLeadsPage() {
       contactName: normalizeOptionalTextForUpdate(leadForm.contactName),
       phone: normalizeOptionalTextForUpdate(leadForm.phone),
       source: normalizeOptionalTextForUpdate(leadForm.source),
+      // 状态在更新场景里允许被切回空值，因此这里仍然按 update/create 的空值语义拆开处理。
       status: normalizeOptionalTextForCreate(leadForm.status),
       ownerId: normalizeRequiredText(leadForm.ownerId),
       notes: normalizeOptionalTextForUpdate(leadForm.notes)
@@ -322,6 +324,7 @@ export function useLeadsPage() {
 
   async function openFollowUpDrawer(lead: Lead): Promise<void> {
     try {
+      // 明细和跟进列表并行加载，避免抽屉打开后先展示半套旧数据、再闪烁更新。
       const [detail, followUpList] = await Promise.all([
         fetchLeadDetail(lead.id),
         fetchLeadFollowUps(lead.id)
@@ -333,6 +336,7 @@ export function useLeadsPage() {
       followUpForm.nextFollowUpAt = "";
       followUpDrawerVisible.value = true;
       await nextTick();
+      // 抽屉复用表单实例时必须清掉历史校验状态，否则会把上一条线索的报错带进来。
       followUpFormRef.value?.clearValidate();
     } catch (error) {
       ElMessage.error(getRequestErrorMessage(error, "线索跟进数据加载失败，请稍后重试。"));

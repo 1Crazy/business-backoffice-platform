@@ -5,11 +5,11 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "lint": "tsc --noEmit -p tsconfig.json",
-    "start": "node dist/src/main.js",
-    "start:dev": "ts-node-dev --respawn --transpile-only src/main.ts",
+    "start": "TS_NODE_PROJECT=tsconfig.runtime.json node -r tsconfig-paths/register dist/src/main.js",
+    "start:dev": "ts-node-dev --respawn --transpile-only -r tsconfig-paths/register src/main.ts",
     "test": "jest --runInBand",
     "prisma": "prisma",
-    "seed": "ts-node --files --project tsconfig.json prisma/seed.ts"
+    "seed": "ts-node --files -r tsconfig-paths/register --project tsconfig.json prisma/seed.ts"
   },
   "dependencies": {
     "@nestjs/common": "^10.4.2",

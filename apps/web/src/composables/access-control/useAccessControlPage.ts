@@ -1,3 +1,4 @@
+/** 场景 composable：负责页面状态、请求编排和错误反馈策略的复用。 */
 import { ElMessage } from "element-plus";
 import type { FormInstance, FormRules } from "element-plus";
 import { nextTick, onMounted, reactive, ref } from "vue";
@@ -101,6 +102,7 @@ export function useAccessControlPage() {
         validator: (_rule, value: string, callback) => {
           const normalized = value.trim();
 
+          // 新建用户必须提供密码；编辑用户时允许留空以表示“不修改现有密码”。
           if (!userForm.id && !normalized) {
             callback(new Error("请输入密码"));
             return;
@@ -232,6 +234,7 @@ export function useAccessControlPage() {
       return;
     }
 
+    // 部门树只做轻量前置保护，至少先拦住“自己挂自己”这种最明显的环路。
     if (departmentForm.id && departmentForm.parentId === departmentForm.id) {
       ElMessage.error("上级部门不能选择自己。");
       return;
@@ -270,6 +273,7 @@ export function useAccessControlPage() {
     userForm.email = user?.email ?? "";
     userForm.phone = user?.phone ?? "";
     userForm.departmentId = user?.departmentId ?? null;
+    // 编辑态只保留 role.id，避免把嵌套关系对象直接塞进表单模型导致提交 payload 污染。
     userForm.roleIds = user ? user.roles.map((item) => item.role.id) : [];
     userDialogVisible.value = true;
     await nextTick();

@@ -1,9 +1,10 @@
+/** users 模块 service：负责业务编排、副作用协同和权限相关流程，数据库访问统一下沉到 repository。 */
 import { Injectable } from "@nestjs/common";
 import { AuditActionType, UserStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
-import type { AuthUser } from "../../common/auth/auth-user.interface";
-import { mapUser } from "../../common/mappers/access-control.mapper";
+import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { mapUser } from "@/common/mappers/access-control.mapper";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { UsersRepository } from "./repositories/users.repository";
 import { CreateUserDto } from "./dto/create-user.dto";

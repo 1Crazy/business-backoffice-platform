@@ -1,8 +1,9 @@
+/** leads 模块 DTO：负责接口入参校验和类型约束，不承载业务副作用。 */
 import { ApiPropertyOptional } from "@nestjs/swagger";
 import { LeadStatus } from "@prisma/client";
 import { IsEnum, IsOptional, IsString } from "class-validator";
 
-import { PaginationQueryDto } from "../../../common/pagination/pagination-query.dto";
+import { PaginationQueryDto } from "@/common/pagination/pagination-query.dto";
 
 export const LEAD_SORT_FIELDS = ["createdAt", "updatedAt", "name", "status"] as const;
 

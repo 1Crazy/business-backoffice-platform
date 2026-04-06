@@ -1,8 +1,9 @@
+/** customers 模块 repository：负责 customers 领域的 Prisma 查询、写入与关联装载。 */
 import { Injectable } from "@nestjs/common";
 import { Prisma, type FollowUpEntityType } from "@prisma/client";
 
-import type { PaginationParams } from "../../../common/pagination/pagination.util";
-import { PrismaService } from "../../../common/prisma/prisma.service";
+import type { PaginationParams } from "@/common/pagination/pagination.util";
+import { PrismaService } from "@/common/prisma/prisma.service";
 
 const customerListInclude = Prisma.validator<Prisma.CustomerInclude>()({
   owner: true,

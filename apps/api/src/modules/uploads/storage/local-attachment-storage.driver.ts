@@ -1,3 +1,4 @@
+/** uploads 模块存储驱动：负责抽象或实现底层附件存储能力。 */
 import { randomUUID } from "crypto";
 import { createReadStream, mkdirSync } from "fs";
 import { promises as fs } from "fs";

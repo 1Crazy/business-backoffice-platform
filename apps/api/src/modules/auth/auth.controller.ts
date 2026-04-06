@@ -1,9 +1,10 @@
+/** auth 模块控制器：负责路由声明、参数接收和权限边界，不直接处理持久化细节。 */
 import { Body, Controller, Get, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { Public } from "../../common/decorators/public.decorator";
-import type { AuthUser } from "../../common/auth/auth-user.interface";
+import { CurrentUser } from "@/common/decorators/current-user.decorator";
+import { Public } from "@/common/decorators/public.decorator";
+import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { LoginDto } from "./dto/login.dto";
 import { RefreshTokenDto } from "./dto/refresh-token.dto";
 import { AuthService } from "./auth.service";
@@ -18,7 +19,8 @@ export class AuthController {
   @Post("login")
   @Public()
   @ApiOperation({
-    summary: "账号密码登录"
+    summary: "账号密码登录",
+    description: "账号密码登录。"
   })
   @ApiOkResponse({
     type: LoginResponseVo
@@ -30,7 +32,8 @@ export class AuthController {
   @Post("refresh")
   @Public()
   @ApiOperation({
-    summary: "刷新访问令牌"
+    summary: "刷新访问令牌",
+    description: "刷新访问令牌。"
   })
   @ApiOkResponse({
     type: LoginResponseVo
@@ -41,7 +44,8 @@ export class AuthController {
 
   @Post("logout")
   @ApiOperation({
-    summary: "退出当前会话"
+    summary: "退出当前会话",
+    description: "退出当前会话。"
   })
   @ApiOkResponse({
     type: LogoutResponseVo
@@ -52,7 +56,8 @@ export class AuthController {
 
   @Get("profile")
   @ApiOperation({
-    summary: "获取当前登录用户资料"
+    summary: "获取当前登录用户资料",
+    description: "获取当前登录用户资料。"
   })
   @ApiOkResponse({
     type: CurrentUserVo

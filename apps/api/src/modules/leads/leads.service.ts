@@ -1,13 +1,14 @@
+/** leads 模块 service：负责业务编排、副作用协同和权限相关流程，数据库访问统一下沉到 repository。 */
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { AuditActionType, FollowUpEntityType, LeadStatus, Prisma, ReminderStatus } from "@prisma/client";
 
-import type { AuthUser } from "../../common/auth/auth-user.interface";
-import { DataScopeService } from "../../common/data-scope/data-scope.service";
+import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { DataScopeService } from "@/common/data-scope/data-scope.service";
 import {
   buildPaginatedResponse,
   getPaginationParams,
   resolveSort
-} from "../../common/pagination/pagination.util";
+} from "@/common/pagination/pagination.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CreateLeadDto } from "./dto/create-lead.dto";
 import { CreateLeadFollowUpDto } from "./dto/create-lead-follow-up.dto";
@@ -43,6 +44,7 @@ export class LeadsService {
   ) {}
 
   async list(query: ListLeadsDto, actor: AuthUser) {
+    // 线索列表和提醒列表都必须先收敛到当前角色可见的 owner 范围，再叠加搜索和排序条件。
     const ownerFilter = await this.dataScopeService.buildScopedOwnerFilter(actor, query.ownerId);
     const pagination = getPaginationParams(query);
     const sort = resolveSort(query, LEAD_SORT_FIELDS, LEAD_DEFAULT_SORT);
@@ -89,6 +91,7 @@ export class LeadsService {
       phone: dto.phone,
       source: dto.source,
       notes: dto.notes,
+      // 新建线索默认落到当前操作人名下，避免后续提醒和数据范围出现“无负责人”例外。
       ownerId: dto.ownerId ?? actor.id
     });
 
@@ -169,6 +172,7 @@ export class LeadsService {
 
     await this.assertLeadAccessible(lead.ownerId, actor);
 
+    // 状态字段和 convertedCustomerId 任一命中都视为已转化，避免历史脏数据导致重复转客户。
     if (lead.status === LeadStatus.CONVERTED || lead.convertedCustomerId) {
       throw new ForbiddenException("This lead has already been converted.");
     }
@@ -230,6 +234,7 @@ export class LeadsService {
     const sort = resolveSort(query, REMINDER_SORT_FIELDS, REMINDER_DEFAULT_SORT);
     const where: Prisma.ReminderWhereInput = {
       ...ownerFilter,
+      // 提醒面板默认只看待处理项；只有调用方显式传状态时才放宽查询范围。
       status: query.status ?? ReminderStatus.PENDING
     };
     const orderBy: Prisma.ReminderOrderByWithRelationInput[] = [

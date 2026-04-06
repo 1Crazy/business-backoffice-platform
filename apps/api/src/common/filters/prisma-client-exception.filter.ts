@@ -1,3 +1,4 @@
+/** 全局异常过滤器：负责把底层 Prisma 异常转换为稳定的 HTTP 错误响应。 */
 import { ArgumentsHost, Catch, ExceptionFilter, HttpStatus } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 import type { Request, Response } from "express";

@@ -1,3 +1,4 @@
+/** uploads 模块控制器：负责路由声明、参数接收和权限边界，不直接处理持久化细节。 */
 import {
   Body,
   Controller,
@@ -23,10 +24,10 @@ import { FileInterceptor } from "@nestjs/platform-express";
 import { memoryStorage } from "multer";
 import type { Response } from "express";
 
-import { AttachmentVo } from "../../common/vo/entity.vo";
-import type { AuthUser } from "../../common/auth/auth-user.interface";
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { Permissions } from "../../common/decorators/permissions.decorator";
+import { AttachmentVo } from "@/common/vo/entity.vo";
+import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { CurrentUser } from "@/common/decorators/current-user.decorator";
+import { Permissions } from "@/common/decorators/permissions.decorator";
 import { ListUploadsDto } from "./dto/list-uploads.dto";
 import { MAX_ATTACHMENT_SIZE_BYTES } from "./uploads.constants";
 import { UploadsService } from "./uploads.service";
@@ -40,7 +41,8 @@ export class UploadsController {
   @Get()
   @Permissions("upload:write")
   @ApiOperation({
-    summary: "查询业务附件列表"
+    summary: "查询业务附件列表",
+    description: "查询业务附件列表。"
   })
   @ApiOkResponse({
     type: AttachmentVo,
@@ -53,24 +55,29 @@ export class UploadsController {
   @Post()
   @Permissions("upload:write")
   @ApiOperation({
-    summary: "上传业务附件"
+    summary: "上传业务附件",
+    description: "上传客户或线索附件，并返回落库后的附件元数据。"
   })
   @ApiConsumes("multipart/form-data")
   @ApiBody({
+    description: "上传附件需要同时提供业务类型、业务实体 ID 和二进制文件。",
     schema: {
       type: "object",
       required: ["businessType", "businessId", "file"],
       properties: {
         businessType: {
           type: "string",
-          enum: Object.values(AttachmentBusinessType)
+          enum: Object.values(AttachmentBusinessType),
+          description: "附件归属的业务类型，例如 CUSTOMER 或 LEAD。"
         },
         businessId: {
-          type: "string"
+          type: "string",
+          description: "附件归属的业务实体 ID。"
         },
         file: {
           type: "string",
-          format: "binary"
+          format: "binary",
+          description: "待上传的二进制附件内容。"
         }
       }
     }
@@ -104,10 +111,11 @@ export class UploadsController {
 
   @Get(":id/download")
   @ApiOperation({
-    summary: "下载业务附件"
+    summary: "下载业务附件",
+    description: "按附件 ID 下载原始文件内容，并在响应头中返回 MIME 类型、文件名和文件大小。"
   })
   @ApiOkResponse({
-    description: "附件文件流返回。"
+    description: "返回二进制文件流；调用方应按响应头中的 Content-Type 和 Content-Disposition 处理下载。"
   })
   async download(@Param("id") id: string, @CurrentUser() user: AuthUser, @Res({ passthrough: true }) response: Response) {
     const file = await this.uploadsService.download(id, user);

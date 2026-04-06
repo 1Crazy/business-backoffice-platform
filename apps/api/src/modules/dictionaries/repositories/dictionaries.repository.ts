@@ -1,7 +1,8 @@
+/** dictionaries 模块 repository：负责 dictionaries 领域的 Prisma 查询、写入与关联装载。 */
 import { Injectable } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
 
-import { PrismaService } from "../../../common/prisma/prisma.service";
+import { PrismaService } from "@/common/prisma/prisma.service";
 
 export type DictionaryEntryRecord = Prisma.DictionaryEntryGetPayload<Record<string, never>>;
 

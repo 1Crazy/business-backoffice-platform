@@ -1,11 +1,12 @@
+/** users 模块控制器：负责路由声明、参数接收和权限边界，不直接处理持久化细节。 */
 import { Body, Controller, Get, Param, Patch, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 import { UserStatus } from "@prisma/client";
 
-import { UserVo } from "../../common/vo/access-control.vo";
-import type { AuthUser } from "../../common/auth/auth-user.interface";
-import { CurrentUser } from "../../common/decorators/current-user.decorator";
-import { Permissions } from "../../common/decorators/permissions.decorator";
+import { UserVo } from "@/common/vo/access-control.vo";
+import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { CurrentUser } from "@/common/decorators/current-user.decorator";
+import { Permissions } from "@/common/decorators/permissions.decorator";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
 import { UsersService } from "./users.service";
@@ -19,7 +20,8 @@ export class UsersController {
   @Get()
   @Permissions("user:read")
   @ApiOperation({
-    summary: "查询员工列表"
+    summary: "查询员工列表",
+    description: "查询员工列表。"
   })
   @ApiOkResponse({
     type: UserVo,
@@ -32,7 +34,8 @@ export class UsersController {
   @Post()
   @Permissions("user:write")
   @ApiOperation({
-    summary: "创建员工"
+    summary: "创建员工",
+    description: "创建员工。"
   })
   @ApiOkResponse({
     type: UserVo
@@ -44,7 +47,8 @@ export class UsersController {
   @Patch(":id")
   @Permissions("user:write")
   @ApiOperation({
-    summary: "更新员工"
+    summary: "更新员工",
+    description: "更新员工。"
   })
   @ApiOkResponse({
     type: UserVo
@@ -56,7 +60,8 @@ export class UsersController {
   @Patch(":id/enable")
   @Permissions("user:write")
   @ApiOperation({
-    summary: "启用员工"
+    summary: "启用员工",
+    description: "启用员工。"
   })
   @ApiOkResponse({
     type: UserVo
@@ -68,7 +73,8 @@ export class UsersController {
   @Patch(":id/disable")
   @Permissions("user:write")
   @ApiOperation({
-    summary: "停用员工"
+    summary: "停用员工",
+    description: "停用员工。"
   })
   @ApiOkResponse({
     type: UserVo
