@@ -1,0 +1,82 @@
+<!-- 通讯录页面：负责组装部门筛选和员工信息卡片。 -->
+<template>
+  <div class="page-grid">
+    <section class="page-card filter-card">
+      <h2 class="page-section-title">组织通讯录</h2>
+      <p class="page-section-caption">按部门查看同事信息，先覆盖最常用的内部联络查询场景。</p>
+
+      <el-select v-model="selectedDepartmentId" placeholder="查看全部部门成员" clearable>
+        <el-option v-for="item in departments" :key="item.id" :label="item.name" :value="item.id" />
+      </el-select>
+    </section>
+
+    <section class="member-grid" v-if="members.length">
+      <article v-for="item in members" :key="item.id" class="page-card member-card">
+        <div class="member-avatar">{{ item.displayName.slice(0, 1) }}</div>
+        <div class="member-name">{{ item.displayName }}</div>
+        <div class="member-meta">{{ item.departmentName || "未分配部门" }}</div>
+        <div class="member-contact">{{ item.email || item.phone || item.username }}</div>
+      </article>
+    </section>
+    <section v-else class="page-card">
+      <el-empty description="当前筛选条件下没有可展示的成员" />
+    </section>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { useDirectoryPage } from "@/composables/directory/useDirectoryPage";
+
+const { departments, members, selectedDepartmentId } = useDirectoryPage();
+</script>
+
+<style scoped>
+.page-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.filter-card {
+  display: grid;
+  gap: 14px;
+}
+
+.member-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.member-card {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+
+.member-avatar {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 16px;
+  background: #ccfbf1;
+  color: #0f766e;
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.member-name {
+  margin-top: 4px;
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.member-meta {
+  color: #64748b;
+}
+
+.member-contact {
+  color: #334155;
+  font-size: 13px;
+}
+</style>

@@ -31,7 +31,7 @@ export class RolesRepository {
 
   listPermissionCatalog() {
     return this.prisma.permission.findMany({
-      orderBy: [{ group: "asc" }, { name: "asc" }]
+      orderBy: [{ appCode: "asc" }, { group: "asc" }, { name: "asc" }]
     });
   }
 

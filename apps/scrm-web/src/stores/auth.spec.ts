@@ -43,21 +43,21 @@ describe("auth store", () => {
 
     expect(store.token).toBe("access-1");
     expect(store.refreshToken).toBe("refresh-1");
-    expect(window.localStorage.getItem("scrm-token")).toBe("access-1");
-    expect(window.localStorage.getItem("scrm-refresh-token")).toBe("refresh-1");
+    expect(window.localStorage.getItem("platform-access-token")).toBe("access-1");
+    expect(window.localStorage.getItem("platform-refresh-token")).toBe("refresh-1");
   });
 
   it("clears the local session after logout", async () => {
-    window.localStorage.setItem("scrm-token", "access-1");
-    window.localStorage.setItem("scrm-refresh-token", "refresh-1");
+    window.localStorage.setItem("platform-access-token", "access-1");
+    window.localStorage.setItem("platform-refresh-token", "refresh-1");
     postMock.mockResolvedValue({ data: { success: true } });
 
     const store = useAuthStore();
     await store.logout();
 
     expect(postMock).toHaveBeenCalledWith("/auth/logout");
-    expect(window.localStorage.getItem("scrm-token")).toBeNull();
-    expect(window.localStorage.getItem("scrm-refresh-token")).toBeNull();
+    expect(window.localStorage.getItem("platform-access-token")).toBeNull();
+    expect(window.localStorage.getItem("platform-refresh-token")).toBeNull();
     expect(store.token).toBeNull();
     expect(store.refreshToken).toBeNull();
   });

@@ -5,13 +5,14 @@
 当前仓库已经包含：
 
 - `apps/scrm-web`：Vue 3 + Vite + Pinia + Vue Router + Element Plus 的当前 SCRM 后台前端
+- `apps/oa-web`：Vue 3 + Vite + Pinia + Vue Router + Element Plus 的 OA 后台前端
 - `apps/api`：NestJS + JWT/RBAC + Prisma 后端服务
 - `docker-compose.yml`：本地 PostgreSQL、NestJS API、SCRM Web 的容器编排配置
 - `apps/api/prisma`：数据库 schema、初始迁移和种子脚本
 - `openspec/specs`：当前已经同步完成的主规格
 - `openspec/changes/archive/2026-04-05-bootstrap-scrm-mvp`：已归档的一期 MVP OpenSpec 变更记录
 
-前端工作区命名约定为 `apps/<domain>-web`。当前已经落地的是 `apps/scrm-web`，后续如需新增 OA 前端，将按同一规则接入，例如 `apps/oa-web`。
+前端工作区命名约定为 `apps/<domain>-web`。当前已经落地的是 `apps/scrm-web` 和 `apps/oa-web`，后续新增其他后台前端也遵循同一规则。
 
 ## 当前能力范围
 
@@ -60,6 +61,7 @@ pnpm install
 - 根目录 `.env` 主要服务于 `docker-compose.yml`，除数据库变量外，建议同时配置 `JWT_SECRET`。
 - `apps/api/.env` 当前需要 `PORT`、`JWT_SECRET` 和 `DATABASE_URL`。
 - `apps/scrm-web/.env` 当前需要 `VITE_API_BASE_URL`。
+- `apps/oa-web/.env` 当前同样需要 `VITE_API_BASE_URL`。
 
 ## Docker 一键启动
 
@@ -121,6 +123,7 @@ pnpm dev:full
 ```bash
 pnpm docker:infra
 pnpm dev:scrm-web
+pnpm dev:oa-web
 ```
 
 常用辅助命令：
@@ -184,6 +187,7 @@ pnpm dev:api
 
 ```bash
 pnpm dev:scrm-web
+pnpm dev:oa-web
 ```
 
 停止开发用数据库：
@@ -194,7 +198,8 @@ pnpm docker:infra:down
 
 默认地址：
 
-- 前端：`http://localhost:5173`
+- SCRM 前端：`http://localhost:5173`
+- OA 前端：`http://localhost:5174`
 - 后端：`http://localhost:3000/api`
 - Swagger：`http://localhost:3000/docs`
 - PostgreSQL：`localhost:5433`
@@ -211,6 +216,7 @@ pnpm docker:infra:down
 ```bash
 pnpm --filter @scrm/api lint
 pnpm --filter scrm-web lint
+pnpm --filter oa-web lint
 ```
 
 构建：
@@ -218,6 +224,7 @@ pnpm --filter scrm-web lint
 ```bash
 pnpm --filter @scrm/api build
 pnpm --filter scrm-web build
+pnpm --filter oa-web build
 ```
 
 测试：

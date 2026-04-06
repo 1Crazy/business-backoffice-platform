@@ -10,6 +10,7 @@ export interface Department {
 
 export interface PermissionItem {
   id: string;
+  appCode: string;
   name: string;
   code: string;
   group: string;

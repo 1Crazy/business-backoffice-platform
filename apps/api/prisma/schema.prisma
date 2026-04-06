@@ -67,6 +67,18 @@ enum AttachmentStorageProvider {
   LOCAL
 }
 
+enum LeaveRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum ApprovalActionDecision {
+  APPROVED
+  REJECTED
+}
+
 model Department {
   id        String       @id @default(cuid())
   name      String
@@ -103,6 +115,10 @@ model User {
   auditLogs           AuditLog[]    @relation("AuditActor")
   uploadedAttachments Attachment[]  @relation("AttachmentUploader")
   sessions            UserSession[]
+  leaveRequests       LeaveRequest[] @relation("LeaveRequestApplicant")
+  approvalsToHandle   LeaveRequest[] @relation("LeaveRequestApprover")
+  leaveApprovalActions LeaveApprovalAction[] @relation("LeaveApprovalActor")
+  publishedAnnouncements Announcement[] @relation("AnnouncementPublisher")
 
   @@index([departmentId])
   @@index([status])
@@ -127,6 +143,7 @@ model Role {
 
 model Permission {
   id          String           @id @default(cuid())
+  appCode     String           @default("scrm")
   name        String
   code        String           @unique
   description String?
@@ -135,7 +152,7 @@ model Permission {
   updatedAt   DateTime         @updatedAt
   roles       RolePermission[]
 
-  @@index([group])
+  @@index([appCode, group])
 }
 
 model UserRole {
@@ -292,6 +309,56 @@ model UserSession {
   @@index([userId])
   @@index([expiresAt])
   @@index([revokedAt])
+}
+
+model LeaveRequest {
+  id         String             @id @default(cuid())
+  applicantId String
+  approverId String
+  leaveType  String
+  startAt    DateTime
+  endAt      DateTime
+  reason     String
+  status     LeaveRequestStatus @default(PENDING)
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  applicant  User               @relation("LeaveRequestApplicant", fields: [applicantId], references: [id], onDelete: Restrict)
+  approver   User               @relation("LeaveRequestApprover", fields: [approverId], references: [id], onDelete: Restrict)
+  actions    LeaveApprovalAction[]
+
+  @@index([applicantId, createdAt])
+  @@index([approverId, status])
+  @@index([status])
+}
+
+model LeaveApprovalAction {
+  id            String                 @id @default(cuid())
+  leaveRequestId String
+  actorId       String
+  decision      ApprovalActionDecision
+  comment       String?
+  createdAt     DateTime               @default(now())
+  leaveRequest  LeaveRequest           @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
+  actor         User                   @relation("LeaveApprovalActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([leaveRequestId, createdAt])
+  @@index([actorId])
+}
+
+model Announcement {
+  id            String       @id @default(cuid())
+  title         String
+  summary       String?
+  content       String
+  status        RecordStatus @default(ACTIVE)
+  publishedById String
+  publishedAt   DateTime     @default(now())
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+  publishedBy   User         @relation("AnnouncementPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
+
+  @@index([status, publishedAt])
+  @@index([publishedById])
 }
 
 model DictionaryEntry {

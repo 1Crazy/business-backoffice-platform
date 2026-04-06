@@ -15,6 +15,7 @@ import { DashboardModule } from "./modules/dashboard/dashboard.module";
 import { DepartmentsModule } from "./modules/departments/departments.module";
 import { DictionariesModule } from "./modules/dictionaries/dictionaries.module";
 import { LeadsModule } from "./modules/leads/leads.module";
+import { OfficeAutomationModule } from "./modules/office-automation/office-automation.module";
 import { RolesModule } from "./modules/roles/roles.module";
 import { UploadsModule } from "./modules/uploads/uploads.module";
 import { UsersModule } from "./modules/users/users.module";
@@ -36,6 +37,7 @@ import { UsersModule } from "./modules/users/users.module";
     LeadsModule,
     DashboardModule,
     DictionariesModule,
+    OfficeAutomationModule,
     UploadsModule
   ],
   controllers: [AppController],

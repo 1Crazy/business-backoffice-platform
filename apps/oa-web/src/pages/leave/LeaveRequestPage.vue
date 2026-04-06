@@ -1,0 +1,98 @@
+<!-- 请假申请页面：负责组装请假表单和最近申请记录。 -->
+<template>
+  <div class="page-grid">
+    <section class="page-card">
+      <h2 class="page-section-title">发起请假申请</h2>
+      <p class="page-section-caption">首期先收口最常见的请假申请场景，后续再扩展到更多办公流程。</p>
+
+      <el-form
+        :ref="setFormRef"
+        :model="form"
+        :rules="rules"
+        label-position="top"
+        require-asterisk-position="right"
+        status-icon
+        class="dialog-form"
+      >
+        <el-form-item label="请假类型" prop="leaveType" required>
+          <el-select v-model="form.leaveType" placeholder="请选择请假类型">
+            <el-option label="年假" value="ANNUAL" />
+            <el-option label="病假" value="SICK" />
+            <el-option label="事假" value="PERSONAL" />
+            <el-option label="其他" value="OTHER" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="开始时间" prop="startAt" required>
+          <el-date-picker v-model="form.startAt" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择开始时间" />
+        </el-form-item>
+        <el-form-item label="结束时间" prop="endAt" required>
+          <el-date-picker v-model="form.endAt" type="datetime" value-format="YYYY-MM-DD HH:mm:ss" placeholder="请选择结束时间" />
+        </el-form-item>
+        <el-form-item label="请假事由" prop="reason" required>
+          <el-input v-model="form.reason" type="textarea" :rows="4" placeholder="请简要描述请假原因与交接说明" />
+        </el-form-item>
+        <el-button type="primary" :loading="submitting" @click="submit">提交请假申请</el-button>
+      </el-form>
+    </section>
+
+    <section class="page-card">
+      <h2 class="page-section-title">最近申请</h2>
+      <p class="page-section-caption">提交后可以在这里快速回看最近的申请状态。</p>
+
+      <div v-if="recentRequests.length" class="recent-list">
+        <article v-for="item in recentRequests" :key="item.id" class="recent-item">
+          <div class="recent-row">
+            <strong>{{ item.leaveType }}</strong>
+            <span class="status-pill" :class="item.status.toLowerCase()">{{ item.status }}</span>
+          </div>
+          <p>{{ item.startAt }} ~ {{ item.endAt }}</p>
+        </article>
+      </div>
+      <el-empty v-else description="最近还没有请假申请记录" />
+    </section>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { useLeaveRequestPage } from "@/composables/leave/useLeaveRequestPage";
+
+const { form, recentRequests, rules, setFormRef, submit, submitting } = useLeaveRequestPage();
+</script>
+
+<style scoped>
+.page-grid {
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
+}
+
+.recent-list {
+  display: grid;
+  gap: 12px;
+}
+
+.recent-item {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+}
+
+.recent-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.recent-item p {
+  margin: 10px 0 0;
+  color: #64748b;
+  font-size: 13px;
+}
+
+@media (max-width: 960px) {
+  .page-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>

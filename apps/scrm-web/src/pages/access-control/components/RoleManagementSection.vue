@@ -2,7 +2,7 @@
 <template>
   <div>
     <div class="toolbar-row">
-      <p>权限点采用扁平编码，方便前端菜单和后端接口共用一套控制口径。</p>
+      <p>权限点按后台应用与业务分组组织，角色可以在同一套目录里同时授权 SCRM 与 OA 能力。</p>
       <el-button type="primary" @click="$emit('create')">新增角色</el-button>
     </div>
 

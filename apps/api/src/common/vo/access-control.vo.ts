@@ -59,6 +59,11 @@ export class PermissionVo {
   id!: string;
 
   @ApiProperty({
+    description: "所属后台应用编码，例如 scrm 或 oa。"
+  })
+  appCode!: string;
+
+  @ApiProperty({
     description: "名称。"
   })
   name!: string;

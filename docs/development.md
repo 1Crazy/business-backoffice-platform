@@ -8,7 +8,7 @@
 
 ### 前端分层
 
-- 前端工作区统一采用 `apps/<domain>-web` 命名；当前 SCRM 前端位于 `apps/scrm-web`，未来新增 OA 等前端也遵循相同规则。
+- 前端工作区统一采用 `apps/<domain>-web` 命名；当前已落地 `apps/scrm-web` 与 `apps/oa-web`，未来新增其他后台前端也遵循相同规则。
 - 页面组件只负责页面组装、路由上下文和顶层交互编排，不直接承载复杂业务流程。
 - 所有接口请求统一放到应用内的 `apps/<domain>-web/src/api` 领域模块中；页面、布局和展示组件不得直接导入 `api/http`。
 - 所有可复用逻辑统一放到应用内的 `apps/<domain>-web/src/composables`，优先按业务场景命名，例如 `useCustomersList`、`useLeadFollowUps`。
@@ -77,7 +77,7 @@
 - `JWT_SECRET`
 - `DATABASE_URL`
 
-前端 `apps/scrm-web/.env`：
+前端 `apps/scrm-web/.env` 与 `apps/oa-web/.env`：
 
 - `VITE_API_BASE_URL`
 
@@ -165,7 +165,7 @@ pnpm dev:full
 
 - `pnpm docker:infra` 只启动 PostgreSQL，适合本地热更新开发前的基础设施准备。
 - `pnpm dev:full` 会并行启动本地 API 与 Web，适合作为默认日常开发入口。
-- 如果只改当前 SCRM 前端，可以保留数据库容器，仅执行 `pnpm dev:scrm-web`。
+- 如果只改某个前端，可以保留数据库容器，仅执行 `pnpm dev:scrm-web` 或 `pnpm dev:oa-web`。
 - `pnpm docker:up` 仍保留给全量联调、验收和近部署环境验证，不建议作为每次改代码后的默认入口。
 
 分别启动单个服务：
@@ -173,6 +173,7 @@ pnpm dev:full
 ```bash
 pnpm dev:api
 pnpm dev:scrm-web
+pnpm dev:oa-web
 ```
 
 查看或停止开发用数据库：

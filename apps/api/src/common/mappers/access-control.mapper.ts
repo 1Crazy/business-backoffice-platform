@@ -17,6 +17,7 @@ interface DepartmentRecord extends DepartmentParentRecord {
 
 interface PermissionRecord {
   id: string;
+  appCode: string;
   name: string;
   code: string;
   description?: string | null;
@@ -85,6 +86,7 @@ export function mapDepartment(record: DepartmentRecord) {
 export function mapPermission(record: PermissionRecord) {
   return {
     id: record.id,
+    appCode: record.appCode,
     name: record.name,
     code: record.code,
     description: record.description ?? null,

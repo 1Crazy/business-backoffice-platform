@@ -31,11 +31,25 @@
         <el-input v-model="form.description" type="textarea" :rows="2" placeholder="选填，描述该角色的职责边界" />
       </el-form-item>
       <el-form-item label="权限" prop="permissionIds" required>
-        <el-checkbox-group v-model="form.permissionIds" class="permission-grid">
-          <el-checkbox v-for="item in permissionCatalog" :key="item.id" :value="item.id">
-            {{ item.name }}
-          </el-checkbox>
-        </el-checkbox-group>
+        <div class="permission-app-list">
+          <section v-for="appSection in permissionSections" :key="appSection.appCode" class="permission-app-section">
+            <header class="permission-app-header">
+              <div class="permission-app-title">{{ appSection.label }}</div>
+              <div class="permission-app-caption">按业务分组勾选当前应用可访问的页面与动作。</div>
+            </header>
+
+            <div class="permission-group-list">
+              <section v-for="groupSection in appSection.groups" :key="`${appSection.appCode}-${groupSection.group}`" class="permission-group-section">
+                <div class="permission-group-title">{{ groupSection.label }}</div>
+                <el-checkbox-group v-model="form.permissionIds" class="permission-grid">
+                  <el-checkbox v-for="item in groupSection.items" :key="item.id" :value="item.id">
+                    {{ item.name }}
+                  </el-checkbox>
+                </el-checkbox-group>
+              </section>
+            </div>
+          </section>
+        </div>
         <div class="field-hint">未勾选任何权限的角色无法访问后台页面，绑定后只会进入无权限说明页。</div>
       </el-form-item>
     </el-form>
@@ -69,9 +83,117 @@ const dialogVisible = computed({
   get: () => props.visible,
   set: (value: boolean) => emit("update:visible", value)
 });
+
+const APP_LABELS: Record<string, string> = {
+  oa: "OA 办公台",
+  scrm: "SCRM 控制台"
+};
+
+const GROUP_LABELS: Record<string, string> = {
+  access: "权限与组织",
+  announcement: "公告通知",
+  approval: "审批中心",
+  customer: "客户中心",
+  dashboard: "运营看板",
+  directory: "组织通讯录",
+  leave: "请假申请",
+  lead: "线索中心",
+  system: "系统管理",
+  workspace: "工作台"
+};
+
+const permissionSections = computed(() => {
+  const sections = new Map<
+    string,
+    {
+      appCode: string;
+      label: string;
+      groups: Map<
+        string,
+        {
+          group: string;
+          label: string;
+          items: PermissionItem[];
+        }
+      >;
+    }
+  >();
+
+  for (const item of props.permissionCatalog) {
+    const appSection =
+      sections.get(item.appCode) ??
+      {
+        appCode: item.appCode,
+        label: APP_LABELS[item.appCode] ?? item.appCode.toUpperCase(),
+        groups: new Map()
+      };
+
+    const groupSection =
+      appSection.groups.get(item.group) ??
+      {
+        group: item.group,
+        label: GROUP_LABELS[item.group] ?? item.group,
+        items: []
+      };
+
+    groupSection.items.push(item);
+    appSection.groups.set(item.group, groupSection);
+    sections.set(item.appCode, appSection);
+  }
+
+  return Array.from(sections.values()).map((appSection) => ({
+    appCode: appSection.appCode,
+    label: appSection.label,
+    groups: Array.from(appSection.groups.values())
+  }));
+});
 </script>
 
 <style scoped>
+.permission-app-list {
+  display: grid;
+  gap: 16px;
+}
+
+.permission-app-section {
+  padding: 16px;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+
+.permission-app-header {
+  margin-bottom: 14px;
+}
+
+.permission-app-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.permission-app-caption {
+  margin-top: 4px;
+  color: #64748b;
+  font-size: 13px;
+}
+
+.permission-group-list {
+  display: grid;
+  gap: 14px;
+}
+
+.permission-group-section {
+  display: grid;
+  gap: 10px;
+}
+
+.permission-group-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #334155;
+}
+
 .permission-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
