@@ -1,13 +1,13 @@
 {
-  "name": "scrm-test",
+  "name": "business-platform-workspace",
   "version": "0.1.0",
   "private": true,
   "packageManager": "pnpm@10.30.2",
   "scripts": {
     "architecture:check": "node scripts/architecture-check.cjs",
     "build": "pnpm -r build",
-    "dev:api": "pnpm --filter @scrm/api dev",
-    "dev:full": "pnpm --filter @scrm/api --filter scrm-web --parallel --stream run dev",
+    "dev:api": "pnpm --filter platform-api dev",
+    "dev:full": "pnpm --filter platform-api --filter scrm-web --parallel --stream run dev",
     "dev:oa-web": "pnpm --filter oa-web dev",
     "dev:scrm-web": "pnpm --filter scrm-web dev",
     "docker:infra": "docker compose up -d postgres",
@@ -18,8 +18,8 @@
     "docker:logs": "docker compose logs -f --tail=200",
     "lint": "pnpm -r lint && pnpm architecture:check",
     "test": "pnpm -r test",
-    "prisma:generate": "pnpm --filter @scrm/api prisma generate",
-    "prisma:migrate": "pnpm --filter @scrm/api prisma migrate dev",
-    "prisma:seed": "pnpm --filter @scrm/api prisma db seed"
+    "prisma:generate": "pnpm --filter platform-api prisma generate",
+    "prisma:migrate": "pnpm --filter platform-api prisma migrate dev",
+    "prisma:seed": "pnpm --filter platform-api prisma db seed"
   }
 }

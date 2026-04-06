@@ -164,7 +164,7 @@ pnpm dev:full
 说明：
 
 - `pnpm docker:infra` 只启动 PostgreSQL，适合本地热更新开发前的基础设施准备。
-- `pnpm dev:full` 会并行启动本地 API 与 Web，适合作为默认日常开发入口。
+- `pnpm dev:full` 会并行启动本地 `platform-api` 与 `scrm-web`，适合作为默认日常开发入口。
 - 如果只改某个前端，可以保留数据库容器，仅执行 `pnpm dev:scrm-web` 或 `pnpm dev:oa-web`。
 - `pnpm docker:up` 仍保留给全量联调、验收和近部署环境验证，不建议作为每次改代码后的默认入口。
 

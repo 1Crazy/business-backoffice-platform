@@ -12,12 +12,12 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml tsconfig.base.json ./
 COPY apps/api/package.json apps/api/package.json
 
 # 先只安装 API 及其工作区依赖，避免前端依赖进入后端镜像。
-RUN pnpm install --frozen-lockfile --filter @scrm/api...
+RUN pnpm install --frozen-lockfile --filter platform-api...
 
 COPY apps/api apps/api
 
-RUN pnpm --filter @scrm/api prisma generate
-RUN pnpm --filter @scrm/api build
+RUN pnpm --filter platform-api prisma generate
+RUN pnpm --filter platform-api build
 
 COPY apps/api/docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

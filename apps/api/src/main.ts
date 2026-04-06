@@ -30,8 +30,8 @@ async function bootstrap(): Promise<void> {
   app.useGlobalFilters(new PrismaClientExceptionFilter());
 
   const swaggerConfig = new DocumentBuilder()
-    .setTitle("SCRM API")
-    .setDescription("Single-tenant SCRM management system API")
+    .setTitle("Business Platform API")
+    .setDescription("Shared API for multi-application business back-office services")
     .setVersion("0.1.0")
     .addBearerAuth()
     .build();

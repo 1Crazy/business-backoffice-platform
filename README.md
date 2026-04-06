@@ -1,13 +1,15 @@
-# SCRM 管理系统 MVP
+# 多应用业务后台平台
 
-这是一个基于 `Vue 3 + TypeScript` 前端、`NestJS + Prisma` 后端、`PostgreSQL` 数据库的单租户 SCRM 管理系统。当前仓库已经完成一期 MVP 和二期平台硬化，能够覆盖认证、客户、线索、跟进、看板、审计与附件等核心后台流程。
+这是一个基于 `Vue 3 + TypeScript` 前端、`NestJS + Prisma` 后端、`PostgreSQL` 数据库的多应用后台平台仓库。当前已经落地 `scrm-web` 与 `oa-web` 两个后台前端，并复用统一的账号、角色权限、会话身份与组织架构体系。
+
+当前仓库已经完成一期 SCRM MVP、二期平台硬化以及 OA 首批办公协作闭环，能够覆盖认证、客户、线索、跟进、看板、请假审批、公告通知、组织通讯录、审计与附件等核心后台流程。
 
 当前仓库已经包含：
 
 - `apps/scrm-web`：Vue 3 + Vite + Pinia + Vue Router + Element Plus 的当前 SCRM 后台前端
 - `apps/oa-web`：Vue 3 + Vite + Pinia + Vue Router + Element Plus 的 OA 后台前端
-- `apps/api`：NestJS + JWT/RBAC + Prisma 后端服务
-- `docker-compose.yml`：本地 PostgreSQL、NestJS API、SCRM Web 的容器编排配置
+- `apps/api`：NestJS + JWT/RBAC + Prisma 的共享平台后端服务，工作区包名为 `platform-api`
+- `docker-compose.yml`：本地 PostgreSQL、NestJS API、当前 SCRM Web 的容器编排配置
 - `apps/api/prisma`：数据库 schema、初始迁移和种子脚本
 - `openspec/specs`：当前已经同步完成的主规格
 - `openspec/changes/archive/2026-04-05-bootstrap-scrm-mvp`：已归档的一期 MVP OpenSpec 变更记录
@@ -16,11 +18,13 @@
 
 ## 当前能力范围
 
+- 平台能力：统一登录身份、多应用权限目录、菜单与页面授权、会话续期与退出
 - 账号登录、角色权限、菜单和接口授权
 - 部门、员工、角色与权限管理
 - 客户中心：客户档案、标签、来源、状态、归属人
 - 线索与跟进：线索分配、线索转客户、跟进记录、待办提醒
 - 运营看板：新增客户、跟进次数、线索转化率
+- OA 办公协作：工作台、待我审批、我发起的申请、请假申请、公告通知、组织通讯录
 - 系统管理：字典配置、审计日志、附件上传
 - 二期平台硬化：会话续期与退出、统一数据范围、分页列表、附件下载鉴权、仓库级 CI
 
@@ -136,7 +140,7 @@ pnpm docker:infra:down
 使用建议：
 
 - `pnpm docker:infra`：只启动 PostgreSQL，适合本地热更新开发。
-- `pnpm dev:full`：并行启动本地 API 和 `scrm-web`，适合高频改代码。
+- `pnpm dev:full`：并行启动本地 `platform-api` 和 `scrm-web`，适合高频改代码。
 - `pnpm docker:up`：全量构建并启动数据库、API、Web，更适合联调、验收和近部署环境验证，而不是日常每次改代码都执行。
 
 ## Prisma 初始化
@@ -214,7 +218,7 @@ pnpm docker:infra:down
 类型检查：
 
 ```bash
-pnpm --filter @scrm/api lint
+pnpm --filter platform-api lint
 pnpm --filter scrm-web lint
 pnpm --filter oa-web lint
 ```
@@ -222,7 +226,7 @@ pnpm --filter oa-web lint
 构建：
 
 ```bash
-pnpm --filter @scrm/api build
+pnpm --filter platform-api build
 pnpm --filter scrm-web build
 pnpm --filter oa-web build
 ```
@@ -230,8 +234,9 @@ pnpm --filter oa-web build
 测试：
 
 ```bash
-pnpm --filter @scrm/api test
+pnpm --filter platform-api test
 pnpm --filter scrm-web test
+pnpm --filter oa-web test
 ```
 
 仓库级校验：
