@@ -13,6 +13,7 @@
 - `apps/api/prisma`：数据库 schema、初始迁移和种子脚本
 - `openspec/specs`：当前已经同步完成的主规格
 - `openspec/changes/archive/2026-04-05-bootstrap-scrm-mvp`：已归档的一期 MVP OpenSpec 变更记录
+- `openspec/changes/archive/2026-04-06-sales-opportunity-management`：已归档的商机管理 OpenSpec 变更记录
 
 前端工作区命名约定为 `apps/<domain>-web`。当前已经落地的是 `apps/scrm-web` 和 `apps/oa-web`，后续新增其他后台前端也遵循同一规则。
 
@@ -54,10 +55,10 @@ pnpm install
 
 仓库已提供环境变量模板文件：
 
-- 根目录 [`.env.example`](/Users/hong/Documents/my-project/scrm-test/.env.example)
-- 后端 [`apps/api/.env.example`](/Users/hong/Documents/my-project/scrm-test/apps/api/.env.example)
-- 前端 [`apps/scrm-web/.env.example`](/Users/hong/Documents/my-project/scrm-test/apps/scrm-web/.env.example)
-- 开发说明 [`docs/development.md`](/Users/hong/Documents/my-project/scrm-test/docs/development.md)
+- 根目录 [`.env.example`](./.env.example)
+- 后端 [`apps/api/.env.example`](./apps/api/.env.example)
+- 前端 [`apps/scrm-web/.env.example`](./apps/scrm-web/.env.example)
+- 开发说明 [`docs/development.md`](./docs/development.md)
 
 本地开发时可以基于这些模板生成对应的 `.env` 文件。当前工作区里已经存在可直接运行的本地 `.env`，如果需要自定义端口、数据库账号或 API 地址，可以按需修改。
 
@@ -154,11 +155,20 @@ pnpm prisma:seed
 
 说明：
 
-- 当前仓库已经包含首版迁移文件：[`apps/api/prisma/migrations/20260405093000_init/migration.sql`](/Users/hong/Documents/my-project/scrm-test/apps/api/prisma/migrations/20260405093000_init/migration.sql)
+- 当前仓库已经包含首版迁移文件：[`apps/api/prisma/migrations/20260405093000_init/migration.sql`](./apps/api/prisma/migrations/20260405093000_init/migration.sql)
 - 如果本地数据库已启动，`pnpm prisma:migrate` 会把 schema 应用到 PostgreSQL
 - `pnpm prisma:seed` 会初始化默认角色、权限、字典和管理员账号
 - 当前默认会把 PostgreSQL 映射到宿主机 `5433`，用于避开常见的本机 `5432` 端口占用问题
 - 如果你使用 `pnpm docker:up`，这些数据库初始化动作会在 API 容器启动时自动执行
+
+如果你是在已有本地数据库上拉取最新商机能力，请额外执行一次：
+
+```bash
+pnpm --filter platform-api prisma migrate deploy
+pnpm --filter platform-api seed
+```
+
+这样可以把 `Opportunity` / `OpportunityStageHistory` 相关表结构和 `opportunity:*` 权限同步到本地数据库；否则 `GET /api/dashboard/overview` 可能因为缺表报错，`GET /api/sales-opportunities` 也可能因为权限种子未更新而返回 `403`。
 
 商机权限补充：
 
@@ -261,7 +271,7 @@ pnpm test
 pnpm build
 ```
 
-GitHub Actions 也会执行同样的校验流程，工作流文件位于 [`.github/workflows/ci.yml`](/Users/hong/Documents/my-project/scrm-test/.github/workflows/ci.yml)。
+GitHub Actions 也会执行同样的校验流程，工作流文件位于 [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)。
 
 ## 二期接口与约束
 
@@ -327,6 +337,7 @@ python3 -m playwright install chromium
 - Chromium 登录流程可用
 - Docker 启动后的前后端联调可用
 - `/dashboard`、`/departments`、`/customers`、`/leads`、`/system` 已完成主流程巡检
+- `/dashboard`、`/opportunities` 在商机迁移与 seed 更新后已完成登录态冒烟验证
 - `390 / 768 / 1440` 三档宽度下，主页面已完成响应式回归
 
 二期收口时建议补充以下验证：
@@ -342,3 +353,4 @@ python3 -m playwright install chromium
 - 当前 Docker 全量启动已经验证通过，前端 `8080`、后端 `3000`、数据库 `5433` 均可访问，默认管理员账号可正常登录。
 - OpenSpec 一期变更 `bootstrap-scrm-mvp` 已同步到主规格并归档。
 - OpenSpec 二期变更 `phase2-platform-hardening` 已完成实现与本地验证，主要增量为会话治理、分页与数据范围、审计和附件硬化、CI 校验。
+- OpenSpec 变更 `sales-opportunity-management` 已同步到主规格并归档，主 spec 位于 `openspec/specs/sales-opportunity-management/spec.md`。
