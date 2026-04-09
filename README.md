@@ -6,6 +6,7 @@
 
 当前仓库已经包含：
 
+- `apps/main-web`：基于 `qiankun` 的统一前端主应用，负责登录入口、统一导航壳层与 OA/SCRM 子应用承载
 - `apps/scrm-web`：Vue 3 + Vite + Pinia + Vue Router + Element Plus 的当前 SCRM 后台前端
 - `apps/oa-web`：Vue 3 + Vite + Pinia + Vue Router + Element Plus 的 OA 后台前端
 - `apps/api`：NestJS + JWT/RBAC + Prisma 的共享平台后端服务，工作区包名为 `platform-api`
@@ -15,11 +16,12 @@
 - `openspec/changes/archive/2026-04-05-bootstrap-scrm-mvp`：已归档的一期 MVP OpenSpec 变更记录
 - `openspec/changes/archive/2026-04-06-sales-opportunity-management`：已归档的商机管理 OpenSpec 变更记录
 
-前端工作区命名约定为 `apps/<domain>-web`。当前已经落地的是 `apps/scrm-web` 和 `apps/oa-web`，后续新增其他后台前端也遵循同一规则。
+前端工作区命名约定为 `apps/<domain>-web`。当前已经落地的是 `apps/main-web`、`apps/scrm-web` 和 `apps/oa-web`，后续新增其他后台前端也遵循同一规则。
 
 ## 当前能力范围
 
 - 平台能力：统一登录身份、多应用权限目录、菜单与页面授权、会话续期与退出
+- 主应用门户：统一登录、跨域菜单壳层、OA/SCRM 页面整合与 qiankun 子应用承载
 - 账号登录、角色权限、菜单和接口授权
 - 部门、员工、角色与权限管理
 - 客户中心：客户档案、标签、来源、状态、归属人
@@ -58,6 +60,7 @@ pnpm install
 - 根目录 [`.env.example`](./.env.example)
 - 后端 [`apps/api/.env.example`](./apps/api/.env.example)
 - 前端 [`apps/scrm-web/.env.example`](./apps/scrm-web/.env.example)
+- 前端 [`apps/main-web/.env.example`](./apps/main-web/.env.example)
 - 开发说明 [`docs/development.md`](./docs/development.md)
 
 本地开发时可以基于这些模板生成对应的 `.env` 文件。当前工作区里已经存在可直接运行的本地 `.env`，如果需要自定义端口、数据库账号或 API 地址，可以按需修改。
@@ -66,6 +69,7 @@ pnpm install
 
 - 根目录 `.env` 主要服务于 `docker-compose.yml`，除数据库变量外，建议同时配置 `JWT_SECRET`。
 - `apps/api/.env` 当前需要 `PORT`、`JWT_SECRET` 和 `DATABASE_URL`。
+- `apps/main-web/.env` 当前需要 `VITE_API_BASE_URL`、`VITE_OA_ENTRY` 和 `VITE_SCRM_ENTRY`。
 - `apps/scrm-web/.env` 当前需要 `VITE_API_BASE_URL`。
 - `apps/oa-web/.env` 当前同样需要 `VITE_API_BASE_URL`。
 
@@ -128,6 +132,7 @@ pnpm dev:full
 
 ```bash
 pnpm docker:infra
+pnpm dev:main-web
 pnpm dev:scrm-web
 pnpm dev:oa-web
 ```
@@ -142,7 +147,8 @@ pnpm docker:infra:down
 使用建议：
 
 - `pnpm docker:infra`：只启动 PostgreSQL，适合本地热更新开发。
-- `pnpm dev:full`：并行启动本地 `platform-api` 和 `scrm-web`，适合高频改代码。
+- `pnpm dev:full`：并行启动本地 `platform-api`、`main-web`、`oa-web` 和 `scrm-web`，适合验证主应用壳层与子应用联调。
+- `pnpm dev:main-web`：只启动主应用宿主，适合配合已启动的子应用做壳层与导航调试。
 - `pnpm docker:up`：全量构建并启动数据库、API、Web，更适合联调、验收和近部署环境验证，而不是日常每次改代码都执行。
 
 ## Prisma 初始化
@@ -213,6 +219,7 @@ pnpm dev:api
 前端：
 
 ```bash
+pnpm dev:main-web
 pnpm dev:scrm-web
 pnpm dev:oa-web
 ```
@@ -225,6 +232,7 @@ pnpm docker:infra:down
 
 默认地址：
 
+- 主应用：`http://localhost:5175`
 - SCRM 前端：`http://localhost:5173`
 - OA 前端：`http://localhost:5174`
 - 后端：`http://localhost:3000/api`
@@ -233,7 +241,7 @@ pnpm docker:infra:down
 
 补充说明：
 
-- `pnpm dev:full` 使用本地热更新链路，不会重新构建前后端镜像。
+- `pnpm dev:full` 使用本地热更新链路，不会重新构建前后端镜像；主应用通过 `qiankun` 从 `oa-web` 与 `scrm-web` 开发服务加载内容页。
 - `pnpm docker:up` 仍然保留，用于全量联调和容器化验证。
 
 ## 构建与测试

@@ -2,17 +2,77 @@
 import { createPinia } from "pinia";
 import ElementPlus from "element-plus";
 import "element-plus/dist/index.css";
-import { createApp } from "vue";
+import { createApp, type App as VueApp } from "vue";
+import { qiankunWindow, renderWithQiankun } from "vite-plugin-qiankun/dist/helper";
 
 import App from "@/App.vue";
 import { elementPlusOptions } from "@/plugins/element-plus";
 import { router } from "@/router";
 import "./styles/global.css";
 
-const app = createApp(App);
+const OA_ROOT_CLASS = "oa-app-root";
+const OA_STANDALONE_ATTR = "data-oa-standalone";
 
-app.use(createPinia());
-app.use(router);
-app.use(ElementPlus, elementPlusOptions);
+let app: VueApp<Element> | null = null;
+let mountElement: HTMLElement | null = null;
 
-app.mount("#app");
+function syncStandaloneDocumentState(standalone: boolean): void {
+  if (typeof document === "undefined") {
+    return;
+  }
+
+  const root = document.documentElement;
+  const body = document.body;
+
+  if (standalone) {
+    root.setAttribute(OA_STANDALONE_ATTR, "true");
+    body.setAttribute(OA_STANDALONE_ATTR, "true");
+    return;
+  }
+
+  root.removeAttribute(OA_STANDALONE_ATTR);
+  body.removeAttribute(OA_STANDALONE_ATTR);
+}
+
+function render(container?: Element | Document, standalone = false): void {
+  const mountTarget = (container ?? document).querySelector("#app");
+
+  if (!(mountTarget instanceof HTMLElement)) {
+    return;
+  }
+
+  syncStandaloneDocumentState(standalone);
+  mountTarget.classList.add(OA_ROOT_CLASS);
+  mountElement = mountTarget;
+
+  app = createApp(App);
+  app.use(createPinia());
+  app.use(router);
+  app.use(ElementPlus, elementPlusOptions);
+  app.mount(mountTarget);
+}
+
+renderWithQiankun({
+  bootstrap() {
+    return Promise.resolve();
+  },
+  mount(props) {
+    render(props.container, false);
+    return Promise.resolve();
+  },
+  update() {
+    return Promise.resolve();
+  },
+  unmount() {
+    app?.unmount();
+    app = null;
+    mountElement?.classList.remove(OA_ROOT_CLASS);
+    mountElement = null;
+    syncStandaloneDocumentState(false);
+    return Promise.resolve();
+  }
+});
+
+if (!qiankunWindow.__POWERED_BY_QIANKUN__) {
+  render(undefined, true);
+}

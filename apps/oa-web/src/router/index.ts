@@ -2,6 +2,7 @@
 import { ElMessage } from "element-plus";
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
 
+import { getMicroAppRouterBase } from "@/micro/runtime";
 import { resolveFirstAccessiblePath } from "@/router/access";
 import { useAuthStore } from "@/stores/auth";
 
@@ -108,7 +109,7 @@ const routes: RouteRecordRaw[] = [
 ];
 
 export const router = createRouter({
-  history: createWebHistory(),
+  history: createWebHistory(getMicroAppRouterBase()),
   routes
 });
 

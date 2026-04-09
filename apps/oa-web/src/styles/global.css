@@ -4,7 +4,8 @@
   box-sizing: border-box;
 }
 
-:root {
+.oa-app-root,
+body[data-oa-standalone="true"] {
   color-scheme: light;
   font-family: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   --app-font-body: "Avenir Next", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
@@ -37,24 +38,24 @@
   --app-shell-min-height: 100dvh;
 }
 
-html {
+html[data-oa-standalone="true"] {
   background: var(--app-canvas);
 }
 
-body {
+body[data-oa-standalone="true"] {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
   color: var(--app-text-primary);
+  font-family: var(--app-font-body);
   background:
     radial-gradient(circle at top left, rgba(15, 118, 110, 0.08), transparent 22%),
     radial-gradient(circle at right 12%, rgba(198, 123, 51, 0.08), transparent 18%),
     linear-gradient(180deg, #faf9f5 0%, #f4f5f1 48%, #edf2f4 100%);
-  font-family: var(--app-font-body);
   position: relative;
 }
 
-body::before {
+body[data-oa-standalone="true"]::before {
   content: "";
   position: fixed;
   inset: 0;
@@ -65,10 +66,13 @@ body::before {
   opacity: 0.45;
 }
 
-#app {
+.oa-app-root {
+  min-width: 0;
   min-height: var(--app-shell-min-height);
   position: relative;
   z-index: 0;
+  color: var(--app-text-primary);
+  font-family: var(--app-font-body);
 }
 
 a {

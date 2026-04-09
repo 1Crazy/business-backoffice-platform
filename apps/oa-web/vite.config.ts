@@ -1,6 +1,7 @@
 import path from "node:path";
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vite";
+import qiankun from "vite-plugin-qiankun";
 
 export default defineConfig({
   build: {
@@ -37,13 +38,19 @@ export default defineConfig({
       }
     }
   },
-  plugins: [vue()],
+  plugins: [vue(), qiankun("oa-web", { useDevMode: true })],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src")
     }
   },
   server: {
+    cors: true,
+    headers: {
+      "Access-Control-Allow-Origin": "*"
+    },
+    hmr: false,
+    origin: "http://localhost:5174",
     port: 5174
   }
 });

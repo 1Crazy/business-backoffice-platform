@@ -1,6 +1,6 @@
 # 开发与验证说明
 
-本文档补充二期平台硬化与商机管理落地后的开发约定，重点覆盖会话治理、分页接口、商机权限与验证流程、附件限制和本地验证流程。
+本文档补充二期平台硬化、商机管理与主应用 `qiankun` 集成后的开发约定，重点覆盖会话治理、分页接口、商机权限、主应用/子应用边界和本地验证流程。
 
 ## 架构与维护约定
 
@@ -8,7 +8,10 @@
 
 ### 前端分层
 
-- 前端工作区统一采用 `apps/<domain>-web` 命名；当前已落地 `apps/scrm-web` 与 `apps/oa-web`，未来新增其他后台前端也遵循相同规则。
+- 前端工作区统一采用 `apps/<domain>-web` 命名；当前已落地 `apps/main-web`、`apps/scrm-web` 与 `apps/oa-web`，未来新增其他后台前端也遵循相同规则。
+- `main-web` 负责统一登录入口、菜单壳层、页面标题区与 `qiankun` 子应用承载；`oa-web` 与 `scrm-web` 负责各自业务域页面、路由守卫、API 调用与领域 UI。
+- 主应用不得直接跨工作区导入子应用业务页面、composable 或 API 源码；子应用集成统一通过 `qiankun` 入口、路由前缀与显式菜单配置完成。
+- 子应用的微前端运行模式判断必须收敛在入口、runtime 或布局适配层，禁止把 `qiankun` 特判散落到页面和业务组件里。
 - 页面组件只负责页面组装、路由上下文和顶层交互编排，不直接承载复杂业务流程。
 - 所有接口请求统一放到应用内的 `apps/<domain>-web/src/api` 领域模块中；页面、布局和展示组件不得直接导入 `api/http`。
 - 所有可复用逻辑统一放到应用内的 `apps/<domain>-web/src/composables`，优先按业务场景命名，例如 `useCustomersList`、`useLeadFollowUps`。
@@ -76,6 +79,12 @@
 - `PORT`
 - `JWT_SECRET`
 - `DATABASE_URL`
+
+前端 `apps/main-web/.env`：
+
+- `VITE_API_BASE_URL`
+- `VITE_OA_ENTRY`
+- `VITE_SCRM_ENTRY`
 
 前端 `apps/scrm-web/.env` 与 `apps/oa-web/.env`：
 
@@ -171,7 +180,8 @@ pnpm dev:full
 说明：
 
 - `pnpm docker:infra` 只启动 PostgreSQL，适合本地热更新开发前的基础设施准备。
-- `pnpm dev:full` 会并行启动本地 `platform-api` 与 `scrm-web`，适合作为默认日常开发入口。
+- `pnpm dev:full` 会并行启动本地 `platform-api`、`main-web`、`oa-web` 与 `scrm-web`，适合作为主应用联调入口。
+- 如果只改宿主壳层，可以保留数据库容器并执行 `pnpm dev:main-web`，再按需单独启动 OA 或 SCRM 子应用。
 - 如果只改某个前端，可以保留数据库容器，仅执行 `pnpm dev:scrm-web` 或 `pnpm dev:oa-web`。
 - `pnpm docker:up` 仍保留给全量联调、验收和近部署环境验证，不建议作为每次改代码后的默认入口。
 
@@ -179,6 +189,7 @@ pnpm dev:full
 
 ```bash
 pnpm dev:api
+pnpm dev:main-web
 pnpm dev:scrm-web
 pnpm dev:oa-web
 ```

@@ -1,10 +1,10 @@
 <!-- 布局组件：负责 OA 应用级导航、面包屑和页面壳层结构。 -->
 <template>
-  <div class="layout-shell">
-    <LayoutSidebarNav :active-path="route.path" :items="visibleItems" />
+  <div class="layout-shell" :class="{ 'layout-shell-embedded': microAppMode }">
+    <LayoutSidebarNav v-if="!microAppMode" :active-path="route.path" :items="visibleItems" />
 
-    <main class="main">
-      <header class="topbar page-card">
+    <main class="main" :class="{ 'main-embedded': microAppMode }">
+      <header v-if="!microAppMode" class="topbar page-card">
         <div class="topbar-copy">
           <div class="topbar-meta">
             <div class="topbar-kicker">办公协同门户</div>
@@ -28,9 +28,15 @@
         </div>
       </header>
 
-      <LayoutMobileNav :active-path="route.path" :current-title="currentTitle" :items="visibleItems" @navigate="handleNavigate" />
+      <LayoutMobileNav
+        v-if="!microAppMode"
+        :active-path="route.path"
+        :current-title="currentTitle"
+        :items="visibleItems"
+        @navigate="handleNavigate"
+      />
 
-      <section class="content">
+      <section class="content" :class="{ 'content-embedded': microAppMode }">
         <RouterView />
       </section>
     </main>
@@ -43,12 +49,14 @@ import { useRoute, useRouter } from "vue-router";
 
 import LayoutMobileNav from "@/layout/components/LayoutMobileNav.vue";
 import LayoutSidebarNav from "@/layout/components/LayoutSidebarNav.vue";
+import { isMicroAppMode } from "@/micro/runtime";
 import { router } from "@/router";
 import { useAuthStore } from "@/stores/auth";
 
 const route = useRoute();
 const routerInstance = useRouter();
 const authStore = useAuthStore();
+const microAppMode = isMicroAppMode();
 
 const menuItems = router.getRoutes().filter(
   (item) =>
@@ -131,6 +139,13 @@ function resolveSectionLabel(path: string): string {
   overflow: hidden;
 }
 
+.layout-shell-embedded {
+  display: block;
+  min-height: 0;
+  height: auto;
+  overflow: visible;
+}
+
 .main {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
@@ -138,6 +153,13 @@ function resolveSectionLabel(path: string): string {
   padding: 16px 18px 18px 0;
   min-width: 0;
   overflow: hidden;
+}
+
+.main-embedded {
+  grid-template-rows: minmax(0, 1fr);
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
 }
 
 .topbar {
@@ -269,6 +291,11 @@ function resolveSectionLabel(path: string): string {
   padding-right: 4px;
   scrollbar-gutter: stable;
   overscroll-behavior: contain;
+}
+
+.content-embedded {
+  overflow: visible;
+  padding-right: 0;
 }
 
 .content::-webkit-scrollbar {
