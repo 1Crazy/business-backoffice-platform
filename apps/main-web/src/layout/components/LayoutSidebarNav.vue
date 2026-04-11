@@ -44,7 +44,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
 
-import type { HostNavigationGroup } from "@/types/navigation";
+import type { HostDomain, HostNavigationGroup } from "@/types/navigation";
 
 const props = defineProps<{
   activeDomain: HostDomain;
@@ -63,7 +63,7 @@ const brandBadge = computed(() => "H");
 const brandKicker = computed(() => "Enterprise Gateway");
 const brandTitle = computed(() => "主应用工作台");
 const footerTitle = computed(() => "统一入口");
-const footerCaption = computed(() => "主系统统一承接 OA 与 SCRM 页面入口，保持稳定导航与跨域切换体验。");
+const footerCaption = computed(() => "主系统统一承接平台治理、OA 与 SCRM 页面入口，保持稳定导航与跨域切换体验。");
 
 watch(
   () => props.activeDomain,

@@ -14,7 +14,7 @@ export function useHostNavigation() {
   const currentItem = computed(() => findNavigationItemByPath(route.path));
   const currentTitle = computed(() => route.meta.title?.toString() ?? currentItem.value?.title ?? "主应用工作台");
   const currentDescription = computed(
-    () => route.meta.description?.toString() ?? currentItem.value?.description ?? "统一承载 OA 与 SCRM 页面内容。"
+    () => route.meta.description?.toString() ?? currentItem.value?.description ?? "统一承载平台治理、OA 与 SCRM 页面内容。"
   );
   const currentKicker = computed(() => route.meta.kicker?.toString() ?? currentItem.value?.kicker ?? "统一门户");
   const currentSectionLabel = computed(
@@ -26,7 +26,7 @@ export function useHostNavigation() {
   const currentDomainTitle = computed(
     () => route.meta.domainTitle?.toString() ?? currentItem.value?.domainTitle ?? "统一门户"
   );
-  const currentDomain = computed<HostDomain>(() => currentItem.value?.domain ?? "oa");
+  const currentDomain = computed<HostDomain>(() => currentItem.value?.domain ?? "platform");
 
   return {
     visibleGroups,

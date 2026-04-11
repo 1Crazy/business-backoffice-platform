@@ -55,7 +55,7 @@ const {
   currentTitle
 } = useHostNavigation();
 const hostShellStyle = computed(() => ({
-  "--host-sidebar-width": currentDomain.value === "scrm" ? "232px" : "228px"
+  "--host-sidebar-width": currentDomain.value === "scrm" ? "232px" : currentDomain.value === "platform" ? "236px" : "228px"
 }));
 
 function handleNavigate(path: string): void {

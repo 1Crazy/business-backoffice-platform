@@ -57,7 +57,7 @@ const emit = defineEmits<{
 
 const expanded = ref(false);
 const drawerTitle = computed(() => "主应用菜单");
-const drawerCaption = computed(() => "统一承接 OA 与 SCRM 页面入口，帮助你在同一壳层里完成跨域切换。");
+const drawerCaption = computed(() => "统一承接平台治理、OA 与 SCRM 页面入口，帮助你在同一壳层里完成跨域切换。");
 
 function handleNavigate(path: string): void {
   expanded.value = false;

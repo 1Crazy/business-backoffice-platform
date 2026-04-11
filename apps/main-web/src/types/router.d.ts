@@ -14,5 +14,6 @@ declare module "vue-router" {
     domainTitle?: string;
     domainBadge?: string;
     microAppName?: MicroAppName;
+    governanceTab?: "departments" | "employees" | "roles";
   }
 }

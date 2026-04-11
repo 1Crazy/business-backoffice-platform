@@ -1,4 +1,4 @@
-/** 路由层：负责主应用登录守卫、权限兜底与子应用页面路由映射。 */
+/** 路由层：负责主应用登录守卫、权限兜底以及原生平台页与子应用页的路由映射。 */
 import { ElMessage } from "element-plus";
 import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router";
 
@@ -9,24 +9,64 @@ const AppLayout = () => import("@/layout/AppLayout.vue");
 const LoginPage = () => import("@/pages/login/LoginPage.vue");
 const MicroAppPage = () => import("@/pages/micro-app/MicroAppPage.vue");
 const NoAccessPage = () => import("@/pages/no-access/NoAccessPage.vue");
+const PlatformGovernancePage = () => import("@/pages/platform-governance/PlatformGovernancePage.vue");
 
-const microRoutes: RouteRecordRaw[] = allNavigationItems.map((item) => ({
-  path: item.path.slice(1),
-  name: item.key,
-  component: MicroAppPage,
-  meta: {
-    title: item.title,
-    description: item.description,
-    permission: item.permission,
-    hidden: item.hidden,
-    sectionLabel: item.sectionLabel,
-    kicker: item.kicker,
-    domain: item.domain,
-    domainTitle: item.domainTitle,
-    domainBadge: item.domainBadge,
-    microAppName: item.microAppName
+const nativePageDefinitions: Record<string, RouteRecordRaw["component"]> = {
+  "platform-departments": PlatformGovernancePage,
+  "platform-employees": PlatformGovernancePage,
+  "platform-roles": PlatformGovernancePage
+};
+
+const nativeRoutes: RouteRecordRaw[] = allNavigationItems
+  .filter((item) => !item.microAppName)
+  .map((item) => ({
+    path: item.path.slice(1),
+    name: item.key,
+    component: nativePageDefinitions[item.key] ?? PlatformGovernancePage,
+    meta: {
+      title: item.title,
+      description: item.description,
+      permission: item.permission,
+      hidden: item.hidden,
+      sectionLabel: item.sectionLabel,
+      kicker: item.kicker,
+      domain: item.domain,
+      domainTitle: item.domainTitle,
+      domainBadge: item.domainBadge,
+      governanceTab:
+        item.key === "platform-departments" ? "departments" : item.key === "platform-employees" ? "employees" : "roles"
+    }
+  }));
+
+const microRoutes: RouteRecordRaw[] = allNavigationItems
+  .filter((item) => item.microAppName)
+  .map((item) => ({
+    path: item.path.slice(1),
+    name: item.key,
+    component: MicroAppPage,
+    meta: {
+      title: item.title,
+      description: item.description,
+      permission: item.permission,
+      hidden: item.hidden,
+      sectionLabel: item.sectionLabel,
+      kicker: item.kicker,
+      domain: item.domain,
+      domainTitle: item.domainTitle,
+      domainBadge: item.domainBadge,
+      microAppName: item.microAppName
+    }
+  }));
+
+const legacyRedirectRoutes: RouteRecordRaw[] = [
+  {
+    path: "scrm/departments",
+    redirect: "/platform/organization/departments",
+    meta: {
+      hidden: true
+    }
   }
-}));
+];
 
 const routes: RouteRecordRaw[] = [
   {
@@ -49,7 +89,11 @@ const routes: RouteRecordRaw[] = [
   {
     path: "/",
     component: AppLayout,
-    children: microRoutes
+    children: [
+      ...nativeRoutes,
+      ...microRoutes,
+      ...legacyRedirectRoutes
+    ]
   },
   {
     path: "/:pathMatch(.*)*",

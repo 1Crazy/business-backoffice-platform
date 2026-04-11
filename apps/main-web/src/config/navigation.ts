@@ -1,6 +1,48 @@
 /** 主应用导航配置：集中维护可访问菜单、隐藏详情页与页面元信息，避免壳层文案散落在多个组件中。 */
 import type { HostNavigationGroup, HostNavigationItem } from "@/types/navigation";
 
+const platformItems: HostNavigationItem[] = [
+  {
+    key: "platform-departments",
+    title: "部门治理",
+    description: "维护部门结构、上下级关系与组织骨架。",
+    path: "/platform/organization/departments",
+    permission: "department:read",
+    domain: "platform",
+    domainTitle: "平台治理",
+    domainBadge: "PLATFORM",
+    sectionLabel: "组织架构",
+    kicker: "组织治理",
+    icon: "platform"
+  },
+  {
+    key: "platform-employees",
+    title: "员工治理",
+    description: "维护员工账号、部门归属与角色绑定关系。",
+    path: "/platform/organization/employees",
+    permission: "user:read",
+    domain: "platform",
+    domainTitle: "平台治理",
+    domainBadge: "PLATFORM",
+    sectionLabel: "员工账号",
+    kicker: "员工治理",
+    icon: "directory"
+  },
+  {
+    key: "platform-roles",
+    title: "角色授权",
+    description: "按平台治理、OA 与 SCRM 维度配置角色权限。",
+    path: "/platform/access/roles",
+    permission: "role:read",
+    domain: "platform",
+    domainTitle: "平台治理",
+    domainBadge: "PLATFORM",
+    sectionLabel: "授权治理",
+    kicker: "角色授权",
+    icon: "system"
+  }
+];
+
 const oaItems: HostNavigationItem[] = [
   {
     key: "oa-workspace",
@@ -104,20 +146,6 @@ const scrmItems: HostNavigationItem[] = [
     icon: "dashboard"
   },
   {
-    key: "scrm-departments",
-    title: "部门管理",
-    description: "维护部门、角色与权限治理结构。",
-    path: "/scrm/departments",
-    permission: "department:read",
-    domain: "scrm",
-    domainTitle: "SCRM 经营",
-    domainBadge: "SCRM",
-    sectionLabel: "权限治理",
-    kicker: "权限治理",
-    microAppName: "scrm-web",
-    icon: "department"
-  },
-  {
     key: "scrm-customers",
     title: "客户中心",
     description: "管理客户档案、跟进与归属关系。",
@@ -177,6 +205,12 @@ const scrmItems: HostNavigationItem[] = [
 
 export const hostNavigationGroups: HostNavigationGroup[] = [
   {
+    key: "platform",
+    title: "平台治理",
+    caption: "组织、员工、角色与应用授权",
+    items: platformItems
+  },
+  {
     key: "oa",
     title: "协同事务",
     caption: "审批、请假、公告与组织联络",
@@ -185,7 +219,7 @@ export const hostNavigationGroups: HostNavigationGroup[] = [
   {
     key: "scrm",
     title: "经营管理",
-    caption: "看板、客户、线索、商机与平台治理",
+    caption: "看板、客户、线索、商机与系统治理",
     items: scrmItems
   }
 ];

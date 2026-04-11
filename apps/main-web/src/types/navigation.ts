@@ -1,7 +1,8 @@
 /** 导航类型定义：约束主应用菜单、页面元信息与子应用归属。 */
-export type HostDomain = "oa" | "scrm";
+export type HostDomain = "platform" | "oa" | "scrm";
 export type MicroAppName = "oa-web" | "scrm-web";
 export type NavigationIcon =
+  | "platform"
   | "compass"
   | "checklist"
   | "draft"
@@ -26,7 +27,7 @@ export interface HostNavigationItem {
   domainBadge: string;
   sectionLabel: string;
   kicker: string;
-  microAppName: MicroAppName;
+  microAppName?: MicroAppName;
   icon: NavigationIcon;
   hidden?: boolean;
 }

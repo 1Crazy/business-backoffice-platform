@@ -12,12 +12,12 @@ const prisma = new PrismaClient();
 
 const permissionSeeds = [
   ["scrm", "dashboard:view", "查看看板", "dashboard"],
-  ["scrm", "department:read", "查看部门", "access"],
-  ["scrm", "department:write", "编辑部门", "access"],
-  ["scrm", "user:read", "查看员工", "access"],
-  ["scrm", "user:write", "编辑员工", "access"],
-  ["scrm", "role:read", "查看角色", "access"],
-  ["scrm", "role:write", "编辑角色", "access"],
+  ["platform", "department:read", "查看部门", "access"],
+  ["platform", "department:write", "编辑部门", "access"],
+  ["platform", "user:read", "查看员工", "access"],
+  ["platform", "user:write", "编辑员工", "access"],
+  ["platform", "role:read", "查看角色", "access"],
+  ["platform", "role:write", "编辑角色", "access"],
   ["scrm", "customer:read", "查看客户", "customer"],
   ["scrm", "customer:write", "编辑客户", "customer"],
   ["scrm", "customer:assign", "转交客户", "customer"],

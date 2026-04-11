@@ -114,6 +114,24 @@ select {
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.88), transparent);
 }
 
+.page-table-shell {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: calc(var(--app-radius-xl) - 2px);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  border: 1px solid rgba(12, 95, 120, 0.14);
+  background: rgba(248, 251, 255, 0.78);
+}
+
+.page-table-shell .el-table,
+.page-table-shell .el-table__inner-wrapper,
+.page-table-shell .el-scrollbar__view {
+  min-width: 100%;
+}
+
 .page-kicker {
   display: inline-flex;
   align-items: center;
@@ -142,6 +160,22 @@ select {
 .dialog-form .el-textarea,
 .dialog-form .el-date-editor {
   width: 100%;
+}
+
+.dialog-form .el-checkbox-group {
+  width: 100%;
+}
+
+.dialog-form .el-checkbox {
+  margin-right: 0;
+}
+
+.entity-dialog .el-dialog {
+  max-width: calc(100vw - 32px);
+}
+
+.entity-dialog .el-dialog__body {
+  padding-top: 12px;
 }
 
 .el-button {
@@ -220,6 +254,50 @@ select {
 .el-input__inner::placeholder,
 .el-textarea__inner::placeholder {
   color: var(--app-text-tertiary);
+}
+
+.ui-skeleton {
+  position: relative;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(12, 95, 120, 0.14);
+}
+
+.ui-skeleton::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.72), transparent);
+  animation: app-skeleton-shimmer 1.3s ease-in-out infinite;
+}
+
+.ui-skeleton-line {
+  height: 12px;
+}
+
+.ui-skeleton-line.short {
+  width: 30%;
+}
+
+.ui-skeleton-line.medium {
+  width: 56%;
+}
+
+.ui-skeleton-line.long {
+  width: 100%;
+}
+
+.ui-skeleton-pill {
+  width: 88px;
+  height: 30px;
+  border-radius: 999px;
+}
+
+@keyframes app-skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
