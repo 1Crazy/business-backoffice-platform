@@ -3,26 +3,19 @@
     <section class="hero">
       <div class="hero-chip">Business Backoffice</div>
       <div class="hero-brand">
-        <span class="hero-mark">BP</span>
         <div>
           <strong>业务主系统</strong>
           <span>平台治理 · OA · SCRM</span>
         </div>
       </div>
-      <h1>进入业务主系统。</h1>
-      <p>从这里进入平台治理、OA 和 SCRM，直接开始当天工作。</p>
+      <div class="hero-copy">
+        <h1>业务后台统一入口</h1>
+        <p>统一身份认证后，按权限进入平台治理、OA 或 SCRM 工作区。</p>
+      </div>
 
-      <div class="domain-grid">
-        <article class="domain-card">
-          <span>OA 办公</span>
-          <strong>审批、请假、公告与通讯录</strong>
-          <p>处理待办与组织协同。</p>
-        </article>
-        <article class="domain-card">
-          <span>SCRM 经营</span>
-          <strong>客户、线索、商机与经营分析</strong>
-          <p>查看进展并继续推进销售。</p>
-        </article>
+      <div class="hero-note" aria-label="能力标识">
+        <span>统一身份认证</span>
+        <span>访问权限控制</span>
       </div>
     </section>
 
@@ -31,7 +24,6 @@
       <div class="panel-head">
         <div>
           <div class="panel-title">登录主系统</div>
-          <div class="panel-caption">进入平台治理、OA 或 SCRM。</div>
         </div>
         <div class="identity-pill">主系统</div>
       </div>

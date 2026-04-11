@@ -4,25 +4,18 @@
     <section class="hero">
       <div class="hero-chip">SCRM</div>
       <div class="hero-brand">
-        <span class="hero-mark">S</span>
         <div>
           <strong>SCRM 控制台</strong>
           <span>客户 · 线索 · 商机 · 看板</span>
         </div>
       </div>
-      <h1>进入 SCRM，先看今天的销售进展。</h1>
-      <p>客户、线索、商机和提醒都在这里。</p>
-      <div class="hero-grid">
-        <article class="hero-card">
-          <span>客户推进</span>
-          <strong>客户 / 线索 / 跟进</strong>
-          <p>先处理本周重点推进。</p>
-        </article>
-        <article class="hero-card">
-          <span>经营判断</span>
-          <strong>看板 / 商机 / 提醒</strong>
-          <p>先看关键指标，再处理明细。</p>
-        </article>
+      <div class="hero-copy">
+        <h1>SCRM 经营工作入口</h1>
+        <p>统一进入客户、线索、商机与经营看板等业务工作区。</p>
+      </div>
+      <div class="hero-note" aria-label="能力标识">
+        <span>客户管理</span>
+        <span>商机推进</span>
       </div>
     </section>
 
@@ -31,7 +24,6 @@
       <div class="panel-head">
         <div>
           <div class="panel-title">后台登录</div>
-          <div class="panel-caption">进入 SCRM 控制台。</div>
         </div>
         <div class="identity-pill">SCRM</div>
       </div>
@@ -119,48 +111,63 @@ async function handleSubmit(): Promise<void> {
 <style scoped>
 .login-shell {
   min-height: 100vh;
+  width: min(100%, 1480px);
+  margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(360px, 500px);
-  gap: 32px;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 500px);
+  gap: 44px;
   align-items: center;
-  padding: 40px;
+  padding: 32px;
+  position: relative;
+  isolation: isolate;
+}
+
+.login-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 14% 20%, rgba(37, 99, 235, 0.16), transparent 34%),
+    radial-gradient(ellipse at 84% 18%, rgba(56, 189, 248, 0.12), transparent 28%),
+    radial-gradient(circle at 78% 80%, rgba(14, 165, 233, 0.12), transparent 22%),
+    radial-gradient(circle at 54% 46%, rgba(255, 255, 255, 0.58), transparent 34%),
+    linear-gradient(135deg, #e7f1f8 0%, #f4f8fb 46%, #e7f0f6 100%);
+  z-index: -2;
+}
+
+.login-shell::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(118deg, rgba(255, 255, 255, 0.48) 0%, rgba(255, 255, 255, 0) 34%),
+    linear-gradient(304deg, rgba(14, 165, 233, 0.05) 10%, rgba(14, 165, 233, 0) 30%),
+    radial-gradient(circle at 24% 72%, rgba(255, 255, 255, 0.34), transparent 26%);
+  z-index: -1;
+  pointer-events: none;
 }
 
 .hero {
   display: grid;
-  gap: 22px;
-  padding: 36px 48px;
+  align-content: center;
+  gap: 24px;
+  min-height: 560px;
+  padding: 32px 16px 32px 0;
 }
 
 .hero-chip {
   display: inline-flex;
   width: fit-content;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: rgba(37, 99, 235, 0.12);
-  color: var(--app-accent-strong);
+  padding: 0;
+  color: var(--app-text-tertiary);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .hero-brand {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.hero-mark {
-  width: 58px;
-  height: 58px;
-  display: grid;
-  place-items: center;
-  border-radius: 18px;
-  background: linear-gradient(135deg, var(--app-accent) 0%, var(--app-accent-strong) 100%);
-  color: white;
-  font-size: 24px;
-  font-weight: 700;
+  display: block;
 }
 
 .hero-brand strong,
@@ -180,55 +187,49 @@ async function handleSubmit(): Promise<void> {
 
 .hero h1 {
   margin: 0;
-  font-size: clamp(36px, 5vw, 62px);
-  line-height: 1.03;
+  max-width: 480px;
+  font-size: clamp(36px, 3.6vw, 46px);
+  line-height: 1.14;
   letter-spacing: -0.05em;
   color: var(--app-text-primary);
 }
 
+.hero-copy {
+  display: grid;
+  gap: 14px;
+  padding-left: 24px;
+  border-left: 3px solid rgba(37, 99, 235, 0.12);
+}
+
 .hero p {
-  max-width: 620px;
+  max-width: 480px;
   margin: 0;
-  font-size: 17px;
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 1.85;
   color: var(--app-text-secondary);
 }
 
-.hero-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  max-width: 660px;
+.hero-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-left: 24px;
 }
 
-.hero-card {
-  padding: 18px 20px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(95, 125, 170, 0.14);
-  box-shadow: 0 18px 32px rgba(16, 32, 59, 0.05);
-}
-
-.hero-card span {
-  display: block;
+.hero-note span {
+  display: inline-flex;
+  align-items: center;
   color: var(--app-text-tertiary);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.hero-card strong {
-  display: block;
-  margin-top: 10px;
-  font-size: 18px;
-  line-height: 1.45;
-}
-
-.hero-card p {
-  margin-top: 10px;
-  font-size: 13px;
-  line-height: 1.7;
+.hero-note span + span::before {
+  content: "/";
+  margin-right: 18px;
+  color: rgba(95, 125, 170, 0.42);
 }
 
 .form-panel {
@@ -255,13 +256,6 @@ async function handleSubmit(): Promise<void> {
 .panel-title {
   font-size: 24px;
   font-weight: 700;
-}
-
-.panel-caption {
-  margin-top: 6px;
-  color: var(--app-text-secondary);
-  line-height: 1.7;
-  font-size: 13px;
 }
 
 .identity-pill {
@@ -313,15 +307,12 @@ async function handleSubmit(): Promise<void> {
   }
 
   .hero {
-    padding: 10px 0;
+    min-height: auto;
+    padding: 8px 0 4px;
   }
 
   .form-panel {
     margin-right: 0;
-  }
-
-  .hero-grid {
-    grid-template-columns: 1fr;
   }
 }
 

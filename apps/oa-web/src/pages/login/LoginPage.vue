@@ -4,25 +4,18 @@
     <section class="hero">
       <div class="hero-chip">OA Office</div>
       <div class="hero-brand">
-        <span class="hero-mark">OA</span>
         <div>
           <strong>OA 办公台</strong>
           <span>审批 · 请假 · 公告 · 通讯录</span>
         </div>
       </div>
-      <h1>进入 OA，先处理今天的待办。</h1>
-      <p>审批、请假、公告和通讯录都从这里开始。</p>
-      <div class="hero-grid">
-        <article class="hero-card">
-          <span>待办处理</span>
-          <strong>审批 / 请假</strong>
-          <p>优先处理今天要过的流程。</p>
-        </article>
-        <article class="hero-card">
-          <span>组织信息</span>
-          <strong>公告 / 通讯录</strong>
-          <p>查看通知和联系人。</p>
-        </article>
+      <div class="hero-copy">
+        <h1>OA 办公协同入口</h1>
+        <p>统一进入审批、请假、公告和通讯录等办公工作区。</p>
+      </div>
+      <div class="hero-note" aria-label="能力标识">
+        <span>审批流程</span>
+        <span>组织协同</span>
       </div>
     </section>
 
@@ -31,7 +24,6 @@
       <div class="panel-head">
         <div>
           <div class="panel-title">OA 登录</div>
-          <div class="panel-caption">进入 OA 办公台。</div>
         </div>
         <div class="identity-pill">OA</div>
       </div>
@@ -110,10 +102,10 @@ async function handleSubmit(): Promise<void> {
     ElMessage.success("登录成功。");
   } catch (error) {
     ElMessage.error(getRequestErrorMessage(error, "登录失败，请检查账号密码和后端服务状态。"));
-    } finally {
-      submitting.value = false;
-    }
+  } finally {
+    submitting.value = false;
   }
+}
 
 defineExpose({
   handleSubmit
@@ -123,49 +115,63 @@ defineExpose({
 <style scoped>
 .login-shell {
   min-height: 100vh;
+  width: min(100%, 1480px);
+  margin: 0 auto;
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(360px, 500px);
-  gap: 32px;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 500px);
+  gap: 44px;
   align-items: center;
-  padding: 40px;
+  padding: 32px;
+  position: relative;
+  isolation: isolate;
+}
+
+.login-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 14% 20%, rgba(37, 99, 235, 0.16), transparent 34%),
+    radial-gradient(ellipse at 84% 18%, rgba(96, 165, 250, 0.12), transparent 28%),
+    radial-gradient(circle at 78% 80%, rgba(59, 130, 246, 0.1), transparent 22%),
+    radial-gradient(circle at 54% 46%, rgba(255, 255, 255, 0.62), transparent 34%),
+    linear-gradient(135deg, #e8f1ff 0%, #f5f8ff 46%, #eaf3ff 100%);
+  z-index: -2;
+}
+
+.login-shell::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    linear-gradient(118deg, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0) 34%),
+    linear-gradient(304deg, rgba(37, 99, 235, 0.05) 10%, rgba(37, 99, 235, 0) 30%),
+    radial-gradient(circle at 24% 72%, rgba(255, 255, 255, 0.36), transparent 26%);
+  z-index: -1;
+  pointer-events: none;
 }
 
 .hero {
   display: grid;
-  gap: 22px;
-  padding: 36px 48px;
+  align-content: center;
+  gap: 24px;
+  min-height: 560px;
+  padding: 32px 16px 32px 0;
 }
 
 .hero-chip {
   display: inline-flex;
   width: fit-content;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: rgba(37, 99, 235, 0.12);
-  color: var(--app-accent-strong);
+  padding: 0;
+  color: var(--app-text-tertiary);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
 }
 
 .hero-brand {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.hero-mark {
-  width: 60px;
-  height: 60px;
-  display: grid;
-  place-items: center;
-  border-radius: 22px;
-  background: linear-gradient(135deg, var(--app-accent) 0%, var(--app-accent-strong) 100%);
-  color: white;
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
+  display: block;
 }
 
 .hero-brand strong,
@@ -185,56 +191,49 @@ defineExpose({
 
 .hero h1 {
   margin: 0;
-  font-size: clamp(36px, 5vw, 62px);
-  line-height: 1.03;
+  max-width: 480px;
+  font-size: clamp(36px, 3.6vw, 46px);
+  line-height: 1.14;
   letter-spacing: -0.05em;
   color: var(--app-text-primary);
 }
 
+.hero-copy {
+  display: grid;
+  gap: 14px;
+  padding-left: 24px;
+  border-left: 3px solid rgba(37, 99, 235, 0.12);
+}
+
 .hero p {
-  max-width: 640px;
+  max-width: 480px;
   margin: 0;
-  font-size: 17px;
-  line-height: 1.8;
+  font-size: 15px;
+  line-height: 1.85;
   color: var(--app-text-secondary);
 }
 
-.hero-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
-  max-width: 640px;
+.hero-note {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-left: 24px;
 }
 
-.hero-card {
-  padding: 18px 20px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.6);
-  border: 1px solid rgba(125, 148, 171, 0.14);
-  box-shadow: 0 18px 32px rgba(23, 32, 43, 0.04);
-}
-
-.hero-card span {
-  display: block;
+.hero-note span {
+  display: inline-flex;
+  align-items: center;
   color: var(--app-text-tertiary);
   font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.hero-card strong {
-  display: block;
-  margin-top: 10px;
-  font-size: 18px;
-  line-height: 1.4;
-}
-
-.hero-card p {
-  margin-top: 10px;
-  font-size: 13px;
-  color: var(--app-text-secondary);
-  line-height: 1.7;
+.hero-note span + span::before {
+  content: "/";
+  margin-right: 18px;
+  color: rgba(125, 148, 171, 0.42);
 }
 
 .form-panel {
@@ -261,13 +260,6 @@ defineExpose({
 .panel-title {
   font-size: 24px;
   font-weight: 700;
-}
-
-.panel-caption {
-  margin-top: 6px;
-  color: var(--app-text-secondary);
-  line-height: 1.7;
-  font-size: 13px;
 }
 
 .identity-pill {
@@ -323,15 +315,12 @@ defineExpose({
   }
 
   .hero {
-    padding: 10px 0;
+    min-height: auto;
+    padding: 8px 0 4px;
   }
 
   .form-panel {
     margin-right: 0;
-  }
-
-  .hero-grid {
-    grid-template-columns: 1fr;
   }
 }
 
