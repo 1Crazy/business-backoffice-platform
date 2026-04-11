@@ -57,19 +57,32 @@ function handleBackToHome(): void {
 
 <style scoped>
 .micro-shell {
-  min-height: calc(100dvh - 150px);
+  min-height: 100%;
+  height: 100%;
   min-width: 0;
 }
 
 .micro-stage {
   position: relative;
-  min-height: calc(100dvh - 178px);
+  min-height: 100%;
+  height: 100%;
   min-width: 0;
 }
 
 .micro-slot {
-  min-height: inherit;
+  min-height: 100%;
+  height: 100%;
   min-width: 0;
+}
+
+.micro-slot :deep([id^="__qiankun_microapp_wrapper_for_"]) {
+  min-height: 0;
+  height: auto;
+}
+
+.micro-slot :deep([id^="__qiankun_microapp_wrapper_for_"] > #app) {
+  min-height: 0;
+  height: auto;
 }
 
 .loading-overlay {

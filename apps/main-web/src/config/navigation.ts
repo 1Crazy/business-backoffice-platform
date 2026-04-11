@@ -180,14 +180,12 @@ export const hostNavigationGroups: HostNavigationGroup[] = [
     key: "oa",
     title: "协同事务",
     caption: "审批、请假、公告与组织联络",
-    badge: "协同",
     items: oaItems
   },
   {
     key: "scrm",
     title: "经营管理",
     caption: "看板、客户、线索、商机与平台治理",
-    badge: "经营",
     items: scrmItems
   }
 ];

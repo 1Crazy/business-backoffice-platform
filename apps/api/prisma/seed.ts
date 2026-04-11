@@ -249,21 +249,21 @@ async function main(): Promise<void> {
   });
 
   const staffUser = await prisma.user.upsert({
-    where: { username: "li.si" },
+    where: { username: "kyle" },
     update: {
-      displayName: "李思",
+      displayName: "kyle",
       passwordHash,
       departmentId: operationsDepartment.id,
-      email: "li.si@example.com",
+      email: "wangyuhong7777@163.com",
       phone: "13800000002",
       status: UserStatus.ACTIVE
     },
     create: {
-      username: "li.si",
-      displayName: "李思",
+      username: "kyle",
+      displayName: "kyle",
       passwordHash,
       departmentId: operationsDepartment.id,
-      email: "li.si@example.com",
+      email: "wangyuhong7777@163.com",
       phone: "13800000002"
     }
   });

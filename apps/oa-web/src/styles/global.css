@@ -68,11 +68,16 @@ body[data-oa-standalone="true"]::before {
 
 .oa-app-root {
   min-width: 0;
-  min-height: var(--app-shell-min-height);
+  min-height: 0;
+  height: auto;
   position: relative;
   z-index: 0;
   color: var(--app-text-primary);
   font-family: var(--app-font-body);
+}
+
+body[data-oa-standalone="true"] .oa-app-root {
+  min-height: var(--app-shell-min-height);
 }
 
 a {

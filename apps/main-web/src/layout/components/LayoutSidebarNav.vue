@@ -18,7 +18,6 @@
         <el-sub-menu v-for="group in groups" :key="group.key" :index="group.key">
           <template #title>
             <div class="host-submenu-title">
-              <span class="host-submenu-badge">{{ resolveGroupBadge(group.key) }}</span>
               <span class="host-submenu-text">{{ group.title }}</span>
             </div>
           </template>
@@ -45,7 +44,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from "vue";
 
-import type { HostDomain, HostNavigationGroup } from "@/types/navigation";
+import type { HostNavigationGroup } from "@/types/navigation";
 
 const props = defineProps<{
   activeDomain: HostDomain;
@@ -57,7 +56,7 @@ defineEmits<{
   (event: "navigate", path: string): void;
 }>();
 
-const menuRef = ref<{ open: (index: string) => void } | null>(null);
+const menuRef = ref<{ open?: (index: string) => void } | null>(null);
 const totalItemCount = computed(() => props.groups.reduce((total, group) => total + group.items.length, 0));
 
 const brandBadge = computed(() => "H");
@@ -70,14 +69,10 @@ watch(
   () => props.activeDomain,
   async (domain) => {
     await nextTick();
-    menuRef.value?.open(domain);
+    menuRef.value?.open?.(domain);
   },
   { immediate: true }
 );
-
-function resolveGroupBadge(group: HostDomain): string {
-  return group === "scrm" ? "S" : "OA";
-}
 </script>
 
 <style scoped src="./LayoutSidebarNav.css"></style>

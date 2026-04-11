@@ -141,14 +141,32 @@ defineProps<{
   padding-right: 4px;
   border-right: none;
   background: transparent;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .menu::-webkit-scrollbar {
-  width: 6px;
+  width: 0;
+  height: 0;
 }
 
 .menu::-webkit-scrollbar-thumb {
   border-radius: 999px;
+  background: transparent;
+}
+
+.menu:hover,
+.menu:focus-within {
+  scrollbar-width: thin;
+}
+
+.menu:hover::-webkit-scrollbar,
+.menu:focus-within::-webkit-scrollbar {
+  width: 6px;
+}
+
+.menu:hover::-webkit-scrollbar-thumb,
+.menu:focus-within::-webkit-scrollbar-thumb {
   background: rgba(125, 148, 171, 0.3);
 }
 

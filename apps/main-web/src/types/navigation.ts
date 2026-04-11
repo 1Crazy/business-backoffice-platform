@@ -35,6 +35,5 @@ export interface HostNavigationGroup {
   key: HostDomain;
   title: string;
   caption: string;
-  badge: string;
   items: HostNavigationItem[];
 }
