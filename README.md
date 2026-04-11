@@ -2,7 +2,7 @@
 
 这是一个基于 `Vue 3 + TypeScript` 前端、`NestJS + Prisma` 后端、`PostgreSQL` 数据库的多应用后台平台仓库。当前已经落地 `scrm-web` 与 `oa-web` 两个后台前端，并复用统一的账号、角色权限、会话身份与组织架构体系。
 
-当前仓库已经完成一期 SCRM MVP、二期平台硬化、商机管理能力以及 OA 首批办公协作闭环，能够覆盖认证、客户、线索、商机、跟进、看板、请假审批、公告通知、组织通讯录、审计与附件等核心后台流程。
+当前仓库已经完成 SCRM 核心业务闭环、平台硬化、商机管理能力以及 OA 首批办公协作闭环，能够覆盖认证、客户、线索、商机、跟进、看板、请假审批、公告通知、组织通讯录、审计与附件等核心后台流程。
 
 当前仓库已经包含：
 
@@ -32,7 +32,7 @@
 - 运营看板：新增客户、跟进次数、线索转化率、新增商机、进行中预计金额、赢单数量、赢单金额、赢单率
 - OA 办公协作：工作台、待我审批、我发起的申请、请假申请、公告通知、组织通讯录
 - 系统管理：字典配置、审计日志、附件上传
-- 二期平台硬化：会话续期与退出、统一数据范围、分页列表、附件下载鉴权、仓库级 CI
+- 平台硬化：会话续期与退出、统一数据范围、分页列表、附件下载鉴权、仓库级 CI
 
 ## 环境要求
 
@@ -40,7 +40,7 @@
 - `pnpm 10.x`
 - Docker Desktop 或可用的 Docker daemon
 
-## 二期平台硬化摘要
+## 平台硬化摘要
 
 - 认证链路已升级为 `12h access token + 30d refresh session`，支持 `POST /api/auth/refresh` 和 `POST /api/auth/logout`。
 - 客户、线索、提醒和审计日志列表统一升级为分页接口，返回 `items/page/pageSize/total/sortBy/sortOrder`。
@@ -283,7 +283,7 @@ pnpm build
 
 GitHub Actions 也会执行同样的校验流程，工作流文件位于 [`.github/workflows/ci.yml`](./.github/workflows/ci.yml)。
 
-## 二期接口与约束
+## 关键接口与约束
 
 分页列表：
 
@@ -350,7 +350,7 @@ python3 -m playwright install chromium
 - `/dashboard`、`/opportunities` 在商机迁移与 seed 更新后已完成登录态冒烟验证
 - `390 / 768 / 1440` 三档宽度下，主页面已完成响应式回归
 
-二期收口时建议补充以下验证：
+建议补充以下验证：
 
 - 登录后自动续期、主动退出、会话失效恢复流程
 - 客户、线索、提醒、审计日志的分页、筛选、排序与翻页状态保留
@@ -362,5 +362,5 @@ python3 -m playwright install chromium
 - 当前代码可以正常通过前后端类型检查、构建与单元测试。
 - 当前 Docker 全量启动已经验证通过，前端 `8080`、后端 `3000`、数据库 `5433` 均可访问，默认管理员账号可正常登录。
 - OpenSpec 一期变更 `bootstrap-scrm-mvp` 已同步到主规格并归档。
-- OpenSpec 二期变更 `phase2-platform-hardening` 已完成实现与本地验证，主要增量为会话治理、分页与数据范围、审计和附件硬化、CI 校验。
+- OpenSpec 变更 `phase2-platform-hardening` 已完成实现与本地验证，主要增量为会话治理、分页与数据范围、审计和附件硬化、CI 校验。
 - OpenSpec 变更 `sales-opportunity-management` 已同步到主规格并归档，主 spec 位于 `openspec/specs/sales-opportunity-management/spec.md`。

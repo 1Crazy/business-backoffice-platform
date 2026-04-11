@@ -104,15 +104,13 @@ describe("PlatformGovernancePage", () => {
     });
   });
 
-  it("routes to the matching platform governance path when switching tabs", async () => {
+  it("derives the current governance tab from route metadata", async () => {
     const wrapper = shallowMount(PlatformGovernancePage, {
       global: {
         stubs: globalStubs
       }
     });
 
-    await (wrapper.vm as any).handleTabChange("roles");
-
-    expect(pushMock).toHaveBeenCalledWith("/platform/access/roles");
+    expect((wrapper.vm as any).currentTab).toBe("departments");
   });
 });

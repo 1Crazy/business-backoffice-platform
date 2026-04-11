@@ -3,7 +3,7 @@
   <section class="page-card detail-card" v-if="announcement">
     <div class="detail-meta">
       <span>发布人：{{ announcement.publishedByName }}</span>
-      <span>{{ announcement.publishedAt }}</span>
+      <span>{{ formatDateTime(announcement.publishedAt) }}</span>
     </div>
     <h2>{{ announcement.title }}</h2>
     <p class="summary" v-if="announcement.summary">{{ announcement.summary }}</p>
@@ -16,6 +16,7 @@
 
 <script setup lang="ts">
 import { useAnnouncementDetailPage } from "@/composables/announcements/useAnnouncementDetailPage";
+import { formatDateTime } from "@/utils/display";
 
 const { announcement } = useAnnouncementDetailPage();
 </script>

@@ -69,12 +69,13 @@ describe("DashboardPage", () => {
       }
     });
 
-    expect(wrapper.text()).toContain("销售运营");
+    expect(wrapper.text()).toContain("运营看板");
+    expect(wrapper.text()).toContain("销售概览");
     expect(wrapper.text()).toContain("新增客户");
     expect(wrapper.text()).toContain("128");
     expect(wrapper.text()).toContain("新增商机");
     expect(wrapper.text()).toContain("36");
-    expect(wrapper.text()).toContain("数据解读");
     expect(wrapper.text()).toContain("赢单金额");
+    expect(wrapper.text()).toContain("待办提醒");
   });
 });

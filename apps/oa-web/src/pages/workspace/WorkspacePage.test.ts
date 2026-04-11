@@ -6,6 +6,7 @@ import WorkspacePage from "./WorkspacePage.vue";
 
 vi.mock("@/composables/workspace/useWorkspacePage", () => ({
   useWorkspacePage: () => ({
+    isLoading: ref(false),
     overview: ref({
       pendingApprovalCount: 12,
       myRequestCount: 4,
@@ -35,7 +36,7 @@ describe("WorkspacePage", () => {
       }
     });
 
-    expect(wrapper.text()).toContain("办公工作台");
+    expect(wrapper.text()).toContain("先处理待办");
     expect(wrapper.text()).toContain("待我审批");
     expect(wrapper.text()).toContain("12");
     expect(wrapper.text()).toContain("最近公告");

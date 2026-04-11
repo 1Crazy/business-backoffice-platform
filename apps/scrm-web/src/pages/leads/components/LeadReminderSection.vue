@@ -41,7 +41,7 @@
           <li v-for="item in reminders" :key="item.id">
             <span>{{ item.owner?.displayName ?? "-" }}</span>
             <strong>{{ item.lead?.name ?? item.customer?.name ?? "未命名记录" }}</strong>
-            <small>{{ item.remindAt }}</small>
+            <small>{{ formatDateTime(item.remindAt) }}</small>
           </li>
         </ul>
         <el-pagination
@@ -62,6 +62,7 @@
 <script setup lang="ts">
 import type { ReminderListItem } from "@/types/follow-ups";
 import type { ReminderTableState } from "@/types/leads";
+import { formatDateTime } from "@/utils/display";
 
 defineProps<{
   loading?: boolean;

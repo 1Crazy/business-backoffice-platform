@@ -14,7 +14,7 @@
         <div class="request-header">
           <div>
             <strong>{{ formatLeaveType(item.leaveType) }}</strong>
-            <p>{{ item.startAt }} ~ {{ item.endAt }}</p>
+            <p>{{ formatDateTime(item.startAt) }} ~ {{ formatDateTime(item.endAt) }}</p>
           </div>
           <span class="status-pill" :class="item.status.toLowerCase()">{{ formatLeaveStatus(item.status) }}</span>
         </div>
@@ -31,7 +31,7 @@
 
 <script setup lang="ts">
 import { useMyRequestsPage } from "@/composables/approvals/useMyRequestsPage";
-import { formatLeaveStatus, formatLeaveType } from "@/utils/display";
+import { formatDateTime, formatLeaveStatus, formatLeaveType } from "@/utils/display";
 
 const { requests } = useMyRequestsPage();
 </script>

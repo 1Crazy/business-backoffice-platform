@@ -76,7 +76,11 @@
           </template>
         </el-table-column>
         <el-table-column prop="targetId" label="对象 ID" min-width="220" />
-        <el-table-column prop="createdAt" label="时间" min-width="180" />
+        <el-table-column label="时间" min-width="180">
+          <template #default="{ row }">
+            {{ formatDateTime(row.createdAt) }}
+          </template>
+        </el-table-column>
       </el-table>
     </div>
     <el-empty v-else description="当前筛选条件下暂无审计日志" />
@@ -102,7 +106,7 @@ import { computed } from "vue";
 
 import type { AuditLog } from "@/types/audit-logs";
 import type { AuditLogFilters, AuditLogTableState } from "@/types/system-administration";
-import { formatAuditActionType, formatAuditTargetType } from "@/utils/display";
+import { formatAuditActionType, formatAuditTargetType, formatDateTime } from "@/utils/display";
 
 const props = defineProps<{
   filter: AuditLogFilters;

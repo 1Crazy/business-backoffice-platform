@@ -25,7 +25,11 @@
           {{ formatSize(row.size) }}
         </template>
       </el-table-column>
-      <el-table-column prop="createdAt" label="上传时间" min-width="180" />
+      <el-table-column label="上传时间" min-width="180">
+        <template #default="{ row }">
+          {{ formatDateTime(row.createdAt) }}
+        </template>
+      </el-table-column>
     </el-table>
   </section>
 </template>
@@ -34,6 +38,7 @@
 import type { UploadRequestOptions } from "element-plus";
 
 import type { Attachment } from "@/types/uploads";
+import { formatDateTime } from "@/utils/display";
 
 withDefaults(
   defineProps<{

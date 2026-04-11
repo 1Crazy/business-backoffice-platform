@@ -55,7 +55,7 @@
             <strong>{{ formatLeaveType(item.leaveType) }}</strong>
             <span class="status-pill" :class="item.status.toLowerCase()">{{ formatLeaveStatus(item.status) }}</span>
           </div>
-          <p>{{ item.startAt }} ~ {{ item.endAt }}</p>
+          <p>{{ formatDateTime(item.startAt) }} ~ {{ formatDateTime(item.endAt) }}</p>
         </article>
       </div>
       <el-empty v-else description="最近还没有请假申请记录" />
@@ -65,7 +65,7 @@
 
 <script setup lang="ts">
 import { useLeaveRequestPage } from "@/composables/leave/useLeaveRequestPage";
-import { formatLeaveStatus, formatLeaveType } from "@/utils/display";
+import { formatDateTime, formatLeaveStatus, formatLeaveType } from "@/utils/display";
 
 const { form, recentRequests, rules, setFormRef, submit, submitting } = useLeaveRequestPage();
 </script>

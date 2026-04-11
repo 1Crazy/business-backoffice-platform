@@ -13,7 +13,7 @@
       <RouterLink v-for="item in announcements" :key="item.id" :to="`/announcements/${item.id}`" class="announcement-item">
         <div class="announcement-head">
           <strong>{{ item.title }}</strong>
-          <span>{{ item.publishedAt }}</span>
+          <span>{{ formatDateTime(item.publishedAt) }}</span>
         </div>
         <p>{{ item.summary || "这条公告没有摘要，请进入详情页查看完整内容。" }}</p>
         <div class="announcement-foot">发布人：{{ item.publishedByName }}</div>
@@ -25,6 +25,7 @@
 
 <script setup lang="ts">
 import { useAnnouncementsPage } from "@/composables/announcements/useAnnouncementsPage";
+import { formatDateTime } from "@/utils/display";
 
 const { announcements } = useAnnouncementsPage();
 </script>

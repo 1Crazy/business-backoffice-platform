@@ -127,7 +127,7 @@
             >
               <div class="announcement-top">
                 <strong>{{ item.title }}</strong>
-                <span>{{ item.publishedAt }}</span>
+                <span>{{ formatDateTime(item.publishedAt) }}</span>
               </div>
               <p>{{ item.summary || "这条公告暂无摘要，请进入详情查看完整内容。" }}</p>
               <div class="announcement-foot">{{ item.publishedByName }}</div>
@@ -144,6 +144,7 @@
 import { computed } from "vue";
 
 import { useWorkspacePage } from "@/composables/workspace/useWorkspacePage";
+import { formatDateTime } from "@/utils/display";
 
 const { overview, isLoading } = useWorkspacePage();
 

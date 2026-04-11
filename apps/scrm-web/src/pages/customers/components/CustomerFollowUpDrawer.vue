@@ -15,10 +15,10 @@
           </div>
         </div>
         <el-timeline>
-          <el-timeline-item v-for="item in followUps" :key="item.id" :timestamp="item.createdAt">
+          <el-timeline-item v-for="item in followUps" :key="item.id" :timestamp="formatDateTime(item.createdAt)">
             <strong>{{ item.createdBy?.displayName }}</strong>
             <p>{{ item.content }}</p>
-            <small v-if="item.reminder">提醒时间：{{ item.reminder.remindAt }}</small>
+            <small v-if="item.reminder">提醒时间：{{ formatDateTime(item.reminder.remindAt) }}</small>
           </el-timeline-item>
         </el-timeline>
       </section>
@@ -64,6 +64,7 @@ import RecordUploadPanel from "@/components/RecordUploadPanel.vue";
 import type { Customer } from "@/types/customers";
 import type { FollowUp, FollowUpFormModel } from "@/types/follow-ups";
 import type { Attachment } from "@/types/uploads";
+import { formatDateTime } from "@/utils/display";
 
 const props = defineProps<{
   visible: boolean;
