@@ -1,67 +1,54 @@
 <template>
-  <aside class="sidebar">
-    <div class="sidebar-inner">
-      <div class="brand-block">
-        <div class="brand-mark">H</div>
-        <div class="brand-copy">
-          <div class="brand-kicker">统一门户</div>
-          <strong>主应用工作台</strong>
+  <aside class="host-sidebar">
+    <div class="host-sidebar-inner">
+      <div class="host-brand">
+        <div class="host-brand-badge">{{ brandBadge }}</div>
+        <div class="host-brand-copy">
+          <div class="host-brand-kicker">{{ brandKicker }}</div>
+          <div class="host-brand-title">{{ brandTitle }}</div>
         </div>
       </div>
 
-      <div class="menu-meta">
-        <span class="menu-label">导航目录</span>
-        <span class="menu-count">{{ totalItemCount }}</span>
+      <div class="host-menu-meta">
+        <span class="host-menu-label">导航目录</span>
+        <span class="host-menu-count">{{ totalItemCount }}</span>
       </div>
 
-      <nav class="nav-list" aria-label="主应用导航">
-        <section v-for="group in props.groups" :key="group.key" class="group-block">
-          <header class="group-head">
-            <div class="group-label">
-              <strong>{{ group.title }}</strong>
-              <span>{{ group.caption }}</span>
+      <el-menu ref="menuRef" :default-active="activePath" class="host-menu">
+        <el-sub-menu v-for="group in groups" :key="group.key" :index="group.key">
+          <template #title>
+            <div class="host-submenu-title">
+              <span class="host-submenu-badge">{{ resolveGroupBadge(group.key) }}</span>
+              <span class="host-submenu-text">{{ group.title }}</span>
             </div>
-            <div class="group-badge">{{ group.items.length }}</div>
-          </header>
+          </template>
 
-          <button
+          <el-menu-item
             v-for="item in group.items"
             :key="item.key"
-            type="button"
-            class="nav-item"
-            :class="{ 'nav-item-active': props.activePath === item.path }"
-            :aria-current="props.activePath === item.path ? 'page' : undefined"
+            :index="item.path"
             @click="$emit('navigate', item.path)"
           >
-            <span class="nav-icon-shell">
-              <component :is="resolveItemIcon(item.icon)" class="nav-icon" />
-            </span>
-            <span class="nav-copy">
-              <strong>{{ item.title }}</strong>
-              <small>{{ item.sectionLabel }}</small>
-            </span>
-          </button>
-        </section>
-      </nav>
+            {{ item.title }}
+          </el-menu-item>
+        </el-sub-menu>
+      </el-menu>
 
-      <div class="sidebar-footer">
-        <span class="sidebar-footer-title">当前入口</span>
-        <strong class="sidebar-footer-heading">{{ activeItem?.title ?? "统一工作台" }}</strong>
-        <span class="sidebar-footer-caption">
-          {{ activeItem?.description ?? "主系统统一承接所有业务入口，不再区分来源子系统。" }}
-        </span>
+      <div class="host-sidebar-footer">
+        <span class="host-sidebar-footer-title">{{ footerTitle }}</span>
+        <span class="host-sidebar-footer-caption">{{ footerCaption }}</span>
       </div>
     </div>
   </aside>
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
-import { Bell, Calendar, Check, Compass, Connection, DataBoard, Files, Management, Opportunity, Setting, Tickets, User } from "@element-plus/icons-vue";
+import { computed, nextTick, ref, watch } from "vue";
 
-import type { HostNavigationGroup, NavigationIcon } from "@/types/navigation";
+import type { HostDomain, HostNavigationGroup } from "@/types/navigation";
 
 const props = defineProps<{
+  activeDomain: HostDomain;
   activePath: string;
   groups: HostNavigationGroup[];
 }>();
@@ -70,28 +57,26 @@ defineEmits<{
   (event: "navigate", path: string): void;
 }>();
 
-const itemIconMap: Record<NavigationIcon, typeof Compass> = {
-  compass: Compass,
-  checklist: Check,
-  draft: Files,
-  calendar: Calendar,
-  announcement: Bell,
-  directory: Connection,
-  dashboard: DataBoard,
-  department: Tickets,
-  customer: User,
-  opportunity: Opportunity,
-  lead: Management,
-  system: Setting
-};
-
+const menuRef = ref<{ open: (index: string) => void } | null>(null);
 const totalItemCount = computed(() => props.groups.reduce((total, group) => total + group.items.length, 0));
-const activeItem = computed(() =>
-  props.groups.flatMap((group) => group.items).find((item) => item.path === props.activePath)
+
+const brandBadge = computed(() => "H");
+const brandKicker = computed(() => "Enterprise Gateway");
+const brandTitle = computed(() => "主应用工作台");
+const footerTitle = computed(() => "统一入口");
+const footerCaption = computed(() => "主系统统一承接 OA 与 SCRM 页面入口，保持稳定导航与跨域切换体验。");
+
+watch(
+  () => props.activeDomain,
+  async (domain) => {
+    await nextTick();
+    menuRef.value?.open(domain);
+  },
+  { immediate: true }
 );
 
-function resolveItemIcon(icon: NavigationIcon) {
-  return itemIconMap[icon];
+function resolveGroupBadge(group: HostDomain): string {
+  return group === "scrm" ? "S" : "OA";
 }
 </script>
 

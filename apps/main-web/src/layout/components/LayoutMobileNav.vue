@@ -1,32 +1,32 @@
 <template>
-  <div class="mobile-nav">
-    <button type="button" class="toggle-button" @click="expanded = true">
-      <Menu class="toggle-icon" />
+  <div class="host-mobile-nav">
+    <button type="button" class="host-mobile-toggle-button" @click="expanded = true">
+      <Menu class="host-mobile-toggle-icon" />
       <span>全部菜单</span>
     </button>
 
     <teleport to="body">
-      <div v-if="expanded" class="drawer-mask" @click="expanded = false">
-        <aside class="drawer-panel" @click.stop>
-          <header class="drawer-head">
+      <div v-if="expanded" class="host-mobile-drawer-mask" @click="expanded = false">
+        <aside class="host-mobile-drawer-panel" @click.stop>
+          <header class="host-mobile-drawer-head">
             <div>
-              <strong>主应用菜单</strong>
-              <span>统一浏览全部业务入口，不再区分来源子系统。</span>
+              <strong>{{ drawerTitle }}</strong>
+              <span>{{ drawerCaption }}</span>
             </div>
-            <button type="button" class="close-button" @click="expanded = false">
-              <Close class="close-icon" />
+            <button type="button" class="host-mobile-close-button" @click="expanded = false">
+              <Close class="host-mobile-close-icon" />
             </button>
           </header>
 
-          <div class="drawer-content">
-            <section v-for="group in groups" :key="group.key" class="drawer-group">
-              <div class="drawer-group-title">{{ group.title }}</div>
+          <div class="host-mobile-drawer-content">
+            <section v-for="group in groups" :key="group.key" class="host-mobile-drawer-group">
+              <div class="host-mobile-drawer-group-title">{{ group.title }}</div>
               <button
                 v-for="item in group.items"
                 :key="item.key"
                 type="button"
-                class="drawer-item"
-                :class="{ 'drawer-item-active': activePath === item.path }"
+                class="host-mobile-drawer-item"
+                :class="{ 'host-mobile-drawer-item-active': activePath === item.path }"
                 @click="handleNavigate(item.path)"
               >
                 <strong>{{ item.title }}</strong>
@@ -42,7 +42,7 @@
 
 <script setup lang="ts">
 import { Close, Menu } from "@element-plus/icons-vue";
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
 import type { HostNavigationGroup } from "@/types/navigation";
 
@@ -56,6 +56,8 @@ const emit = defineEmits<{
 }>();
 
 const expanded = ref(false);
+const drawerTitle = computed(() => "主应用菜单");
+const drawerCaption = computed(() => "统一承接 OA 与 SCRM 页面入口，帮助你在同一壳层里完成跨域切换。");
 
 function handleNavigate(path: string): void {
   expanded.value = false;
@@ -64,17 +66,17 @@ function handleNavigate(path: string): void {
 </script>
 
 <style scoped>
-.mobile-nav {
+.host-mobile-nav {
   display: none;
 }
 
-.toggle-button,
-.close-button,
-.drawer-item {
+.host-mobile-toggle-button,
+.host-mobile-close-button,
+.host-mobile-drawer-item {
   cursor: pointer;
 }
 
-.toggle-button {
+.host-mobile-toggle-button {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -86,13 +88,13 @@ function handleNavigate(path: string): void {
   color: var(--app-text-primary);
 }
 
-.toggle-icon,
-.close-icon {
+.host-mobile-toggle-icon,
+.host-mobile-close-icon {
   width: 18px;
   height: 18px;
 }
 
-.drawer-mask {
+.host-mobile-drawer-mask {
   position: fixed;
   inset: 0;
   z-index: 50;
@@ -102,7 +104,7 @@ function handleNavigate(path: string): void {
   backdrop-filter: blur(8px);
 }
 
-.drawer-panel {
+.host-mobile-drawer-panel {
   width: min(92vw, 360px);
   height: 100%;
   padding: 22px 18px;
@@ -110,7 +112,7 @@ function handleNavigate(path: string): void {
   box-shadow: -24px 0 48px rgba(15, 41, 64, 0.12);
 }
 
-.drawer-head {
+.host-mobile-drawer-head {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -118,19 +120,19 @@ function handleNavigate(path: string): void {
   margin-bottom: 18px;
 }
 
-.drawer-head strong,
-.drawer-head span {
+.host-mobile-drawer-head strong,
+.host-mobile-drawer-head span {
   display: block;
 }
 
-.drawer-head span {
+.host-mobile-drawer-head span {
   margin-top: 6px;
   color: var(--app-text-secondary);
   font-size: 12px;
   line-height: 1.6;
 }
 
-.close-button {
+.host-mobile-close-button {
   width: 38px;
   height: 38px;
   display: grid;
@@ -140,19 +142,19 @@ function handleNavigate(path: string): void {
   background: rgba(15, 41, 64, 0.06);
 }
 
-.drawer-content {
+.host-mobile-drawer-content {
   display: grid;
   gap: 18px;
   height: calc(100% - 72px);
   overflow-y: auto;
 }
 
-.drawer-group {
+.host-mobile-drawer-group {
   display: grid;
   gap: 10px;
 }
 
-.drawer-group-title {
+.host-mobile-drawer-group-title {
   color: var(--app-text-tertiary);
   font-size: 11px;
   font-weight: 700;
@@ -160,7 +162,7 @@ function handleNavigate(path: string): void {
   text-transform: uppercase;
 }
 
-.drawer-item {
+.host-mobile-drawer-item {
   width: 100%;
   padding: 12px 14px;
   border: 1px solid transparent;
@@ -169,24 +171,24 @@ function handleNavigate(path: string): void {
   text-align: left;
 }
 
-.drawer-item strong,
-.drawer-item small {
+.host-mobile-drawer-item strong,
+.host-mobile-drawer-item small {
   display: block;
 }
 
-.drawer-item small {
+.host-mobile-drawer-item small {
   margin-top: 4px;
   color: var(--app-text-secondary);
   line-height: 1.55;
 }
 
-.drawer-item-active {
+.host-mobile-drawer-item-active {
   border-color: rgba(8, 145, 178, 0.18);
   background: rgba(236, 254, 255, 0.92);
 }
 
 @media (max-width: 1180px) {
-  .mobile-nav {
+  .host-mobile-nav {
     display: block;
   }
 }

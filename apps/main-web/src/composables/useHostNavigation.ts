@@ -4,6 +4,7 @@ import { useRoute } from "vue-router";
 
 import { findNavigationItemByPath, getVisibleNavigationGroups } from "@/config/navigation";
 import { useAuthStore } from "@/stores/auth";
+import type { HostDomain } from "@/types/navigation";
 
 export function useHostNavigation() {
   const route = useRoute();
@@ -19,12 +20,23 @@ export function useHostNavigation() {
   const currentSectionLabel = computed(
     () => route.meta.sectionLabel?.toString() ?? currentItem.value?.sectionLabel ?? "统一导航"
   );
+  const currentDomainBadge = computed(
+    () => route.meta.domainBadge?.toString() ?? currentItem.value?.domainBadge ?? "平台"
+  );
+  const currentDomainTitle = computed(
+    () => route.meta.domainTitle?.toString() ?? currentItem.value?.domainTitle ?? "统一门户"
+  );
+  const currentDomain = computed<HostDomain>(() => currentItem.value?.domain ?? "oa");
 
   return {
     visibleGroups,
+    currentItem,
+    currentDomain,
     currentTitle,
     currentDescription,
     currentKicker,
-    currentSectionLabel
+    currentSectionLabel,
+    currentDomainBadge,
+    currentDomainTitle
   };
 }

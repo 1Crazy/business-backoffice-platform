@@ -52,3 +52,10 @@ TBD - created by archiving change bootstrap-scrm-mvp. Update Purpose after archi
 - **WHEN** 用户上传不符合大小或类型约束的附件
 - **THEN** 系统拒绝保存该附件并提示约束原因
 
+### Requirement: 字典配置弹窗在宿主模式下保持可见且可操作
+当系统管理页面被主应用承载时，字典项新增/编辑对话框 SHALL 继续完整显示并保持可操作。宿主模式 MUST NOT 让字典表单弹窗因为内容容器裁切而只在不可见区域渲染。
+
+#### Scenario: 新增或编辑字典项时弹窗完整显示
+- **WHEN** 用户在主应用中打开新增字典项或编辑字典项对话框
+- **THEN** 字典表单完整显示在宿主壳层之上，并可正常填写、校验与关闭
+

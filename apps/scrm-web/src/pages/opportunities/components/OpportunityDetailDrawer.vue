@@ -1,6 +1,6 @@
 <!-- 复用组件：负责承载跨页面共享的展示或交互骨架，通过 props / emits 与页面协作。 -->
 <template>
-  <el-drawer v-model="drawerVisible" title="商机详情" :size="isTabletOrDown ? '100%' : '680px'">
+  <el-drawer v-model="drawerVisible" title="商机详情" :size="isTabletOrDown ? '100%' : '680px'" append-to-body>
     <template v-if="opportunity">
       <div class="drawer-stack">
         <section class="summary-panel">

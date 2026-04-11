@@ -1,6 +1,11 @@
 <!-- 复用组件：负责承载跨页面共享的展示或交互骨架，通过 props / emits 与页面协作。 -->
 <template>
-  <el-drawer v-model="drawerVisible" :size="isTabletOrDown ? '100%' : '58%'" :title="lead?.name ?? '线索跟进'">
+  <el-drawer
+    v-model="drawerVisible"
+    :size="isTabletOrDown ? '100%' : '58%'"
+    :title="lead?.name ?? '线索跟进'"
+    append-to-body
+  >
     <div class="drawer-stack">
       <section class="page-card">
         <h3>跟进记录</h3>

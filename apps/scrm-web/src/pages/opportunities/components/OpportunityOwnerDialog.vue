@@ -1,6 +1,6 @@
 <!-- 复用组件：负责承载跨页面共享的展示或交互骨架，通过 props / emits 与页面协作。 -->
 <template>
-  <el-dialog v-model="dialogVisible" title="重新分配商机" width="420px">
+  <el-dialog v-model="dialogVisible" title="重新分配商机" width="420px" append-to-body>
     <el-form :ref="setFormRef" :model="form" :rules="rules" label-position="top" status-icon>
       <el-form-item label="新的归属人" prop="ownerId" required>
         <el-select v-model="form.ownerId" placeholder="请选择归属人" filterable>
