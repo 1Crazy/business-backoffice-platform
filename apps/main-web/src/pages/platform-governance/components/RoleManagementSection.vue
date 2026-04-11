@@ -2,7 +2,7 @@
 <template>
   <div>
     <div class="toolbar-row">
-      <p>权限点按应用域与业务分组组织，角色可以在同一套目录里同时授权平台治理、OA 与 SCRM 能力。</p>
+      <p>维护角色权限。</p>
       <el-button type="primary" @click="$emit('create')">新增角色</el-button>
     </div>
 
@@ -60,7 +60,8 @@ defineEmits<{
 
 .toolbar-row p {
   margin: 0;
-  color: #64748b;
+  color: var(--app-text-secondary);
+  line-height: 1.7;
 }
 
 .tag-item {

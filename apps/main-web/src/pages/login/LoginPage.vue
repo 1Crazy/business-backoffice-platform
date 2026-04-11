@@ -1,39 +1,39 @@
 <template>
   <div class="login-shell">
     <section class="hero">
-      <div class="hero-chip">Enterprise Gateway</div>
+      <div class="hero-chip">Business Backoffice</div>
       <div class="hero-brand">
-        <span class="hero-mark">H</span>
+        <span class="hero-mark">BP</span>
         <div>
-          <strong>主应用工作台</strong>
-          <span>统一承接 OA 与 SCRM 的集团级业务入口</span>
+          <strong>业务主系统</strong>
+          <span>平台治理 · OA · SCRM</span>
         </div>
       </div>
-      <h1>把办公流转与经营判断收束到同一张稳定的工作台里</h1>
-      <p>主应用不是再造一套业务页面，而是用一层清晰、稳定、可维护的壳层，把 OA 和 SCRM 的内容页组织成统一入口，让员工进入后更快找到今天该处理的事情。</p>
+      <h1>进入业务主系统。</h1>
+      <p>从这里进入平台治理、OA 和 SCRM，直接开始当天工作。</p>
 
       <div class="domain-grid">
         <article class="domain-card">
           <span>OA 办公</span>
           <strong>审批、请假、公告与通讯录</strong>
-          <p>流程驱动的日常办公协作入口，适合处理高频组织动作。</p>
+          <p>处理待办与组织协同。</p>
         </article>
         <article class="domain-card">
           <span>SCRM 经营</span>
           <strong>客户、线索、商机与经营分析</strong>
-          <p>用统一视角承接销售运营判断、客户管理和权限治理。</p>
+          <p>查看进展并继续推进销售。</p>
         </article>
       </div>
     </section>
 
-    <section class="page-card form-panel">
-      <div class="panel-kicker">统一登录</div>
+    <section class="form-panel">
+      <div class="panel-kicker">系统登录</div>
       <div class="panel-head">
         <div>
-          <div class="panel-title">进入主应用</div>
-          <div class="panel-caption">使用平台账号进入统一门户，再按权限访问 OA 与 SCRM 页面。</div>
+          <div class="panel-title">登录主系统</div>
+          <div class="panel-caption">进入平台治理、OA 或 SCRM。</div>
         </div>
-        <div class="identity-pill">统一账号</div>
+        <div class="identity-pill">主系统</div>
       </div>
 
       <el-form
@@ -53,11 +53,11 @@
           <el-input v-model="form.password" type="password" show-password placeholder="请输入密码" />
         </el-form-item>
         <el-button type="primary" class="submit-button" :loading="submitting" @click="handleSubmit">
-          登录主应用
+          进入系统
         </el-button>
       </el-form>
 
-      <div class="hint">沿用仓库当前统一账号体系，子应用会共享同一份登录态。</div>
+      <div class="hint">体验账号可直接进入。</div>
       <div class="credential-card">
         <span>体验账号</span>
         <strong>admin / Admin123456!</strong>

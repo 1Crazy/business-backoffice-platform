@@ -76,7 +76,7 @@ defineEmits<{
   border: none;
   border-radius: 999px;
   padding: 8px 12px;
-  background: rgba(245, 239, 229, 0.9);
+  background: rgba(232, 239, 247, 0.9);
   color: var(--app-text-secondary);
   font: inherit;
   font-weight: 600;
@@ -87,7 +87,7 @@ defineEmits<{
 }
 
 .mobile-nav-link:hover {
-  background: rgba(15, 118, 110, 0.12);
+  background: rgba(37, 99, 235, 0.1);
   color: var(--app-accent-strong);
   transform: translateY(-1px);
 }
@@ -95,7 +95,7 @@ defineEmits<{
 .mobile-nav-link.active {
   background: linear-gradient(135deg, var(--app-accent) 0%, var(--app-accent-strong) 100%);
   color: white;
-  box-shadow: 0 14px 28px rgba(15, 118, 110, 0.18);
+  box-shadow: 0 14px 28px rgba(37, 99, 235, 0.18);
 }
 
 @media (max-width: 1024px) {

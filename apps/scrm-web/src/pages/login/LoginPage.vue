@@ -2,38 +2,38 @@
 <template>
   <div class="login-shell">
     <section class="hero">
-      <div class="hero-chip">销售运营控制台</div>
+      <div class="hero-chip">SCRM</div>
       <div class="hero-brand">
         <span class="hero-mark">S</span>
         <div>
           <strong>SCRM 控制台</strong>
-          <span>客户、线索、销售节奏与权限治理的统一控制台</span>
+          <span>客户 · 线索 · 商机 · 看板</span>
         </div>
       </div>
-      <h1>让客户、线索和销售协作真正连成一套可判断、可执行的闭环</h1>
-      <p>这一版先聚焦权限、客户、线索跟进、看板和系统管理，为后续企业微信与自动化运营能力保留足够清晰的数据控制台骨架。</p>
+      <h1>进入 SCRM，先看今天的销售进展。</h1>
+      <p>客户、线索、商机和提醒都在这里。</p>
       <div class="hero-grid">
         <article class="hero-card">
-          <span>统一视图</span>
-          <strong>客户 / 线索 / 提醒</strong>
-          <p>用同一套筛选、归属和跟进节奏串起销售日常动作。</p>
+          <span>客户推进</span>
+          <strong>客户 / 线索 / 跟进</strong>
+          <p>先处理本周重点推进。</p>
         </article>
         <article class="hero-card">
-          <span>运营判断</span>
-          <strong>指标 + 口径 + 洞察</strong>
-          <p>把时间范围、数据范围和核心指标收敛到一个判断面板里。</p>
+          <span>经营判断</span>
+          <strong>看板 / 商机 / 提醒</strong>
+          <p>先看关键指标，再处理明细。</p>
         </article>
       </div>
     </section>
 
     <section class="page-card form-panel">
-      <div class="panel-kicker">运营登录</div>
+      <div class="panel-kicker">系统登录</div>
       <div class="panel-head">
         <div>
           <div class="panel-title">后台登录</div>
-          <div class="panel-caption">使用平台账号进入销售与客户运营控制台。</div>
+          <div class="panel-caption">进入 SCRM 控制台。</div>
         </div>
-        <div class="identity-pill">控制台账号</div>
+        <div class="identity-pill">SCRM</div>
       </div>
       <el-form
         ref="loginFormRef"
@@ -55,7 +55,7 @@
           登录系统
         </el-button>
       </el-form>
-      <div class="hint">默认种子账号会在 Prisma seed 后生成。</div>
+      <div class="hint">体验账号可直接进入。</div>
       <div class="credential-card">
         <span>体验账号</span>
         <strong>admin / Admin123456!</strong>
@@ -137,7 +137,7 @@ async function handleSubmit(): Promise<void> {
   width: fit-content;
   padding: 8px 14px;
   border-radius: 999px;
-  background: rgba(30, 64, 175, 0.12);
+  background: rgba(37, 99, 235, 0.12);
   color: var(--app-accent-strong);
   font-size: 12px;
   font-weight: 700;
@@ -157,7 +157,7 @@ async function handleSubmit(): Promise<void> {
   display: grid;
   place-items: center;
   border-radius: 18px;
-  background: linear-gradient(135deg, var(--app-accent) 0%, #2856e1 100%);
+  background: linear-gradient(135deg, var(--app-accent) 0%, var(--app-accent-strong) 100%);
   color: white;
   font-size: 24px;
   font-weight: 700;
@@ -270,7 +270,7 @@ async function handleSubmit(): Promise<void> {
   min-height: 34px;
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(30, 64, 175, 0.08);
+  background: rgba(37, 99, 235, 0.08);
   color: var(--app-accent-strong);
   font-size: 12px;
   font-weight: 700;
@@ -293,7 +293,7 @@ async function handleSubmit(): Promise<void> {
   gap: 16px;
   padding: 14px 16px;
   border-radius: 18px;
-  background: rgba(232, 239, 252, 0.82);
+  background: rgba(239, 246, 255, 0.84);
   border: 1px solid rgba(95, 125, 170, 0.14);
 }
 

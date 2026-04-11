@@ -140,7 +140,7 @@ defineEmits<{
   margin-bottom: 8px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(30, 64, 175, 0.08);
+  background: rgba(37, 99, 235, 0.08);
   color: var(--app-accent-strong);
   font-size: 11px;
   font-weight: 700;
@@ -164,7 +164,7 @@ defineEmits<{
   align-items: center;
   padding: 7px 11px;
   border-radius: 12px;
-  background: rgba(30, 64, 175, 0.08);
+  background: rgba(37, 99, 235, 0.08);
   color: var(--app-accent-strong);
   font-weight: 600;
   white-space: nowrap;

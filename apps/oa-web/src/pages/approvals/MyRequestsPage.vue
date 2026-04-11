@@ -6,7 +6,7 @@
         <span class="page-kicker">我的流程</span>
         <h2 class="page-section-title">我发起的申请</h2>
       </div>
-      <p class="page-section-caption">在一个列表里查看自己发起过的请假申请、当前状态和最近审批反馈。</p>
+      <p class="page-section-caption">查看最近申请状态。</p>
     </div>
 
     <div class="request-list" v-if="requests.length">

@@ -15,6 +15,7 @@
 - `openspec/specs`：当前已经同步完成的主规格
 - `openspec/changes/archive/2026-04-05-bootstrap-scrm-mvp`：已归档的一期 MVP OpenSpec 变更记录
 - `openspec/changes/archive/2026-04-06-sales-opportunity-management`：已归档的商机管理 OpenSpec 变更记录
+- `openspec/changes/archive/2026-04-11-polish-main-web-shell-visual-consistency`：已归档的主应用壳层视觉收敛与跨应用样式边界治理记录
 
 前端工作区命名约定为 `apps/<domain>-web`。当前已经落地的是 `apps/main-web`、`apps/scrm-web` 和 `apps/oa-web`，后续新增其他后台前端也遵循同一规则。
 
@@ -22,6 +23,7 @@
 
 - 平台能力：统一登录身份、多应用权限目录、菜单与页面授权、会话续期与退出
 - 主应用门户：统一登录、跨域菜单壳层、OA/SCRM 页面整合与 qiankun 子应用承载
+- 主应用视觉收敛：主系统原生平台页与 OA/SCRM 共享基础组件结构语言，宿主主题更稳定，切换业务域时避免 `Element Plus` 全局样式串扰
 - 账号登录、角色权限、菜单和接口授权
 - 部门、员工、角色与权限管理
 - 客户中心：客户档案、标签、来源、状态、归属人

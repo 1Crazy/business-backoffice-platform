@@ -20,11 +20,6 @@
           {{ item.title }}
         </el-menu-item>
       </el-menu>
-
-      <div class="sidebar-footer">
-        <span class="sidebar-footer-title">统一身份</span>
-        <span class="sidebar-footer-caption">适合嵌入主应用的轻量办公微前端</span>
-      </div>
     </div>
   </aside>
 </template>
@@ -45,22 +40,23 @@ defineProps<{
   top: 0;
   align-self: start;
   height: var(--app-shell-min-height, 100vh);
-  padding: 16px 10px 16px 16px;
-  color: var(--app-text-primary);
+  padding: var(--app-shell-gutter, 8px) 8px var(--app-shell-gutter, 8px) var(--app-shell-gutter, 8px);
+  color: rgba(255, 255, 255, 0.96);
 }
 
 .sidebar-inner {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 12px;
-  height: calc(var(--app-shell-min-height, 100vh) - 32px);
-  padding: 12px;
+  height: calc(var(--app-shell-min-height, 100vh) - (var(--app-shell-gutter, 8px) * 2));
+  padding: 12px 8px 12px 12px;
   border-radius: 24px;
-  border: 1px solid rgba(125, 148, 171, 0.16);
+  border: 1px solid rgba(148, 163, 184, 0.14);
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.9) 0%, rgba(243, 247, 246, 0.94) 100%);
-  box-shadow: 0 18px 38px rgba(23, 32, 43, 0.06);
-  backdrop-filter: blur(16px);
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.18), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.22), transparent 28%),
+    linear-gradient(180deg, #0f172a 0%, #0f1b34 48%, #12203d 100%);
+  box-shadow: 0 30px 60px rgba(2, 6, 23, 0.28);
 }
 
 .brand {
@@ -69,8 +65,8 @@ defineProps<{
   gap: 10px;
   padding: 10px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.76);
-  border: 1px solid rgba(125, 148, 171, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(148, 163, 184, 0.16);
 }
 
 .brand-badge {
@@ -79,11 +75,11 @@ defineProps<{
   border-radius: 12px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #14b8a6, #0f766e);
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
   color: white;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
 }
 
 .brand-copy {
@@ -91,7 +87,7 @@ defineProps<{
 }
 
 .brand-kicker {
-  color: var(--app-text-tertiary);
+  color: #7f93b8;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -112,9 +108,8 @@ defineProps<{
   padding: 2px 4px 0;
 }
 
-.menu-label,
-.sidebar-footer-title {
-  color: var(--app-text-tertiary);
+.menu-label {
+  color: #7f93b8;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -129,8 +124,8 @@ defineProps<{
   height: 24px;
   padding-inline: 8px;
   border-radius: 999px;
-  background: rgba(15, 118, 110, 0.08);
-  color: var(--app-accent-strong);
+  background: rgba(59, 130, 246, 0.18);
+  color: #dbeafe;
   font-size: 11px;
   font-weight: 700;
 }
@@ -138,7 +133,7 @@ defineProps<{
 .menu {
   min-height: 0;
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: 2px;
   border-right: none;
   background: transparent;
   scrollbar-width: none;
@@ -155,59 +150,26 @@ defineProps<{
   background: transparent;
 }
 
-.menu:hover,
-.menu:focus-within {
-  scrollbar-width: thin;
-}
-
-.menu:hover::-webkit-scrollbar,
-.menu:focus-within::-webkit-scrollbar {
-  width: 6px;
-}
-
-.menu:hover::-webkit-scrollbar-thumb,
-.menu:focus-within::-webkit-scrollbar-thumb {
-  background: rgba(125, 148, 171, 0.3);
-}
-
 :deep(.el-menu-item) {
   height: 40px;
   line-height: 40px;
   margin-bottom: 4px;
+  margin-right: 4px;
   padding: 0 12px;
-  color: var(--app-text-secondary);
+  color: #d2dced;
   border-radius: 12px;
   font-weight: 600;
   font-size: 13px;
 }
 
 :deep(.el-menu-item:hover) {
-  background: rgba(15, 118, 110, 0.08);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 :deep(.el-menu-item.is-active) {
-  color: var(--app-accent-strong);
-  background:
-    linear-gradient(135deg, rgba(15, 118, 110, 0.16), rgba(15, 118, 110, 0.08)),
-    rgba(255, 255, 255, 0.96);
-}
-
-.sidebar-footer {
-  display: grid;
-  gap: 4px;
-  padding: 12px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.64);
-}
-
-.sidebar-footer-title {
-  color: var(--app-accent-strong);
-}
-
-.sidebar-footer-caption {
-  color: var(--app-text-secondary);
-  font-size: 12px;
-  line-height: 1.5;
+  color: white;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.48), rgba(29, 78, 216, 0.34));
+  box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.2);
 }
 
 @media (max-width: 1024px) {

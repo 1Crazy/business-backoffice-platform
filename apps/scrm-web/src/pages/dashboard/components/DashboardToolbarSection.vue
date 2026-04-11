@@ -2,21 +2,14 @@
 <template>
   <section class="page-card toolbar">
     <div class="toolbar-copy">
-      <span class="toolbar-kicker">销售运营</span>
-      <div class="toolbar-head">
-        <div>
-          <h2>运营看板</h2>
-          <p>默认统计最近 30 天，并按当前账号的数据权限范围收口，让指标、范围和判断发生在同一首屏结构里。</p>
-        </div>
-        <div class="toolbar-badges">
-          <span v-if="refreshing" class="loading-badge">数据同步中</span>
-          <span class="toolbar-badge">统一口径</span>
-          <span class="toolbar-badge">权限收口</span>
-        </div>
-      </div>
+      <span class="toolbar-kicker">运营看板</span>
+      <h2>销售概览</h2>
+      <p>聚合客户、线索和商机的核心指标，便于快速掌握当前经营状态。</p>
     </div>
     <div class="toolbar-controls">
-      <span class="toolbar-label">统计周期</span>
+      <div class="toolbar-metrics">
+        <span v-if="refreshing" class="loading-badge">数据同步中</span>
+      </div>
       <el-date-picker
         v-model="model"
         class="toolbar-picker"
@@ -56,12 +49,17 @@ const model = computed({
 <style scoped>
 .toolbar {
   display: grid;
-  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+}
+
+.toolbar-copy {
+  display: grid;
+  gap: 6px;
 }
 
 .toolbar-kicker {
-  display: inline-flex;
-  margin-bottom: 10px;
   color: var(--app-accent-strong);
   font-size: 12px;
   font-weight: 700;
@@ -69,66 +67,42 @@ const model = computed({
   text-transform: uppercase;
 }
 
-.toolbar-head {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 18px;
+.toolbar-copy h2 {
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.2;
 }
 
-.toolbar-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.toolbar-badge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 34px;
-  padding: 8px 12px;
-  border-radius: 999px;
-  background: rgba(30, 64, 175, 0.08);
-  color: var(--app-accent-strong);
-  font-size: 12px;
-  font-weight: 700;
+.toolbar-copy p {
+  margin: 0;
+  color: var(--app-text-secondary);
+  line-height: 1.6;
 }
 
 .toolbar-controls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  padding-top: 18px;
-  border-top: 1px solid rgba(95, 125, 170, 0.12);
+  display: grid;
+  justify-items: end;
+  gap: 10px;
 }
 
-.toolbar-label {
-  color: var(--app-text-secondary);
-  font-size: 13px;
-  font-weight: 600;
+.toolbar-metrics {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
 }
 
 .toolbar-picker {
-  width: 340px;
+  width: 320px;
   max-width: 100%;
 }
 
-.toolbar h2 {
-  margin: 0 0 6px;
-}
-
-.toolbar p {
-  margin: 0;
-  color: var(--app-text-secondary);
-  line-height: 1.75;
-}
-
 @media (max-width: 960px) {
-  .toolbar-head,
+  .toolbar {
+    grid-template-columns: 1fr;
+  }
+
   .toolbar-controls {
-    flex-direction: column;
-    align-items: stretch;
+    justify-items: stretch;
   }
 
   .toolbar-picker {

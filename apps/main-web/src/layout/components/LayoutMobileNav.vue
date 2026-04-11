@@ -11,7 +11,7 @@
           <header class="host-mobile-drawer-head">
             <div>
               <strong>{{ drawerTitle }}</strong>
-              <span>{{ drawerCaption }}</span>
+              <span v-if="drawerCaption">{{ drawerCaption }}</span>
             </div>
             <button type="button" class="host-mobile-close-button" @click="expanded = false">
               <Close class="host-mobile-close-icon" />
@@ -56,8 +56,8 @@ const emit = defineEmits<{
 }>();
 
 const expanded = ref(false);
-const drawerTitle = computed(() => "主应用菜单");
-const drawerCaption = computed(() => "统一承接平台治理、OA 与 SCRM 页面入口，帮助你在同一壳层里完成跨域切换。");
+const drawerTitle = computed(() => "业务主系统");
+const drawerCaption = computed(() => "");
 
 function handleNavigate(path: string): void {
   expanded.value = false;
@@ -82,9 +82,9 @@ function handleNavigate(path: string): void {
   gap: 8px;
   min-height: 42px;
   padding: 10px 14px;
-  border: 1px solid rgba(8, 145, 178, 0.16);
+  border: 1px solid rgba(15, 23, 42, 0.08);
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.82);
+  background: rgba(255, 255, 255, 0.88);
   color: var(--app-text-primary);
 }
 
@@ -100,7 +100,7 @@ function handleNavigate(path: string): void {
   z-index: 50;
   display: grid;
   justify-items: end;
-  background: rgba(15, 41, 64, 0.24);
+  background: rgba(18, 32, 47, 0.22);
   backdrop-filter: blur(8px);
 }
 
@@ -108,8 +108,12 @@ function handleNavigate(path: string): void {
   width: min(92vw, 360px);
   height: 100%;
   padding: 22px 18px;
-  background: rgba(252, 255, 255, 0.96);
-  box-shadow: -24px 0 48px rgba(15, 41, 64, 0.12);
+  color: rgba(255, 255, 255, 0.96);
+  background:
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.18), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.22), transparent 28%),
+    linear-gradient(180deg, #0f172a 0%, #0f1b34 48%, #12203d 100%);
+  box-shadow: -24px 0 48px rgba(2, 6, 23, 0.28);
 }
 
 .host-mobile-drawer-head {
@@ -127,7 +131,7 @@ function handleNavigate(path: string): void {
 
 .host-mobile-drawer-head span {
   margin-top: 6px;
-  color: var(--app-text-secondary);
+  color: #c5d2e8;
   font-size: 12px;
   line-height: 1.6;
 }
@@ -139,7 +143,8 @@ function handleNavigate(path: string): void {
   place-items: center;
   border: none;
   border-radius: 14px;
-  background: rgba(15, 41, 64, 0.06);
+  color: inherit;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .host-mobile-drawer-content {
@@ -155,7 +160,7 @@ function handleNavigate(path: string): void {
 }
 
 .host-mobile-drawer-group-title {
-  color: var(--app-text-tertiary);
+  color: #7f93b8;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -167,7 +172,8 @@ function handleNavigate(path: string): void {
   padding: 12px 14px;
   border: 1px solid transparent;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.82);
+  color: inherit;
+  background: rgba(255, 255, 255, 0.06);
   text-align: left;
 }
 
@@ -178,13 +184,14 @@ function handleNavigate(path: string): void {
 
 .host-mobile-drawer-item small {
   margin-top: 4px;
-  color: var(--app-text-secondary);
+  color: #c5d2e8;
   line-height: 1.55;
 }
 
 .host-mobile-drawer-item-active {
-  border-color: rgba(8, 145, 178, 0.18);
-  background: rgba(236, 254, 255, 0.92);
+  border-color: rgba(147, 197, 253, 0.2);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.44), rgba(29, 78, 216, 0.32));
+  box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.2);
 }
 
 @media (max-width: 1180px) {

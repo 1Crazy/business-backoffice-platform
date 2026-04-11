@@ -2,7 +2,7 @@
 <template>
   <div>
     <div class="toolbar-row">
-      <p>统一维护平台治理、OA 与 SCRM 共享的组织架构骨架。</p>
+      <p>维护部门结构。</p>
       <el-button type="primary" @click="$emit('create')">新增部门</el-button>
     </div>
 
@@ -58,6 +58,7 @@ defineEmits<{
 .toolbar-row p {
   margin: 0;
   color: var(--app-text-secondary);
+  line-height: 1.7;
 }
 
 @media (max-width: 960px) {

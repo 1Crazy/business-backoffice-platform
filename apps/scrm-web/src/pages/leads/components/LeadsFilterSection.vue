@@ -27,7 +27,7 @@
       </el-form-item>
     </el-form>
     <div class="toolbar-row">
-      <p>线索页把“分配、转化、跟进、提醒”压缩到一条工作路径里，减少销售切换页面的次数。</p>
+      <p>按归属、状态和来源筛选。</p>
       <div class="toolbar-actions">
         <span v-if="loading" class="loading-badge">筛选项同步中</span>
         <el-button @click="$emit('refresh')">刷新</el-button>

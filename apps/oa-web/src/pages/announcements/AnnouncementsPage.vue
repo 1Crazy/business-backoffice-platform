@@ -6,7 +6,7 @@
         <span class="page-kicker">组织动态</span>
         <h2 class="page-section-title">公告通知</h2>
       </div>
-      <p class="page-section-caption">把制度更新、节奏提醒和协作通知收拢到一个可快速浏览的列表里。</p>
+      <p class="page-section-caption">最近发布。</p>
     </div>
 
     <div v-if="announcements.length" class="announcement-list">
@@ -64,7 +64,7 @@ const { announcements } = useAnnouncementsPage();
 
 .announcement-item:hover {
   transform: translateY(-1px);
-  border-color: rgba(15, 118, 110, 0.18);
+  border-color: rgba(37, 99, 235, 0.18);
   box-shadow: 0 18px 30px rgba(23, 32, 43, 0.05);
 }
 

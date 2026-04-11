@@ -7,7 +7,7 @@
           <span class="page-kicker">请假流程</span>
           <h2 class="page-section-title">发起请假申请</h2>
         </div>
-        <p class="page-section-caption">首期先收口最常见的请假申请场景，后续再扩展到更多办公流程。</p>
+        <p class="page-section-caption">填写并提交。</p>
       </div>
 
       <el-form
@@ -46,7 +46,7 @@
           <span class="page-kicker">最近申请</span>
           <h2 class="page-section-title">最近申请</h2>
         </div>
-        <p class="page-section-caption">提交后可以在这里快速回看最近的申请状态。</p>
+        <p class="page-section-caption">最近记录。</p>
       </div>
 
       <div v-if="recentRequests.length" class="recent-list">

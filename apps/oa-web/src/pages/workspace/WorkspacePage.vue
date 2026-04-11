@@ -70,9 +70,7 @@
     <template v-else>
       <section class="hero-card page-card">
         <div class="hero-copy">
-          <span class="hero-eyebrow">办公工作台</span>
-          <h2>先处理最影响今天节奏的办公事项。</h2>
-          <p class="hero-caption">这个工作台优先呈现与当前员工最相关的审批、申请与组织信息，把高频动作收敛在一套更有秩序的办公门户结构里。</p>
+          <h2>先处理待办。</h2>
           <div class="hero-signals">
             <span class="hero-signal">待办 {{ overview.pendingApprovalCount }}</span>
             <span class="hero-signal">申请 {{ overview.myRequestCount }}</span>
@@ -84,10 +82,6 @@
             <RouterLink class="quick-link" to="/leave/request">发起请假</RouterLink>
             <RouterLink class="quick-link soft" to="/approvals/pending">处理审批</RouterLink>
           </div>
-          <div class="hero-note">
-            <span>统一入口</span>
-            <p>审批、公告、组织联络与假勤流程都在同一条办公动线里展开。</p>
-          </div>
         </div>
       </section>
 
@@ -95,7 +89,6 @@
         <article v-for="item in metricCards" :key="item.label" class="page-card metric-card">
           <span>{{ item.label }}</span>
           <strong>{{ item.value }}</strong>
-          <p>{{ item.caption }}</p>
         </article>
       </section>
 
@@ -103,10 +96,8 @@
         <section class="page-card focus-card">
           <div class="section-head">
             <div>
-              <span class="page-kicker">今日优先</span>
               <h3 class="page-section-title">优先事项</h3>
             </div>
-            <p class="page-section-caption">先解决最影响协作节奏的事项，再去处理次级信息。</p>
           </div>
 
           <div class="focus-list">
@@ -123,10 +114,8 @@
         <section class="page-card bulletin-card">
           <div class="section-head">
             <div>
-              <span class="page-kicker">组织动态</span>
               <h3 class="page-section-title">最近公告</h3>
             </div>
-            <p class="page-section-caption">先看最新制度变化和协作提醒，避免在审批和出勤信息之间反复切换。</p>
           </div>
 
           <div v-if="overview.recentAnnouncements.length" class="announcement-list">
@@ -159,46 +148,39 @@ import { useWorkspacePage } from "@/composables/workspace/useWorkspacePage";
 const { overview, isLoading } = useWorkspacePage();
 
 const metricCards = computed(() => [
-  {
-    label: "待我审批",
-    value: overview.value.pendingApprovalCount,
-    caption: "优先处理当前轮到你的审批节点。"
-  },
-  {
-    label: "我发起的申请",
-    value: overview.value.myRequestCount,
-    caption: "持续跟踪自己提交过的办公申请。"
-  },
-  {
-    label: "进行中的公告",
-    value: overview.value.activeAnnouncementCount,
-    caption: "把制度变化与协作提醒保持在视线内。"
-  },
-  {
-    label: "通讯录部门数",
-    value: overview.value.directoryDepartmentCount,
-    caption: "组织信息已按部门结构沉淀到同一入口。"
-  }
-]);
+    {
+      label: "待我审批",
+      value: overview.value.pendingApprovalCount
+    },
+    {
+      label: "我发起的申请",
+      value: overview.value.myRequestCount
+    },
+    {
+      label: "进行中的公告",
+      value: overview.value.activeAnnouncementCount
+    },
+    {
+      label: "通讯录部门数",
+      value: overview.value.directoryDepartmentCount
+    }
+  ]);
 
 const focusItems = computed(() => [
   {
     title: "待我审批",
     value: `${overview.value.pendingApprovalCount} 项`,
-    caption:
-      overview.value.pendingApprovalCount > 0 ? "建议先清理当前卡在你这里的审批动作，避免影响上下游协作。" : "当前没有积压在你这里的审批事项。"
+    caption: overview.value.pendingApprovalCount > 0 ? "优先处理。" : "当前为空。"
   },
   {
     title: "我发起的申请",
     value: `${overview.value.myRequestCount} 项`,
-    caption:
-      overview.value.myRequestCount > 0 ? "最近申请仍在流转中，适合从这里继续查看最新状态与审批意见。" : "当前没有需要继续跟进的个人申请。"
+    caption: overview.value.myRequestCount > 0 ? "查看状态。" : "暂无进行中申请。"
   },
   {
     title: "公告同步",
     value: `${overview.value.activeAnnouncementCount} 条`,
-    caption:
-      overview.value.activeAnnouncementCount > 0 ? "先浏览最新制度与通知摘要，避免在后续协作中出现信息差。" : "当前公告节奏平稳，可以把时间优先留给流程处理。"
+    caption: overview.value.activeAnnouncementCount > 0 ? "查看最新通知。" : "当前无新公告。"
   }
 ]);
 </script>
@@ -247,41 +229,23 @@ const focusItems = computed(() => [
 .hero-card {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(220px, 0.55fr);
-  gap: 20px;
+  gap: 14px;
   align-items: stretch;
-}
-
-.hero-eyebrow {
-  display: inline-flex;
-  margin-bottom: 10px;
-  color: var(--app-accent-strong);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
 }
 
 h2 {
   margin: 0;
   max-width: none;
-  font-size: clamp(24px, 2.5vw, 30px);
-  line-height: 1.18;
+  font-size: clamp(20px, 2vw, 22px);
+  line-height: 1.12;
   letter-spacing: -0.035em;
-}
-
-.hero-caption {
-  max-width: 42rem;
-  margin: 10px 0 0;
-  color: var(--app-text-secondary);
-  font-size: 14px;
-  line-height: 1.68;
 }
 
 .hero-signals {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-top: 14px;
+  margin-top: 10px;
 }
 
 .hero-signal {
@@ -299,8 +263,7 @@ h2 {
 
 .hero-actions {
   display: grid;
-  gap: 14px;
-  align-content: space-between;
+  align-content: start;
 }
 
 .quick-actions {
@@ -320,7 +283,7 @@ h2 {
   background: linear-gradient(135deg, var(--app-accent) 0%, var(--app-accent-strong) 100%);
   color: white;
   font-weight: 700;
-  box-shadow: 0 18px 32px rgba(15, 118, 110, 0.18);
+  box-shadow: 0 18px 32px rgba(37, 99, 235, 0.18);
   transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease;
 }
 
@@ -333,31 +296,6 @@ h2 {
 .quick-link:hover {
   transform: translateY(-1px);
   opacity: 0.98;
-}
-
-.hero-note {
-  padding: 16px;
-  border-radius: 18px;
-  background:
-    linear-gradient(135deg, rgba(198, 123, 51, 0.12), transparent 70%),
-    rgba(255, 255, 255, 0.72);
-  border: 1px solid rgba(125, 148, 171, 0.12);
-}
-
-.hero-note span {
-  display: block;
-  color: var(--app-text-tertiary);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.hero-note p {
-  margin: 8px 0 0;
-  color: var(--app-text-secondary);
-  line-height: 1.65;
-  font-size: 13px;
 }
 
 .metric-grid {
@@ -383,13 +321,6 @@ h2 {
   line-height: 1;
 }
 
-.metric-card p {
-  margin: 0;
-  color: var(--app-text-secondary);
-  line-height: 1.62;
-  font-size: 13px;
-}
-
 .content-grid {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(320px, 0.9fr);
@@ -398,14 +329,8 @@ h2 {
 
 .section-head {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.section-head .page-section-caption {
-  max-width: 320px;
-  margin: 0;
+  align-items: center;
+  min-height: 20px;
 }
 
 .focus-card,
@@ -466,7 +391,7 @@ h2 {
 
 .announcement-item:hover {
   transform: translateY(-1px);
-  border-color: rgba(15, 118, 110, 0.18);
+  border-color: rgba(37, 99, 235, 0.18);
   box-shadow: 0 18px 30px rgba(23, 32, 43, 0.05);
 }
 

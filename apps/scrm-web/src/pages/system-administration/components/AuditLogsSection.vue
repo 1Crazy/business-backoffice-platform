@@ -49,7 +49,7 @@
     </el-form>
 
     <div class="toolbar-row">
-      <p>认证、分配、转换和修改动作都会进入日志列表，筛选后仍保持服务端分页与时间口径一致。</p>
+      <p>按操作人、动作和时间筛选。</p>
       <el-button @click="$emit('refresh')">刷新</el-button>
     </div>
 
@@ -57,7 +57,7 @@
       <div>
         <span class="table-kicker">操作审计</span>
         <h3>审计结果</h3>
-        <p>结果已按动作、对象和时间区间同步更新，便于快速追溯关键操作。</p>
+        <p>查看最近关键操作。</p>
       </div>
       <div class="meta-pill">{{ refreshing ? "结果同步中" : `排序：${currentSortLabel}` }}</div>
     </div>
@@ -142,7 +142,7 @@ const localSortPreset = computed({
 .toolbar-row p {
   margin: 0;
   min-width: 0;
-  color: #64748b;
+  color: var(--app-text-secondary);
 }
 
 .table-skeleton {
@@ -196,8 +196,8 @@ const localSortPreset = computed({
   margin-bottom: 8px;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(30, 64, 175, 0.08);
-  color: #1e40af;
+  background: rgba(37, 99, 235, 0.08);
+  color: #1d4ed8;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -210,7 +210,7 @@ const localSortPreset = computed({
 
 .table-meta p {
   margin: 0;
-  color: #64748b;
+  color: var(--app-text-secondary);
   line-height: 1.6;
   font-size: 13px;
 }
@@ -220,7 +220,7 @@ const localSortPreset = computed({
   align-items: center;
   padding: 7px 11px;
   border-radius: 12px;
-  background: rgba(30, 64, 175, 0.08);
+  background: rgba(37, 99, 235, 0.08);
   color: #1e3a8a;
   font-weight: 600;
   white-space: nowrap;

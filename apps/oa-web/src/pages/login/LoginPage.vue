@@ -2,38 +2,38 @@
 <template>
   <div class="login-shell">
     <section class="hero">
-      <div class="hero-chip">统一员工门户</div>
+      <div class="hero-chip">OA Office</div>
       <div class="hero-brand">
         <span class="hero-mark">OA</span>
         <div>
           <strong>OA 办公台</strong>
-          <span>办公流转、组织公告与协同联络的统一入口</span>
+          <span>审批 · 请假 · 公告 · 通讯录</span>
         </div>
       </div>
-      <h1>把审批、公告与组织协作收束到一个更有秩序的办公门户</h1>
-      <p>这一版先聚焦工作台、请假审批、公告通知和组织通讯录，让员工用同一套身份完成日常办公流转与信息同步。</p>
+      <h1>进入 OA，先处理今天的待办。</h1>
+      <p>审批、请假、公告和通讯录都从这里开始。</p>
       <div class="hero-grid">
         <article class="hero-card">
-          <span>流程集中</span>
-          <strong>审批 / 请假 / 公告</strong>
-          <p>高频办公动作集中在一个入口，不再来回切换。</p>
+          <span>待办处理</span>
+          <strong>审批 / 请假</strong>
+          <p>优先处理今天要过的流程。</p>
         </article>
         <article class="hero-card">
-          <span>统一身份</span>
-          <strong>统一员工身份</strong>
-          <p>沿用平台账号体系进入 OA，不再维护割裂的登录身份。</p>
+          <span>组织信息</span>
+          <strong>公告 / 通讯录</strong>
+          <p>查看通知和联系人。</p>
         </article>
       </div>
     </section>
 
     <section class="page-card form-panel">
-      <div class="panel-kicker">安全登录</div>
+      <div class="panel-kicker">系统登录</div>
       <div class="panel-head">
         <div>
           <div class="panel-title">OA 登录</div>
-          <div class="panel-caption">使用统一员工账号进入审批、公告与办公协同门户。</div>
+          <div class="panel-caption">进入 OA 办公台。</div>
         </div>
-        <div class="identity-pill">统一账号</div>
+        <div class="identity-pill">OA</div>
       </div>
       <el-form
         ref="loginFormRef"
@@ -52,10 +52,10 @@
           <el-input v-model="form.password" type="password" show-password placeholder="请输入密码" />
         </el-form-item>
         <el-button type="primary" :loading="submitting" class="submit-button" @click="handleSubmit">
-          登录系统
+          进入 OA
         </el-button>
       </el-form>
-      <div class="hint">统一账号体系仍复用平台种子账号。</div>
+      <div class="hint">体验账号可直接进入。</div>
       <div class="credential-card">
         <span>体验账号</span>
         <strong>admin / Admin123456!</strong>
@@ -141,7 +141,7 @@ defineExpose({
   width: fit-content;
   padding: 8px 14px;
   border-radius: 999px;
-  background: rgba(15, 118, 110, 0.12);
+  background: rgba(37, 99, 235, 0.12);
   color: var(--app-accent-strong);
   font-size: 12px;
   font-weight: 700;
@@ -276,7 +276,7 @@ defineExpose({
   min-height: 34px;
   padding: 8px 12px;
   border-radius: 999px;
-  background: rgba(15, 118, 110, 0.08);
+  background: rgba(37, 99, 235, 0.08);
   color: var(--app-accent-strong);
   font-size: 12px;
   font-weight: 700;
@@ -303,7 +303,7 @@ defineExpose({
   gap: 16px;
   padding: 14px 16px;
   border-radius: 18px;
-  background: rgba(245, 239, 229, 0.78);
+  background: rgba(239, 246, 255, 0.84);
   border: 1px solid rgba(125, 148, 171, 0.12);
 }
 

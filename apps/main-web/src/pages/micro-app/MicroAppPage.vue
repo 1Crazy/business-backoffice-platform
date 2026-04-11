@@ -91,7 +91,7 @@ function handleBackToHome(): void {
   z-index: 1;
   display: grid;
   place-items: center;
-  background: linear-gradient(180deg, rgba(247, 252, 254, 0.8) 0%, rgba(236, 254, 255, 0.62) 100%);
+  background: linear-gradient(180deg, rgba(248, 251, 255, 0.82) 0%, rgba(233, 242, 255, 0.68) 100%);
   backdrop-filter: blur(10px);
 }
 
@@ -100,7 +100,7 @@ function handleBackToHome(): void {
   max-width: 520px;
   padding: 28px;
   border-radius: 28px;
-  border: 1px solid rgba(8, 145, 178, 0.16);
+  border: 1px solid rgba(59, 130, 246, 0.14);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: 0 20px 48px rgba(15, 41, 64, 0.08);
 }
@@ -110,7 +110,7 @@ function handleBackToHome(): void {
   width: fit-content;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(8, 145, 178, 0.12);
+  background: rgba(37, 99, 235, 0.12);
   color: var(--app-accent-strong);
   font-size: 11px;
   font-weight: 700;

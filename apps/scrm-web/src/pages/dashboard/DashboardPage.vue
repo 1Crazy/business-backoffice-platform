@@ -47,7 +47,6 @@
 
     <template v-else>
       <DashboardToolbarSection v-model="dateRange" :refreshing="isRefreshing" @change="loadOverview" />
-      <DashboardScopeSection :is-overview-empty="isOverviewEmpty" />
       <DashboardStatsSection :cards="cards" />
       <DashboardInsightSection :overview="overview" />
     </template>
@@ -56,12 +55,11 @@
 
 <script setup lang="ts">
 import DashboardInsightSection from "@/pages/dashboard/components/DashboardInsightSection.vue";
-import DashboardScopeSection from "@/pages/dashboard/components/DashboardScopeSection.vue";
 import DashboardStatsSection from "@/pages/dashboard/components/DashboardStatsSection.vue";
 import DashboardToolbarSection from "@/pages/dashboard/components/DashboardToolbarSection.vue";
 import { useDashboardOverview } from "@/composables/dashboard/useDashboardOverview";
 
-const { cards, dateRange, isLoading, isOverviewEmpty, isRefreshing, loadOverview, overview } = useDashboardOverview();
+const { cards, dateRange, isLoading, isRefreshing, loadOverview, overview } = useDashboardOverview();
 </script>
 
 <style scoped>

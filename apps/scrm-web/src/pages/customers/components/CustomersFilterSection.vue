@@ -1,6 +1,14 @@
 <!-- 复用组件：负责承载跨页面共享的展示或交互骨架，通过 props / emits 与页面协作。 -->
 <template>
   <section class="page-card filter-card">
+    <div class="filter-toolbar">
+      <div class="filter-actions">
+        <span v-if="loading" class="loading-badge">筛选项同步中</span>
+        <el-button @click="$emit('refresh')">刷新</el-button>
+        <el-button @click="$emit('create-tag')">新建标签</el-button>
+        <el-button type="primary" @click="$emit('create-customer')">新增客户</el-button>
+      </div>
+    </div>
     <el-form class="filter-form" label-position="top">
       <el-form-item label="关键词">
         <el-input v-model="filters.keyword" placeholder="客户名 / 联系人 / 手机" clearable />
@@ -31,15 +39,6 @@
         </el-select>
       </el-form-item>
     </el-form>
-    <div class="toolbar-row">
-      <p>把客户资料、标签、归属和跟进放在同一张工作台里，销售切换成本会更低。</p>
-      <div class="toolbar-actions">
-        <span v-if="loading" class="loading-badge">筛选项同步中</span>
-        <el-button @click="$emit('refresh')">刷新</el-button>
-        <el-button @click="$emit('create-tag')">新建标签</el-button>
-        <el-button type="primary" @click="$emit('create-customer')">新增客户</el-button>
-      </div>
-    </div>
   </section>
 </template>
 
@@ -77,18 +76,36 @@ const localSortPreset = computed({
 <style scoped>
 .filter-card {
   display: grid;
-  gap: 16px;
+  gap: 14px;
+}
+
+.filter-toolbar {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.filter-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .filter-form {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0 16px;
 }
 
 .filter-form :deep(.el-form-item) {
   margin-right: 0;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
+}
+
+.filter-form :deep(.el-form-item__label) {
+  min-height: 18px;
+  line-height: 18px;
+  margin-bottom: 6px;
 }
 
 .filter-form :deep(.el-form-item__content),
@@ -97,41 +114,27 @@ const localSortPreset = computed({
   width: 100%;
 }
 
-.toolbar-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.toolbar-row p {
-  margin: 0;
-  color: var(--app-text-secondary);
-}
-
-.toolbar-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
 @media (max-width: 960px) {
   .filter-form {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
   }
 
-  .toolbar-row {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .toolbar-actions {
+  .filter-toolbar {
     justify-content: stretch;
   }
 
-  .toolbar-actions :deep(.el-button) {
+  .filter-actions {
+    justify-content: stretch;
+  }
+
+  .filter-actions :deep(.el-button) {
     flex: 1 1 140px;
+  }
+}
+
+@media (max-width: 640px) {
+  .filter-form {
+    grid-template-columns: 1fr;
   }
 }
 </style>

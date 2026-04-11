@@ -32,11 +32,6 @@
           </el-menu-item>
         </el-sub-menu>
       </el-menu>
-
-      <div class="host-sidebar-footer">
-        <span class="host-sidebar-footer-title">{{ footerTitle }}</span>
-        <span class="host-sidebar-footer-caption">{{ footerCaption }}</span>
-      </div>
     </div>
   </aside>
 </template>
@@ -59,11 +54,9 @@ defineEmits<{
 const menuRef = ref<{ open?: (index: string) => void } | null>(null);
 const totalItemCount = computed(() => props.groups.reduce((total, group) => total + group.items.length, 0));
 
-const brandBadge = computed(() => "H");
-const brandKicker = computed(() => "Enterprise Gateway");
-const brandTitle = computed(() => "主应用工作台");
-const footerTitle = computed(() => "统一入口");
-const footerCaption = computed(() => "主系统统一承接平台治理、OA 与 SCRM 页面入口，保持稳定导航与跨域切换体验。");
+const brandBadge = computed(() => "BP");
+const brandKicker = computed(() => "Business Backoffice");
+const brandTitle = computed(() => "业务主系统");
 
 watch(
   () => props.activeDomain,

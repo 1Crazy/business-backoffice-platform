@@ -5,17 +5,15 @@
 
     <main class="main" :class="{ 'main-embedded': microAppMode }">
       <header v-if="!microAppMode" class="topbar page-card">
-        <div class="topbar-copy">
-          <div class="topbar-kicker">{{ currentKicker }}</div>
-          <div class="title-row">
-            <div class="page-title">{{ currentTitle }}</div>
-            <span class="page-chip">{{ currentSectionLabel }}</span>
-          </div>
-        </div>
+        <nav class="topbar-breadcrumb" aria-label="页面路径">
+          <span class="breadcrumb-item">销售运营</span>
+          <span class="breadcrumb-separator">/</span>
+          <span class="breadcrumb-item current">{{ currentTitle }}</span>
+        </nav>
         <div class="topbar-actions">
           <div class="user-summary">
             <span class="user-name">{{ authStore.currentUser?.displayName ?? "系统管理员" }}</span>
-            <span class="user-caption">运营控制台账号</span>
+            <span class="user-caption">当前账号</span>
           </div>
           <el-button text class="logout-button" @click="handleLogout">退出</el-button>
         </div>
@@ -75,8 +73,6 @@ const visibleItems = computed(() =>
 );
 
 const currentTitle = computed(() => route.meta.title?.toString() ?? "SCRM 控制台");
-const currentSectionLabel = computed(() => resolveSectionLabel(route.path));
-const currentKicker = computed(() => resolveKicker(route.path));
 
 function handleNavigate(path: string): void {
   if (path !== route.path) {
@@ -89,59 +85,12 @@ async function handleLogout(): Promise<void> {
   await routerInstance.push("/login");
 }
 
-function resolveSectionLabel(path: string): string {
-  if (path.startsWith("/customers")) {
-    return "客户运营";
-  }
-
-  if (path.startsWith("/opportunities")) {
-    return "销售商机";
-  }
-
-  if (path.startsWith("/leads")) {
-    return "线索跟进";
-  }
-
-  if (path.startsWith("/departments")) {
-    return "权限治理";
-  }
-
-  if (path.startsWith("/system")) {
-    return "平台设置";
-  }
-
-  return "运营总览";
-}
-
-function resolveKicker(path: string): string {
-  if (path.startsWith("/customers")) {
-    return "客户经营";
-  }
-
-  if (path.startsWith("/opportunities")) {
-    return "销售管道";
-  }
-
-  if (path.startsWith("/leads")) {
-    return "线索漏斗";
-  }
-
-  if (path.startsWith("/departments")) {
-    return "权限治理";
-  }
-
-  if (path.startsWith("/system")) {
-    return "平台管理";
-  }
-
-  return "销售运营";
-}
 </script>
 
 <style scoped>
 .layout-shell {
   display: grid;
-  grid-template-columns: 232px minmax(0, 1fr);
+  grid-template-columns: var(--app-shell-sidebar-width, 212px) minmax(0, 1fr);
   height: var(--app-shell-min-height, 100vh);
   min-height: var(--app-shell-min-height, 100vh);
   align-items: stretch;
@@ -159,7 +108,7 @@ function resolveKicker(path: string): string {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   min-height: 0;
-  padding: 16px 18px 18px 0;
+  padding: var(--app-shell-gutter, 8px) 8px var(--app-shell-gutter, 8px) 0;
   min-width: 0;
   overflow: hidden;
 }
@@ -175,68 +124,55 @@ function resolveKicker(path: string): string {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 16px;
-  padding: 14px 16px;
-  border-radius: 20px;
+  gap: 10px;
+  margin-bottom: 10px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border-radius: 16px;
+  margin-right: 0;
 }
 
-.topbar-copy {
+.topbar-breadcrumb {
   min-width: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.topbar-kicker {
-  display: inline-flex;
-  color: var(--app-accent-strong);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.title-row {
   display: flex;
   align-items: center;
+  gap: 8px;
   flex-wrap: wrap;
-  gap: 10px;
-  min-width: 0;
 }
 
-.page-title {
-  font-size: clamp(20px, 2.1vw, 26px);
+.breadcrumb-item {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
   font-weight: 700;
-  line-height: 1.12;
-  letter-spacing: -0.03em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--app-text-secondary);
+  white-space: nowrap;
+}
+
+.breadcrumb-item.current {
   color: var(--app-text-primary);
 }
 
-.page-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--app-accent-soft);
-  color: var(--app-accent-strong);
+.breadcrumb-separator {
+  color: var(--app-text-tertiary);
   font-size: 11px;
-  font-weight: 700;
 }
 
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   justify-content: flex-end;
 }
 
 .user-summary {
   display: grid;
-  gap: 2px;
+  gap: 0;
   min-width: 0;
-  padding: 8px 12px;
-  border-radius: 14px;
+  padding: 4px 8px;
+  border-radius: 10px;
   border: 1px solid rgba(95, 125, 170, 0.16);
   background: rgba(255, 255, 255, 0.86);
 }
@@ -247,9 +183,7 @@ function resolveKicker(path: string): string {
 }
 
 .user-caption {
-  color: var(--app-text-secondary);
-  font-size: 11px;
-  line-height: 1.4;
+  display: none;
 }
 
 .logout-button {
@@ -261,8 +195,7 @@ function resolveKicker(path: string): string {
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  padding-right: 4px;
-  scrollbar-gutter: stable;
+  scrollbar-width: none;
   overscroll-behavior: contain;
 }
 
@@ -272,7 +205,8 @@ function resolveKicker(path: string): string {
 }
 
 .content::-webkit-scrollbar {
-  width: 10px;
+  width: 0;
+  height: 0;
 }
 
 .content::-webkit-scrollbar-thumb {
@@ -290,13 +224,14 @@ function resolveKicker(path: string): string {
   .main {
     min-height: auto;
     grid-template-rows: auto auto auto;
-    padding: 14px 16px 16px;
+    padding: var(--app-shell-gutter, 12px);
     overflow: visible;
   }
 
   .topbar {
     grid-template-columns: 1fr;
     align-items: stretch;
+    margin-right: 0;
   }
 
   .topbar-actions {
@@ -312,12 +247,13 @@ function resolveKicker(path: string): string {
 
 @media (max-width: 640px) {
   .main {
-    padding: 12px;
+    padding: 10px;
   }
 
   .topbar {
-    padding: 12px 14px;
-    margin-bottom: 12px;
+    padding: 5px 9px;
+    margin-bottom: 8px;
+    margin-right: 0;
   }
 
   .topbar-actions {

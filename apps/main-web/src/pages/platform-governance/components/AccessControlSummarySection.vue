@@ -44,16 +44,21 @@ defineProps<{
 
 .summary-card {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .summary-card span {
   color: var(--app-text-tertiary);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .summary-card strong {
-  font-size: 34px;
+  font-size: 40px;
   color: var(--app-text-primary);
+  letter-spacing: -0.04em;
 }
 
 .skeleton-value {

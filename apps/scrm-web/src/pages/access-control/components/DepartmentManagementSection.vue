@@ -2,7 +2,7 @@
 <template>
   <div>
     <div class="toolbar-row">
-      <p>支持建立部门层级，为主管看板和数据权限预留团队视角。</p>
+      <p>维护部门结构。</p>
       <el-button type="primary" @click="$emit('create')">新增部门</el-button>
     </div>
 

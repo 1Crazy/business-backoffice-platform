@@ -7,7 +7,7 @@
           <span class="page-kicker">组织检索</span>
           <h2 class="page-section-title">组织通讯录</h2>
         </div>
-        <p class="page-section-caption">按部门查看同事信息，先覆盖最常用的内部联络查询场景。</p>
+        <p class="page-section-caption">按部门查看成员。</p>
       </div>
 
       <el-select v-model="selectedDepartmentId" placeholder="查看全部部门成员" clearable>
@@ -69,7 +69,7 @@ const { departments, members, selectedDepartmentId } = useDirectoryPage();
   gap: 8px;
   justify-items: start;
   background:
-    linear-gradient(135deg, rgba(15, 118, 110, 0.08), transparent 68%),
+    linear-gradient(135deg, rgba(37, 99, 235, 0.08), transparent 68%),
     rgba(255, 255, 255, 0.84);
 }
 
@@ -79,7 +79,7 @@ const { departments, members, selectedDepartmentId } = useDirectoryPage();
   display: grid;
   place-items: center;
   border-radius: 16px;
-  background: rgba(15, 118, 110, 0.12);
+  background: rgba(37, 99, 235, 0.12);
   color: var(--app-accent-strong);
   font-size: 20px;
   font-weight: 700;

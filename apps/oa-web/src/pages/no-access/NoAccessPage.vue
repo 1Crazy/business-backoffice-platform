@@ -141,7 +141,7 @@ h1 {
 
 .callout p {
   margin: 8px 0 0;
-  color: #0f766e;
+  color: #1d4ed8;
   line-height: 1.8;
 }
 

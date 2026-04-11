@@ -1,11 +1,13 @@
 <!-- 复用组件：负责承载跨页面共享的展示或交互骨架，通过 props / emits 与页面协作。 -->
 <template>
   <div class="stats-grid">
-    <article v-for="(card, index) in cards" :key="card.label" class="page-card stat-card" :class="`tone-${index + 1}`">
-      <div class="stat-label">{{ card.label }}</div>
+    <article v-for="(card, index) in cards" :key="card.label" class="page-card stat-card">
+      <div class="stat-head">
+        <div class="stat-label">{{ card.label }}</div>
+        <div class="stat-index">0{{ index + 1 }}</div>
+      </div>
       <div class="stat-value">{{ card.value }}</div>
       <div class="stat-caption">{{ card.caption }}</div>
-      <div class="stat-index">0{{ index + 1 }}</div>
     </article>
   </div>
 </template>
@@ -23,7 +25,7 @@ defineProps<{
 <style scoped>
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 18px;
 }
 
@@ -31,66 +33,73 @@ defineProps<{
   position: relative;
   overflow: hidden;
   display: grid;
-  gap: 4px;
+  gap: 12px;
+  min-height: 188px;
+  padding-top: 20px;
+}
+
+.stat-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(37, 99, 235, 0.9), rgba(37, 99, 235, 0.14));
 }
 
 .stat-card::after {
   content: "";
   position: absolute;
-  inset: auto -30px -60px auto;
-  width: 140px;
-  height: 140px;
+  inset: auto -28px -56px auto;
+  width: 132px;
+  height: 132px;
   border-radius: 999px;
-  background: radial-gradient(circle, rgba(59, 130, 246, 0.15), transparent 70%);
+  background: radial-gradient(circle, rgba(148, 163, 184, 0.14), transparent 72%);
+}
+
+.stat-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
 }
 
 .stat-label {
-  color: var(--app-text-tertiary);
-  font-size: 14px;
-}
-
-.stat-value {
-  margin-top: 18px;
-  font-size: clamp(34px, 5vw, 48px);
-  font-weight: 700;
-  color: var(--app-text-primary);
+  color: var(--app-text-secondary);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
 }
 
 .stat-caption {
-  margin-top: 14px;
   max-width: 240px;
   color: var(--app-text-secondary);
-  line-height: 1.7;
+  line-height: 1.6;
+  font-size: 13px;
+}
+
+.stat-value {
+  margin-top: auto;
+  font-size: clamp(32px, 4vw, 42px);
+  font-weight: 700;
+  color: var(--app-text-primary);
+  letter-spacing: -0.04em;
 }
 
 .stat-index {
-  position: absolute;
-  inset: 18px 18px auto auto;
-  color: rgba(78, 95, 124, 0.18);
-  font-size: 34px;
+  flex: none;
+  color: rgba(100, 116, 139, 0.22);
+  font-size: 28px;
   font-weight: 700;
   letter-spacing: -0.06em;
 }
 
-.tone-1 {
-  background:
-    linear-gradient(135deg, rgba(30, 64, 175, 0.08), transparent 56%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.88));
-}
-
-.tone-2 {
-  background:
-    linear-gradient(135deg, rgba(56, 189, 248, 0.1), transparent 56%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.88));
-}
-
-.tone-3 {
-  background:
-    linear-gradient(135deg, rgba(213, 138, 17, 0.12), transparent 56%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.88));
-}
-
 @media (max-width: 960px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
   .stats-grid {
     grid-template-columns: 1fr;
   }

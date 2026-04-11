@@ -21,11 +21,6 @@
 
     <template v-else>
     <div class="table-meta">
-      <div>
-        <span class="table-kicker">客户列表</span>
-        <h3>客户结果</h3>
-        <p>结果已按当前筛选条件、数据权限和排序方式同步更新。</p>
-      </div>
       <div class="meta-pill">{{ refreshing ? "结果同步中" : `排序：${currentSortLabel}` }}</div>
     </div>
 
@@ -136,33 +131,7 @@ defineEmits<{
 
 .table-meta {
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.table-kicker {
-  display: inline-flex;
-  margin-bottom: 8px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(30, 64, 175, 0.08);
-  color: var(--app-accent-strong);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.table-meta h3 {
-  margin: 0 0 6px;
-}
-
-.table-meta p {
-  margin: 0;
-  color: var(--app-text-secondary);
-  line-height: 1.6;
-  font-size: 13px;
+  justify-content: flex-end;
 }
 
 .meta-pill {
@@ -170,7 +139,7 @@ defineEmits<{
   align-items: center;
   padding: 7px 11px;
   border-radius: 12px;
-  background: rgba(30, 64, 175, 0.08);
+  background: rgba(37, 99, 235, 0.08);
   color: var(--app-accent-strong);
   font-weight: 600;
   white-space: nowrap;

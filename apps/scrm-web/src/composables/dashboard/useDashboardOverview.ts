@@ -33,32 +33,32 @@ export function useDashboardOverview() {
     {
       label: "新增客户",
       value: overview.value?.newCustomers ?? "--",
-      caption: "统计周期内新增的客户档案数"
+      caption: "本期新增客户"
     },
     {
       label: "跟进次数",
       value: overview.value?.followUpCount ?? "--",
-      caption: "统计周期内新建的跟进记录数"
+      caption: "本期新增跟进"
     },
     {
       label: "新增商机",
       value: overview.value?.newOpportunities ?? "--",
-      caption: "按创建时间进入销售管道的新商机数量"
+      caption: "本期新增商机"
     },
     {
       label: "进行中预计金额",
       value: overview.value ? formatAmount(overview.value.pipelineForecastAmount) : "--",
-      caption: "按预计成交时间统计的进行中商机金额"
+      caption: "进行中商机金额"
     },
     {
       label: "商机赢单率",
       value: overview.value ? `${overview.value.opportunityWinRate}%` : "--",
-      caption: "同周期赢单数 / 赢单数与输单数之和"
+      caption: "本期赢单率"
     },
     {
       label: "线索转化率",
       value: overview.value ? `${overview.value.conversionRate}%` : "--",
-      caption: "已转客户线索 / 周期内线索总数"
+      caption: "本期转化率"
     }
   ]);
 

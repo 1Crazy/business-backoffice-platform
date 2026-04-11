@@ -6,7 +6,7 @@
         <span class="page-kicker">待办流程</span>
         <h2 class="page-section-title">待我审批</h2>
       </div>
-      <p class="page-section-caption">把当前轮到你处理的请假申请集中展示，避免在消息和表单之间来回跳转。</p>
+      <p class="page-section-caption">当前待处理事项。</p>
     </div>
 
     <div class="page-table-shell">

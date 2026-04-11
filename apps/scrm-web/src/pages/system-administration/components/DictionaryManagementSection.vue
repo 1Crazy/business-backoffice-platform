@@ -2,7 +2,7 @@
 <template>
   <section>
     <div class="toolbar-row">
-      <p>客户来源、客户状态等字段通过字典驱动，避免业务表单硬编码。</p>
+      <p>维护字典项。</p>
       <el-button type="primary" @click="$emit('create')">新增字典项</el-button>
     </div>
 
@@ -57,7 +57,7 @@ defineEmits<{
 
 .toolbar-row p {
   margin: 0;
-  color: #64748b;
+  color: var(--app-text-secondary);
 }
 
 @media (max-width: 960px) {

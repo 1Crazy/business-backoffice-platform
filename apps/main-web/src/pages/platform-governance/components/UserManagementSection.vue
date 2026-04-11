@@ -2,7 +2,7 @@
 <template>
   <div>
     <div class="toolbar-row">
-      <p>员工账号与角色绑定后，会直接影响平台治理、OA 与 SCRM 的菜单可见性和接口授权范围。</p>
+      <p>维护员工与角色。</p>
       <el-button type="primary" @click="$emit('create')">新增员工</el-button>
     </div>
 
@@ -64,7 +64,8 @@ defineEmits<{
 
 .toolbar-row p {
   margin: 0;
-  color: #64748b;
+  color: var(--app-text-secondary);
+  line-height: 1.7;
 }
 
 .tag-item {

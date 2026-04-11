@@ -5,24 +5,15 @@
 
     <main class="main" :class="{ 'main-embedded': microAppMode }">
       <header v-if="!microAppMode" class="topbar page-card">
-        <div class="topbar-copy">
-          <div class="topbar-meta">
-            <div class="topbar-kicker">办公协同门户</div>
-            <div class="breadcrumb-row" v-if="breadcrumbItems.length > 1">
-              <span v-for="item in breadcrumbItems" :key="item.key" class="breadcrumb-item">
-                {{ item.title }}
-              </span>
-            </div>
-          </div>
-          <div class="title-row">
-            <div class="page-title">{{ currentTitle }}</div>
-            <span class="page-chip">{{ currentSectionLabel }}</span>
-          </div>
-        </div>
+        <nav class="topbar-breadcrumb" aria-label="页面路径">
+          <span class="breadcrumb-item">OA 办公</span>
+          <span class="breadcrumb-separator">/</span>
+          <span class="breadcrumb-item current">{{ currentTitle }}</span>
+        </nav>
         <div class="topbar-actions">
           <div class="user-summary">
             <span class="user-name">{{ authStore.currentUser?.displayName ?? "当前用户" }}</span>
-            <span class="user-caption">统一身份账号</span>
+            <span class="user-caption">当前账号</span>
           </div>
           <el-button text class="logout-button" @click="handleLogout">退出</el-button>
         </div>
@@ -81,17 +72,7 @@ const visibleItems = computed(() =>
     }))
 );
 
-const breadcrumbItems = computed(() =>
-  route.matched
-    .filter((item) => item.meta?.title && item.path !== "/")
-    .map((item, index) => ({
-      key: `${item.path}-${index}`,
-      title: item.meta.title?.toString() ?? item.name?.toString() ?? item.path
-    }))
-);
-
 const currentTitle = computed(() => route.meta.title?.toString() ?? "OA 办公台");
-const currentSectionLabel = computed(() => resolveSectionLabel(route.path));
 
 function handleNavigate(path: string): void {
   if (path !== route.path) {
@@ -108,31 +89,12 @@ defineExpose({
   handleNavigate
 });
 
-function resolveSectionLabel(path: string): string {
-  if (path.startsWith("/approvals")) {
-    return "流程协同";
-  }
-
-  if (path.startsWith("/leave")) {
-    return "假勤流程";
-  }
-
-  if (path.startsWith("/announcements")) {
-    return "组织信息";
-  }
-
-  if (path.startsWith("/directory")) {
-    return "组织联络";
-  }
-
-  return "今日工作";
-}
 </script>
 
 <style scoped>
 .layout-shell {
   display: grid;
-  grid-template-columns: 228px minmax(0, 1fr);
+  grid-template-columns: var(--app-shell-sidebar-width, 212px) minmax(0, 1fr);
   height: var(--app-shell-min-height, 100vh);
   min-height: var(--app-shell-min-height, 100vh);
   align-items: stretch;
@@ -150,7 +112,7 @@ function resolveSectionLabel(path: string): string {
   display: grid;
   grid-template-rows: auto auto minmax(0, 1fr);
   min-height: 0;
-  padding: 16px 18px 18px 0;
+  padding: var(--app-shell-gutter, 8px) 8px var(--app-shell-gutter, 8px) 0;
   min-width: 0;
   overflow: hidden;
 }
@@ -166,103 +128,55 @@ function resolveSectionLabel(path: string): string {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 16px;
-  padding: 14px 16px;
-  border-radius: 22px;
-}
-
-.topbar-copy {
-  min-width: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.topbar-meta {
-  display: flex;
-  align-items: center;
-  gap: 10px 14px;
-  flex-wrap: wrap;
-  min-width: 0;
-}
-
-.topbar-kicker {
-  display: inline-flex;
-  align-items: center;
-  color: var(--app-accent-strong);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.title-row {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
   gap: 10px;
-  min-width: 0;
+  margin-bottom: 10px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border-radius: 16px;
+  margin-right: 0;
 }
 
-.breadcrumb-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+.topbar-breadcrumb {
   min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .breadcrumb-item {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  max-width: 160px;
-  color: var(--app-text-tertiary);
-  font-size: 11px;
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.breadcrumb-item:not(:last-child)::after {
-  content: "/";
-  color: rgba(124, 136, 151, 0.8);
-}
-
-.page-title {
-  font-family: var(--app-font-display);
-  font-size: clamp(20px, 2.1vw, 26px);
+  font-size: 10px;
   font-weight: 700;
-  line-height: 1.12;
-  letter-spacing: -0.03em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--app-text-secondary);
+  white-space: nowrap;
+}
+
+.breadcrumb-item.current {
   color: var(--app-text-primary);
 }
 
-.page-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--app-accent-soft);
-  color: var(--app-accent-strong);
+.breadcrumb-separator {
+  color: var(--app-text-tertiary);
   font-size: 11px;
-  font-weight: 700;
 }
 
 .topbar-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   justify-content: flex-end;
 }
 
 .user-summary {
   display: grid;
-  gap: 2px;
+  gap: 0;
   min-width: 0;
-  padding: 8px 12px;
-  border-radius: 16px;
+  padding: 4px 8px;
+  border-radius: 10px;
   border: 1px solid rgba(125, 148, 171, 0.18);
   background: rgba(255, 255, 255, 0.76);
 }
@@ -274,9 +188,7 @@ function resolveSectionLabel(path: string): string {
 }
 
 .user-caption {
-  color: var(--app-text-secondary);
-  font-size: 11px;
-  line-height: 1.4;
+  display: none;
 }
 
 .logout-button {
@@ -288,8 +200,7 @@ function resolveSectionLabel(path: string): string {
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  padding-right: 4px;
-  scrollbar-gutter: stable;
+  scrollbar-width: none;
   overscroll-behavior: contain;
 }
 
@@ -299,7 +210,8 @@ function resolveSectionLabel(path: string): string {
 }
 
 .content::-webkit-scrollbar {
-  width: 10px;
+  width: 0;
+  height: 0;
 }
 
 .content::-webkit-scrollbar-thumb {
@@ -317,13 +229,14 @@ function resolveSectionLabel(path: string): string {
   .main {
     min-height: auto;
     grid-template-rows: auto auto auto;
-    padding: 14px 16px 16px;
+    padding: 10px 12px 12px;
     overflow: visible;
   }
 
   .topbar {
     grid-template-columns: 1fr;
     align-items: stretch;
+    margin-right: 0;
   }
 
   .topbar-actions {
@@ -339,16 +252,13 @@ function resolveSectionLabel(path: string): string {
 
 @media (max-width: 640px) {
   .main {
-    padding: 12px;
+    padding: 10px;
   }
 
   .topbar {
-    padding: 12px 14px;
-    margin-bottom: 12px;
-  }
-
-  .topbar-meta {
-    gap: 8px 10px;
+    padding: 5px 9px;
+    margin-bottom: 8px;
+    margin-right: 0;
   }
 
   .topbar-actions {

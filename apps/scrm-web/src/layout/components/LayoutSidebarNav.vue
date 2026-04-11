@@ -20,11 +20,6 @@
           {{ item.title }}
         </el-menu-item>
       </el-menu>
-
-      <div class="sidebar-footer">
-        <span class="sidebar-footer-title">数据协同</span>
-        <span class="sidebar-footer-caption">面向主应用集成的紧凑运营微前端</span>
-      </div>
     </div>
   </aside>
 </template>
@@ -45,22 +40,23 @@ defineProps<{
   top: 0;
   align-self: start;
   height: var(--app-shell-min-height, 100vh);
-  padding: 16px 10px 16px 16px;
+  padding: var(--app-shell-gutter, 8px) 8px var(--app-shell-gutter, 8px) var(--app-shell-gutter, 8px);
   color: #e2e8f0;
 }
 
 .sidebar-inner {
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(0, 1fr);
   gap: 12px;
-  height: calc(var(--app-shell-min-height, 100vh) - 32px);
-  padding: 12px;
+  height: calc(var(--app-shell-min-height, 100vh) - (var(--app-shell-gutter, 8px) * 2));
+  padding: 12px 8px 12px 12px;
   border-radius: 24px;
-  border: 1px solid rgba(86, 110, 165, 0.32);
+  border: 1px solid rgba(148, 163, 184, 0.14);
   background:
-    radial-gradient(circle at top right, rgba(37, 99, 235, 0.16), transparent 28%),
-    linear-gradient(180deg, #0e1628 0%, #172235 100%);
-  box-shadow: 0 20px 40px rgba(4, 11, 24, 0.24);
+    radial-gradient(circle at top left, rgba(96, 165, 250, 0.18), transparent 24%),
+    radial-gradient(circle at bottom right, rgba(37, 99, 235, 0.22), transparent 28%),
+    linear-gradient(180deg, #0f172a 0%, #0f1b34 48%, #12203d 100%);
+  box-shadow: 0 30px 60px rgba(2, 6, 23, 0.28);
 }
 
 .brand {
@@ -74,15 +70,16 @@ defineProps<{
 }
 
 .brand-badge {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 12px;
   display: grid;
   place-items: center;
-  background: linear-gradient(135deg, #38bdf8, #2563eb);
+  background: linear-gradient(135deg, #3b82f6, #60a5fa);
   color: white;
-  font-size: 18px;
+  font-size: 14px;
   font-weight: 700;
+  letter-spacing: 0.04em;
 }
 
 .brand-copy {
@@ -90,7 +87,7 @@ defineProps<{
 }
 
 .brand-kicker {
-  color: rgba(191, 219, 254, 0.74);
+  color: #7f93b8;
   font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -111,9 +108,8 @@ defineProps<{
   padding: 2px 4px 0;
 }
 
-.menu-label,
-.sidebar-footer-title {
-  color: rgba(148, 163, 184, 0.78);
+.menu-label {
+  color: #7f93b8;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
@@ -128,7 +124,7 @@ defineProps<{
   height: 24px;
   padding-inline: 8px;
   border-radius: 999px;
-  background: rgba(59, 130, 246, 0.16);
+  background: rgba(59, 130, 246, 0.18);
   color: #dbeafe;
   font-size: 11px;
   font-weight: 700;
@@ -137,7 +133,7 @@ defineProps<{
 .menu {
   min-height: 0;
   overflow-y: auto;
-  padding-right: 4px;
+  padding-right: 2px;
   border-right: none;
   background: transparent;
   scrollbar-width: none;
@@ -154,25 +150,11 @@ defineProps<{
   background: transparent;
 }
 
-.menu:hover,
-.menu:focus-within {
-  scrollbar-width: thin;
-}
-
-.menu:hover::-webkit-scrollbar,
-.menu:focus-within::-webkit-scrollbar {
-  width: 6px;
-}
-
-.menu:hover::-webkit-scrollbar-thumb,
-.menu:focus-within::-webkit-scrollbar-thumb {
-  background: rgba(148, 163, 184, 0.28);
-}
-
 :deep(.el-menu-item) {
   height: 40px;
   line-height: 40px;
   margin-bottom: 4px;
+  margin-right: 4px;
   padding: 0 12px;
   color: #d9e2f1;
   border-radius: 12px;
@@ -186,22 +168,8 @@ defineProps<{
 
 :deep(.el-menu-item.is-active) {
   color: white;
-  background: linear-gradient(135deg, rgba(30, 64, 175, 0.54), rgba(59, 130, 246, 0.24));
-  box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.14);
-}
-
-.sidebar-footer {
-  display: grid;
-  gap: 4px;
-  padding: 12px;
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.04);
-}
-
-.sidebar-footer-caption {
-  color: rgba(203, 213, 225, 0.72);
-  font-size: 12px;
-  line-height: 1.5;
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.48), rgba(29, 78, 216, 0.34));
+  box-shadow: inset 0 0 0 1px rgba(147, 197, 253, 0.2);
 }
 
 @media (max-width: 1024px) {

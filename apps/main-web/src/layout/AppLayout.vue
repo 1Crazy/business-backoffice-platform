@@ -1,5 +1,5 @@
 <template>
-  <div class="host-shell" :style="hostShellStyle">
+  <div class="host-shell">
     <LayoutSidebarNav
       :active-domain="currentDomain"
       :active-path="route.path"
@@ -9,18 +9,16 @@
 
     <main class="host-main">
       <header class="host-topbar">
-        <div class="host-topbar-copy">
-          <div class="host-topbar-kicker">{{ currentKicker }}</div>
-          <div class="host-title-row">
-            <div class="host-page-title">{{ currentTitle }}</div>
-            <span class="host-page-chip">{{ currentSectionLabel }}</span>
-          </div>
-        </div>
+        <nav class="host-breadcrumb" aria-label="页面路径">
+          <span class="host-breadcrumb-item">{{ currentDomainTitle }}</span>
+          <span class="host-breadcrumb-separator">/</span>
+          <span class="host-breadcrumb-item current">{{ currentTitle }}</span>
+        </nav>
 
         <div class="host-topbar-actions">
           <div class="host-user-summary">
             <span class="host-user-name">{{ authStore.currentUser?.displayName ?? "当前用户" }}</span>
-            <span class="host-user-caption">统一身份账号</span>
+            <span class="host-user-caption">当前账号</span>
           </div>
           <el-button text class="host-logout-button" @click="handleLogout">退出</el-button>
         </div>
@@ -36,7 +34,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import { useHostNavigation } from "@/composables/useHostNavigation";
@@ -50,13 +47,9 @@ const authStore = useAuthStore();
 const {
   visibleGroups,
   currentDomain,
-  currentKicker,
-  currentSectionLabel,
+  currentDomainTitle,
   currentTitle
 } = useHostNavigation();
-const hostShellStyle = computed(() => ({
-  "--host-sidebar-width": currentDomain.value === "scrm" ? "232px" : currentDomain.value === "platform" ? "236px" : "228px"
-}));
 
 function handleNavigate(path: string): void {
   if (path !== route.path) {
@@ -72,20 +65,18 @@ async function handleLogout(): Promise<void> {
 
 <style scoped>
 .host-shell {
-  --host-panel-border: rgba(114, 137, 165, 0.18);
-  --host-panel-background:
-    radial-gradient(circle at top right, rgba(14, 165, 233, 0.12), transparent 30%),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.94) 0%, rgba(244, 249, 252, 0.96) 100%);
-  --host-panel-shadow: 0 20px 42px rgba(15, 30, 47, 0.08);
-  --host-summary-border: rgba(114, 137, 165, 0.16);
-  --host-summary-background: rgba(255, 255, 255, 0.78);
-  --host-kicker-color: #0f6380;
-  --host-chip-background: rgba(8, 145, 178, 0.12);
-  --host-chip-color: #0f6380;
-  --host-text-primary: #0f2940;
-  --host-text-secondary: #496276;
-  --host-text-tertiary: #72879a;
-  --host-sidebar-width: 228px;
+  --host-panel-border: rgba(15, 23, 42, 0.08);
+  --host-panel-background: rgba(255, 255, 255, 0.94);
+  --host-panel-shadow: 0 18px 36px rgba(15, 23, 42, 0.06);
+  --host-summary-border: rgba(15, 23, 42, 0.08);
+  --host-summary-background: rgba(255, 255, 255, 0.9);
+  --host-kicker-color: #64748b;
+  --host-chip-background: rgba(37, 99, 235, 0.1);
+  --host-chip-color: #1e40af;
+  --host-text-primary: var(--app-text-primary);
+  --host-text-secondary: var(--app-text-secondary);
+  --host-text-tertiary: var(--app-text-tertiary);
+  --host-sidebar-width: 220px;
   display: grid;
   grid-template-columns: var(--host-sidebar-width) minmax(0, 1fr);
   height: var(--app-shell-min-height, 100vh);
@@ -102,82 +93,69 @@ async function handleLogout(): Promise<void> {
   gap: 0;
   min-width: 0;
   min-height: 0;
-  padding: 16px 18px 18px 0;
+  padding: var(--app-shell-gutter, 8px) 8px var(--app-shell-gutter, 8px) 0;
   overflow: hidden;
 }
 
 .host-topbar {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 18px;
+  gap: 10px;
   align-items: center;
   min-width: 0;
-  padding: 14px 16px;
-  border-radius: 22px;
+  min-height: 40px;
+  padding: 6px 10px;
+  border-radius: 16px;
   border: 1px solid var(--host-panel-border);
   background: var(--host-panel-background);
   box-shadow: var(--host-panel-shadow);
   color: var(--host-text-primary);
-  margin-bottom: 16px;
+  margin-bottom: 10px;
+  margin-right: 0;
 }
 
-.host-topbar-copy {
+.host-breadcrumb {
   min-width: 0;
-  display: grid;
-  gap: 8px;
-}
-
-.host-topbar-kicker {
-  display: inline-flex;
-  align-items: center;
-  color: var(--host-kicker-color);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.host-title-row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
-.host-page-title {
-  font-size: clamp(20px, 2.1vw, 26px);
+.host-breadcrumb-item {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
   font-weight: 700;
-  line-height: 1.12;
-  letter-spacing: -0.03em;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--host-text-secondary);
+  white-space: nowrap;
+}
+
+.host-breadcrumb-item.current {
   color: var(--host-text-primary);
 }
 
-.host-page-chip {
-  display: inline-flex;
-  align-items: center;
-  min-height: 28px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: var(--host-chip-background);
-  color: var(--host-chip-color);
+.host-breadcrumb-separator {
+  color: var(--host-text-tertiary);
   font-size: 11px;
-  font-weight: 700;
 }
 
 .host-topbar-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
 
 .host-user-summary {
   display: grid;
-  gap: 4px;
+  gap: 0;
   min-width: 0;
-  padding: 8px 12px;
-  border-radius: 14px;
+  padding: 4px 8px;
+  border-radius: 10px;
   border: 1px solid var(--host-summary-border);
   background: var(--host-summary-background);
 }
@@ -190,10 +168,7 @@ async function handleLogout(): Promise<void> {
 }
 
 .host-user-caption {
-  display: block;
-  color: var(--host-text-secondary);
-  font-size: 11px;
-  line-height: 1.4;
+  display: none;
 }
 
 .host-logout-button {
@@ -214,18 +189,18 @@ async function handleLogout(): Promise<void> {
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  padding-right: 4px;
-  scrollbar-gutter: stable;
+  scrollbar-width: none;
   overscroll-behavior: contain;
 }
 
 .host-content::-webkit-scrollbar {
-  width: 10px;
+  width: 0;
+  height: 0;
 }
 
 .host-content::-webkit-scrollbar-thumb {
   border-radius: 999px;
-  background: rgba(125, 148, 171, 0.3);
+  background: rgba(118, 135, 154, 0.28);
 }
 
 @media (max-width: 1180px) {
@@ -233,7 +208,7 @@ async function handleLogout(): Promise<void> {
     grid-template-columns: 1fr;
     height: auto;
     overflow: visible;
-    padding: 14px 16px 16px;
+    padding: var(--app-shell-gutter, 12px) 14px 14px;
   }
 
   :deep(.host-sidebar) {
@@ -249,7 +224,8 @@ async function handleLogout(): Promise<void> {
 
   .host-topbar {
     grid-template-columns: 1fr;
-    margin: 0 0 14px;
+    margin-right: 0;
+    margin: 0 0 8px;
   }
 
   .host-topbar-actions {
@@ -269,12 +245,9 @@ async function handleLogout(): Promise<void> {
   }
 
   .host-topbar {
-    padding: 12px 14px;
-    margin-bottom: 12px;
-  }
-
-  .host-page-title {
-    font-size: 28px;
+    padding: 5px 9px;
+    margin-bottom: 8px;
+    margin-right: 0;
   }
 }
 </style>
