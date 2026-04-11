@@ -1,4 +1,4 @@
-<!-- 工作台页面：负责组装 OA 摘要卡片、快捷入口和最近公告。 -->
+<!-- 工作台页面：负责组装 OA 摘要卡片、快捷入口和最近公告，并在当前上下文中展开公告详情。 -->
 <template>
   <div class="workspace-shell">
     <template v-if="isLoading">
@@ -119,23 +119,31 @@
           </div>
 
           <div v-if="overview.recentAnnouncements.length" class="announcement-list">
-            <RouterLink
+            <button
               v-for="item in overview.recentAnnouncements"
               :key="item.id"
-              :to="`/announcements/${item.id}`"
+              type="button"
               class="announcement-item"
+              @click="openAnnouncementDetail(item.id)"
             >
               <div class="announcement-top">
                 <strong>{{ item.title }}</strong>
                 <span>{{ formatDateTime(item.publishedAt) }}</span>
               </div>
-              <p>{{ item.summary || "这条公告暂无摘要，请进入详情查看完整内容。" }}</p>
+              <p>{{ item.summary || "这条公告暂无摘要，可展开查看完整内容。" }}</p>
               <div class="announcement-foot">{{ item.publishedByName }}</div>
-            </RouterLink>
+            </button>
           </div>
           <el-empty v-else description="暂时没有需要同步的公告" />
         </section>
       </div>
+
+      <AnnouncementDetailDrawer
+        v-model:visible="drawerVisible"
+        :announcement="announcement"
+        :is-loading="isAnnouncementLoading"
+        :is-tablet-or-down="isTabletOrDown"
+      />
     </template>
   </div>
 </template>
@@ -143,29 +151,38 @@
 <script setup lang="ts">
 import { computed } from "vue";
 
+import { useAnnouncementDetailDrawer } from "@/composables/announcements/useAnnouncementDetailDrawer";
+import AnnouncementDetailDrawer from "@/pages/announcements/components/AnnouncementDetailDrawer.vue";
 import { useWorkspacePage } from "@/composables/workspace/useWorkspacePage";
 import { formatDateTime } from "@/utils/display";
 
 const { overview, isLoading } = useWorkspacePage();
+const {
+  announcement,
+  drawerVisible,
+  isLoading: isAnnouncementLoading,
+  isTabletOrDown,
+  openAnnouncementDetail
+} = useAnnouncementDetailDrawer();
 
 const metricCards = computed(() => [
-    {
-      label: "待我审批",
-      value: overview.value.pendingApprovalCount
-    },
-    {
-      label: "我发起的申请",
-      value: overview.value.myRequestCount
-    },
-    {
-      label: "进行中的公告",
-      value: overview.value.activeAnnouncementCount
-    },
-    {
-      label: "通讯录部门数",
-      value: overview.value.directoryDepartmentCount
-    }
-  ]);
+  {
+    label: "待我审批",
+    value: overview.value.pendingApprovalCount
+  },
+  {
+    label: "我发起的申请",
+    value: overview.value.myRequestCount
+  },
+  {
+    label: "进行中的公告",
+    value: overview.value.activeAnnouncementCount
+  },
+  {
+    label: "通讯录部门数",
+    value: overview.value.directoryDepartmentCount
+  }
+]);
 
 const focusItems = computed(() => [
   {
@@ -383,10 +400,16 @@ h2 {
 .announcement-item {
   display: grid;
   gap: 10px;
+  width: 100%;
   padding: 16px 18px;
   border-radius: 20px;
   border: 1px solid rgba(125, 148, 171, 0.12);
   background: rgba(255, 255, 255, 0.74);
+  appearance: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 

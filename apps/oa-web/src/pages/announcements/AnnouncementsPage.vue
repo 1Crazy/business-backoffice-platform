@@ -1,4 +1,4 @@
-<!-- 公告列表页面：负责组装公告列表并跳转到详情。 -->
+<!-- 公告列表页面：负责组装公告列表，并在当前上下文中通过抽屉查看详情。 -->
 <template>
   <section class="page-card page-shell">
     <div class="section-head">
@@ -10,24 +10,40 @@
     </div>
 
     <div v-if="announcements.length" class="announcement-list">
-      <RouterLink v-for="item in announcements" :key="item.id" :to="`/announcements/${item.id}`" class="announcement-item">
+      <button
+        v-for="item in announcements"
+        :key="item.id"
+        type="button"
+        class="announcement-item"
+        @click="openAnnouncementDetail(item.id)"
+      >
         <div class="announcement-head">
           <strong>{{ item.title }}</strong>
           <span>{{ formatDateTime(item.publishedAt) }}</span>
         </div>
-        <p>{{ item.summary || "这条公告没有摘要，请进入详情页查看完整内容。" }}</p>
+        <p>{{ item.summary || "这条公告没有摘要，可展开查看完整内容。" }}</p>
         <div class="announcement-foot">发布人：{{ item.publishedByName }}</div>
-      </RouterLink>
+      </button>
     </div>
     <el-empty v-else description="暂时没有公告可查看" />
+
+    <AnnouncementDetailDrawer
+      v-model:visible="drawerVisible"
+      :announcement="announcement"
+      :is-loading="isLoading"
+      :is-tablet-or-down="isTabletOrDown"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
+import { useAnnouncementDetailDrawer } from "@/composables/announcements/useAnnouncementDetailDrawer";
 import { useAnnouncementsPage } from "@/composables/announcements/useAnnouncementsPage";
+import AnnouncementDetailDrawer from "@/pages/announcements/components/AnnouncementDetailDrawer.vue";
 import { formatDateTime } from "@/utils/display";
 
 const { announcements } = useAnnouncementsPage();
+const { announcement, drawerVisible, isLoading, isTabletOrDown, openAnnouncementDetail } = useAnnouncementDetailDrawer();
 </script>
 
 <style scoped>
@@ -56,10 +72,16 @@ const { announcements } = useAnnouncementsPage();
 .announcement-item {
   display: grid;
   gap: 10px;
+  width: 100%;
   padding: 18px;
   border-radius: 22px;
   border: 1px solid rgba(125, 148, 171, 0.14);
   background: rgba(255, 255, 255, 0.74);
+  appearance: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
 }
 

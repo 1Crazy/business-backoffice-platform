@@ -224,23 +224,7 @@ export const hostNavigationGroups: HostNavigationGroup[] = [
   }
 ];
 
-export const hiddenNavigationItems: HostNavigationItem[] = [
-  {
-    key: "oa-announcement-detail",
-    title: "公告详情",
-    description: "查看单条公告的完整内容与发布时间。",
-    path: "/oa/announcements/:id",
-    permission: "oa:announcement:read",
-    domain: "oa",
-    domainTitle: "OA 办公",
-    domainBadge: "OA",
-    sectionLabel: "组织信息",
-    kicker: "公告详情",
-    microAppName: "oa-web",
-    icon: "announcement",
-    hidden: true
-  }
-];
+export const hiddenNavigationItems: HostNavigationItem[] = [];
 
 export const visibleNavigationItems = hostNavigationGroups.flatMap((group) => group.items);
 export const allNavigationItems = [...visibleNavigationItems, ...hiddenNavigationItems];

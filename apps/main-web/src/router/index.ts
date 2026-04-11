@@ -65,6 +65,18 @@ const legacyRedirectRoutes: RouteRecordRaw[] = [
     meta: {
       hidden: true
     }
+  },
+  {
+    path: "oa/announcements/:id",
+    redirect: (to) => ({
+      path: "/oa/announcements",
+      query: {
+        announcementId: to.params.id?.toString()
+      }
+    }),
+    meta: {
+      hidden: true
+    }
   }
 ];
 

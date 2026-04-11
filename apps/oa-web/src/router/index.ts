@@ -14,7 +14,6 @@ const ApprovalsInboxPage = () => import("@/pages/approvals/ApprovalsInboxPage.vu
 const MyRequestsPage = () => import("@/pages/approvals/MyRequestsPage.vue");
 const LeaveRequestPage = () => import("@/pages/leave/LeaveRequestPage.vue");
 const AnnouncementsPage = () => import("@/pages/announcements/AnnouncementsPage.vue");
-const AnnouncementDetailPage = () => import("@/pages/announcements/AnnouncementDetailPage.vue");
 const DirectoryPage = () => import("@/pages/directory/DirectoryPage.vue");
 
 const routes: RouteRecordRaw[] = [
@@ -87,8 +86,13 @@ const routes: RouteRecordRaw[] = [
       },
       {
         path: "announcements/:id",
-        name: "announcement-detail",
-        component: AnnouncementDetailPage,
+        name: "announcement-detail-legacy",
+        redirect: (to) => ({
+          name: "announcements",
+          query: {
+            announcementId: to.params.id?.toString()
+          }
+        }),
         meta: {
           title: "公告详情",
           permission: "oa:announcement:read",

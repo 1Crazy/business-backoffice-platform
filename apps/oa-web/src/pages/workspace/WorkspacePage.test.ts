@@ -4,6 +4,8 @@ import { mount, RouterLinkStub } from "@vue/test-utils";
 
 import WorkspacePage from "./WorkspacePage.vue";
 
+const openAnnouncementDetail = vi.fn();
+
 vi.mock("@/composables/workspace/useWorkspacePage", () => ({
   useWorkspacePage: () => ({
     isLoading: ref(false),
@@ -25,11 +27,24 @@ vi.mock("@/composables/workspace/useWorkspacePage", () => ({
   })
 }));
 
+vi.mock("@/composables/announcements/useAnnouncementDetailDrawer", () => ({
+  useAnnouncementDetailDrawer: () => ({
+    announcement: ref(null),
+    drawerVisible: ref(false),
+    isLoading: ref(false),
+    isTabletOrDown: ref(false),
+    openAnnouncementDetail
+  })
+}));
+
 describe("WorkspacePage", () => {
-  it("renders the upgraded workspace hero, metrics, and announcement list", () => {
+  it("renders the upgraded workspace hero, metrics, and announcement list", async () => {
+    openAnnouncementDetail.mockClear();
+
     const wrapper = mount(WorkspacePage, {
       global: {
         stubs: {
+          AnnouncementDetailDrawer: true,
           RouterLink: RouterLinkStub,
           "el-empty": true
         }
@@ -41,5 +56,9 @@ describe("WorkspacePage", () => {
     expect(wrapper.text()).toContain("12");
     expect(wrapper.text()).toContain("最近公告");
     expect(wrapper.text()).toContain("五一节假期值班排班发布");
+
+    await wrapper.get(".announcement-item").trigger("click");
+
+    expect(openAnnouncementDetail).toHaveBeenCalledWith("announcement-1");
   });
 });
