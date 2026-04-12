@@ -1,7 +1,14 @@
 /** 展示文案工具：负责把枚举、字典值和后台代号转换成中文界面文案。 */
 import type { DictionaryEntry } from "@/types/dictionaries";
 import type { Lead } from "@/types/leads";
-import type { OpportunityResultStatus, OpportunityStage } from "@/types/opportunities";
+import type {
+  ContractStatus,
+  OpportunityResultStatus,
+  OpportunityStage,
+  PaymentPlanStatus,
+  QuoteStatus,
+  RenewalReminderStatus
+} from "@/types/opportunities";
 
 const ACCESS_STATUS_LABELS: Record<"ACTIVE" | "DISABLED", string> = {
   ACTIVE: "启用",
@@ -62,6 +69,37 @@ const OPPORTUNITY_RESULT_LABELS: Record<OpportunityResultStatus, string> = {
   IN_PROGRESS: "进行中",
   WON: "赢单",
   LOST: "输单"
+};
+
+const QUOTE_STATUS_LABELS: Record<QuoteStatus, string> = {
+  DRAFT: "草稿",
+  SENT: "已发送",
+  ACCEPTED: "已接受",
+  REJECTED: "已拒绝",
+  EXPIRED: "已过期"
+};
+
+const CONTRACT_STATUS_LABELS: Record<ContractStatus, string> = {
+  DRAFT: "草稿",
+  ACTIVE: "履约中",
+  COMPLETED: "已完成",
+  CANCELLED: "已取消",
+  EXPIRED: "已到期"
+};
+
+const PAYMENT_PLAN_STATUS_LABELS: Record<PaymentPlanStatus, string> = {
+  PENDING: "待回款",
+  PARTIAL: "部分回款",
+  PAID: "已回款",
+  OVERDUE: "已逾期",
+  CANCELLED: "已取消"
+};
+
+const RENEWAL_REMINDER_STATUS_LABELS: Record<RenewalReminderStatus, string> = {
+  PENDING: "待跟进",
+  CONTACTED: "已联系",
+  COMPLETED: "已完成",
+  DISMISSED: "已忽略"
 };
 
 function padDateTimePart(value: number): string {
@@ -158,6 +196,38 @@ export function formatOpportunityResult(value?: OpportunityResultStatus | string
   }
 
   return OPPORTUNITY_RESULT_LABELS[value as OpportunityResultStatus] ?? value;
+}
+
+export function formatQuoteStatus(value?: QuoteStatus | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return QUOTE_STATUS_LABELS[value as QuoteStatus] ?? value;
+}
+
+export function formatContractStatus(value?: ContractStatus | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return CONTRACT_STATUS_LABELS[value as ContractStatus] ?? value;
+}
+
+export function formatPaymentPlanStatus(value?: PaymentPlanStatus | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return PAYMENT_PLAN_STATUS_LABELS[value as PaymentPlanStatus] ?? value;
+}
+
+export function formatRenewalReminderStatus(value?: RenewalReminderStatus | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return RENEWAL_REMINDER_STATUS_LABELS[value as RenewalReminderStatus] ?? value;
 }
 
 export function formatAmount(value?: number | null): string {

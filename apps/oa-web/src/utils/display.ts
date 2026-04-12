@@ -1,5 +1,10 @@
 /** 展示文案工具：负责把后端枚举和英文代号转换成更适合界面展示的中文文案。 */
-import type { LeaveRequestStatus } from "@/types/office-automation";
+import type {
+  AdministrativeRequestActionType,
+  AdministrativeRequestStatus,
+  AdministrativeRequestType,
+  LeaveRequestStatus
+} from "@/types/office-automation";
 
 const LEAVE_TYPE_LABELS: Record<string, string> = {
   ANNUAL: "年假",
@@ -13,6 +18,27 @@ const LEAVE_STATUS_LABELS: Record<LeaveRequestStatus, string> = {
   APPROVED: "已通过",
   REJECTED: "已驳回",
   CANCELLED: "已撤销"
+};
+
+const ADMINISTRATIVE_REQUEST_TYPE_LABELS: Record<AdministrativeRequestType, string> = {
+  REIMBURSEMENT: "报销申请",
+  TRAVEL: "出差申请",
+  PURCHASE: "采购申请",
+  SEAL: "用印申请"
+};
+
+const ADMINISTRATIVE_REQUEST_STATUS_LABELS: Record<AdministrativeRequestStatus, string> = {
+  PENDING: "待审批",
+  APPROVED: "已通过",
+  REJECTED: "已驳回",
+  CANCELLED: "已撤销"
+};
+
+const ADMINISTRATIVE_REQUEST_ACTION_LABELS: Record<AdministrativeRequestActionType, string> = {
+  SUBMITTED: "已提交",
+  APPROVED: "审批通过",
+  REJECTED: "审批驳回",
+  CANCELLED: "已撤回"
 };
 
 function padDateTimePart(value: number): string {
@@ -59,6 +85,32 @@ export function formatLeaveStatus(value?: LeaveRequestStatus | string | null): s
   }
 
   return LEAVE_STATUS_LABELS[value as LeaveRequestStatus] ?? value;
+}
+
+export function formatAdministrativeRequestType(value?: AdministrativeRequestType | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return ADMINISTRATIVE_REQUEST_TYPE_LABELS[value as AdministrativeRequestType] ?? value;
+}
+
+export function formatAdministrativeRequestStatus(value?: AdministrativeRequestStatus | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return ADMINISTRATIVE_REQUEST_STATUS_LABELS[value as AdministrativeRequestStatus] ?? value;
+}
+
+export function formatAdministrativeRequestActionType(
+  value?: AdministrativeRequestActionType | string | null
+): string {
+  if (!value) {
+    return "-";
+  }
+
+  return ADMINISTRATIVE_REQUEST_ACTION_LABELS[value as AdministrativeRequestActionType] ?? value;
 }
 
 export function formatDateTime(value?: string | null): string {

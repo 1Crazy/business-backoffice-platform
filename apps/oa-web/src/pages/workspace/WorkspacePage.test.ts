@@ -12,6 +12,8 @@ vi.mock("@/composables/workspace/useWorkspacePage", () => ({
     overview: ref({
       pendingApprovalCount: 12,
       myRequestCount: 4,
+      administrativeRequestPendingCount: 3,
+      administrativeRequestMyCount: 2,
       activeAnnouncementCount: 7,
       directoryDepartmentCount: 18,
       recentAnnouncements: [
@@ -52,8 +54,10 @@ describe("WorkspacePage", () => {
     });
 
     expect(wrapper.text()).toContain("先处理待办");
-    expect(wrapper.text()).toContain("待我审批");
+    expect(wrapper.text()).toContain("行政待我审批");
     expect(wrapper.text()).toContain("12");
+    expect(wrapper.text()).toContain("报销申请");
+    expect(wrapper.text()).toContain("采购申请");
     expect(wrapper.text()).toContain("最近公告");
     expect(wrapper.text()).toContain("五一节假期值班排班发布");
 

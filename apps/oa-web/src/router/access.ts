@@ -18,6 +18,18 @@ const OA_ROUTE_ACCESS: PageAccessRule[] = [
     permission: "oa:leave:apply"
   },
   {
+    path: "/administrative-requests/new",
+    permission: "oa:request:apply"
+  },
+  {
+    path: "/administrative-requests/mine",
+    permission: "oa:request:apply"
+  },
+  {
+    path: "/administrative-requests/pending",
+    permission: "oa:request:approve"
+  },
+  {
     path: "/leave/request",
     permission: "oa:leave:apply"
   },

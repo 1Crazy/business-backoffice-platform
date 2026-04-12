@@ -2,24 +2,28 @@
 <template>
   <section class="insight-grid">
     <article class="page-card insight-item">
-      <span>管道金额</span>
+      <span>进行中商机金额</span>
       <strong>{{ formatAmount(overview?.pipelineForecastAmount ?? 0) }}</strong>
-    </article>
-    <article class="page-card insight-item">
-      <span>赢单数量</span>
-      <strong>{{ overview?.wonOpportunities ?? 0 }}</strong>
     </article>
     <article class="page-card insight-item">
       <span>赢单金额</span>
       <strong>{{ formatAmount(overview?.wonAmount ?? 0) }}</strong>
     </article>
     <article class="page-card insight-item">
-      <span>已转客户</span>
-      <strong>{{ overview?.convertedLeads ?? 0 }}</strong>
+      <span>未回款金额</span>
+      <strong>{{ formatAmount(overview?.receivableForecast.unreceivedAmount ?? 0) }}</strong>
     </article>
     <article class="page-card insight-item">
-      <span>待办提醒</span>
-      <strong>{{ overview?.pendingReminders ?? 0 }}</strong>
+      <span>逾期未回款</span>
+      <strong>{{ formatAmount(overview?.receivableForecast.overdueAmount ?? 0) }}</strong>
+    </article>
+    <article class="page-card insight-item">
+      <span>平均审批时效</span>
+      <strong>{{ `${overview?.approvalTimeliness.averageHours ?? 0}h` }}</strong>
+    </article>
+    <article class="page-card insight-item">
+      <span>超 48h 待审批</span>
+      <strong>{{ overview?.approvalTimeliness.pendingOver48Hours ?? 0 }}</strong>
     </article>
   </section>
 </template>

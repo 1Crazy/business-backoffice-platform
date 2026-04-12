@@ -34,7 +34,7 @@
             <h3>最近提醒</h3>
             <p>只展示当前分页内的提醒，翻页后会保留筛选状态。</p>
           </div>
-          <el-button text @click="$emit('refresh')">刷新</el-button>
+          <el-button text @click="$emit('reset')">重置</el-button>
         </div>
         <el-empty v-if="!reminders.length" description="暂无待办提醒" />
         <ul v-else>
@@ -71,7 +71,7 @@ defineProps<{
 }>();
 
 defineEmits<{
-  refresh: [];
+  reset: [];
   "page-change": [page: number];
 }>();
 </script>

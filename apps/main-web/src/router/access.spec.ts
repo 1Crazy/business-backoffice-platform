@@ -7,11 +7,11 @@ describe("resolveFirstAccessiblePath", () => {
     expect(resolveFirstAccessiblePath(["department:read", "oa:workspace:view"])).toBe("/platform/organization/departments");
   });
 
-  it("falls back to OA pages when no platform governance permission is available", () => {
-    expect(resolveFirstAccessiblePath(["oa:workspace:view"])).toBe("/oa/workspace");
-  });
+it("falls back to workfeed when no platform governance permission is available", () => {
+  expect(resolveFirstAccessiblePath(["oa:workspace:view"])).toBe("/workfeed");
+});
 
-  it("returns null when no page permission is available", () => {
-    expect(resolveFirstAccessiblePath([])).toBeNull();
-  });
+it("still returns workfeed when no page permission is available", () => {
+  expect(resolveFirstAccessiblePath([])).toBe("/workfeed");
+});
 });

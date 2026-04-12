@@ -10,7 +10,7 @@
       :tags="tags"
       :sort-options="customerSortOptions"
       :sort-preset="customerTableState.sortPreset"
-      @refresh="loadCustomers"
+      @reset="resetCustomerFilters"
       @create-tag="openTagDialog"
       @create-customer="openCustomerDialog"
       @update:sort-preset="customerTableState.sortPreset = $event"
@@ -64,12 +64,14 @@
     <CustomerFollowUpDrawer
       v-model:visible="followUpDrawerVisible"
       :customer="selectedCustomer"
+      :revenue-overview="customerRevenueOverview"
       :follow-ups="followUps"
       :form="followUpForm"
       :rules="followUpRules"
       :attachments="attachments"
       :is-tablet-or-down="isTabletOrDown"
       :set-form-ref="setFollowUpFormRef"
+      @open-revenue="openRevenueWorkspace"
       @submit-follow-up="submitFollowUp"
       @upload="handleUploadAttachment"
     />
@@ -77,6 +79,8 @@
 </template>
 
 <script setup lang="ts">
+import { useRouter } from "vue-router";
+
 import CustomerEditorDialog from "@/pages/customers/components/CustomerEditorDialog.vue";
 import CustomerFollowUpDrawer from "@/pages/customers/components/CustomerFollowUpDrawer.vue";
 import CustomerOwnerDialog from "@/pages/customers/components/CustomerOwnerDialog.vue";
@@ -85,11 +89,14 @@ import CustomersFilterSection from "@/pages/customers/components/CustomersFilter
 import CustomersTableSection from "@/pages/customers/components/CustomersTableSection.vue";
 import { useCustomersPage } from "@/composables/customers/useCustomersPage";
 
+const router = useRouter();
+
 const {
   attachments,
   currentCustomerSortLabel,
   customerDialogVisible,
   customerForm,
+  customerRevenueOverview,
   customerRules,
   customerSortOptions,
   customerTableState,
@@ -107,7 +114,6 @@ const {
   isTableLoading,
   isTableRefreshing,
   isTabletOrDown,
-  loadCustomers,
   openCustomerDialog,
   openFollowUpDrawer,
   openOwnerDialog,
@@ -115,6 +121,7 @@ const {
   ownerDialogVisible,
   ownerForm,
   ownerRules,
+  resetCustomerFilters,
   selectedCustomer,
   setCustomerFormRef,
   setFollowUpFormRef,
@@ -132,6 +139,19 @@ const {
   tags,
   users
 } = useCustomersPage();
+
+function openRevenueWorkspace(): void {
+  if (!selectedCustomer.value) {
+    return;
+  }
+
+  void router.push({
+    path: "/revenue-operations",
+    query: {
+      customerId: selectedCustomer.value.id
+    }
+  });
+}
 </script>
 
 <style scoped>

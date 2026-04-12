@@ -14,6 +14,7 @@ import {
   transferCustomerOwner,
   updateCustomer
 } from "@/api/customers.api";
+import { fetchCustomerRevenueOverview } from "@/api/revenue-operations.api";
 import { useViewport } from "@/composables/useViewport";
 import { useRecordUploads } from "@/composables/uploads/useRecordUploads";
 import type { User } from "@/types/access-control";
@@ -34,6 +35,7 @@ import type {
 } from "@/types/customers";
 import type { DictionaryEntry } from "@/types/dictionaries";
 import type { FollowUp, FollowUpFormModel } from "@/types/follow-ups";
+import type { CustomerRevenueOverview } from "@/types/revenue-operations";
 import {
   normalizeOptionalArray,
   normalizeOptionalTextForCreate,
@@ -56,6 +58,7 @@ export function useCustomersPage() {
   const sourceOptions = ref<DictionaryEntry[]>([]);
   const statusOptions = ref<DictionaryEntry[]>([]);
   const followUps = ref<FollowUp[]>([]);
+  const customerRevenueOverview = ref<CustomerRevenueOverview | null>(null);
   const isMetaLoading = ref(true);
   const isTableLoading = ref(true);
   const isTableRefreshing = ref(false);
@@ -395,13 +398,15 @@ export function useCustomersPage() {
 
   async function openFollowUpDrawer(customer: Customer): Promise<void> {
     try {
-      const [detail, followUpList] = await Promise.all([
+      const [detail, followUpList, revenueOverview] = await Promise.all([
         fetchCustomerDetail(customer.id),
-        fetchCustomerFollowUps(customer.id)
+        fetchCustomerFollowUps(customer.id),
+        fetchCustomerRevenueOverview(customer.id)
       ]);
 
       selectedCustomer.value = detail;
       followUps.value = followUpList;
+      customerRevenueOverview.value = revenueOverview;
       followUpForm.content = "";
       followUpForm.nextFollowUpAt = "";
       followUpDrawerVisible.value = true;
@@ -471,6 +476,29 @@ export function useCustomersPage() {
     void loadCustomers();
   }
 
+  async function resetCustomerFilters(): Promise<void> {
+    const isAlreadyDefault =
+      !filters.keyword &&
+      !filters.source &&
+      !filters.status &&
+      !filters.ownerId &&
+      !filters.tagId &&
+      customerTableState.sortPreset === customerSortOptions[0].value &&
+      customerTableState.page === 1;
+
+    filters.keyword = "";
+    filters.source = "";
+    filters.status = "";
+    filters.ownerId = "";
+    filters.tagId = "";
+    customerTableState.page = 1;
+    customerTableState.sortPreset = customerSortOptions[0].value;
+
+    if (isAlreadyDefault) {
+      await loadCustomers();
+    }
+  }
+
   onMounted(async () => {
     await loadMeta();
     resetCustomerForm();
@@ -482,6 +510,7 @@ export function useCustomersPage() {
     currentCustomerSortLabel,
     customerDialogVisible,
     customerForm,
+    customerRevenueOverview,
     customerRules,
     customerSortOptions,
     customerTableState,
@@ -506,6 +535,7 @@ export function useCustomersPage() {
     ownerDialogVisible,
     ownerForm,
     ownerRules,
+    resetCustomerFilters,
     selectedCustomer,
     setCustomerFormRef,
     setFollowUpFormRef,
@@ -521,7 +551,6 @@ export function useCustomersPage() {
     tagForm,
     tagRules,
     tags,
-    users,
-    loadCustomers
+    users
   };
 }

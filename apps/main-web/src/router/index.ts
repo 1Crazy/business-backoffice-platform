@@ -10,11 +10,13 @@ const LoginPage = () => import("@/pages/login/LoginPage.vue");
 const MicroAppPage = () => import("@/pages/micro-app/MicroAppPage.vue");
 const NoAccessPage = () => import("@/pages/no-access/NoAccessPage.vue");
 const PlatformGovernancePage = () => import("@/pages/platform-governance/PlatformGovernancePage.vue");
+const WorkfeedPage = () => import("@/pages/workfeed/WorkfeedPage.vue");
 
 const nativePageDefinitions: Record<string, RouteRecordRaw["component"]> = {
   "platform-departments": PlatformGovernancePage,
   "platform-employees": PlatformGovernancePage,
-  "platform-roles": PlatformGovernancePage
+  "platform-roles": PlatformGovernancePage,
+  "platform-workfeed": WorkfeedPage
 };
 
 const nativeRoutes: RouteRecordRaw[] = allNavigationItems

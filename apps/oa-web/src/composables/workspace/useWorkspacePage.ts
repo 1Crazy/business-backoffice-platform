@@ -9,6 +9,8 @@ import { getRequestErrorMessage } from "@/utils/request";
 const EMPTY_OVERVIEW: WorkspaceOverview = {
   pendingApprovalCount: 0,
   myRequestCount: 0,
+  administrativeRequestPendingCount: 0,
+  administrativeRequestMyCount: 0,
   activeAnnouncementCount: 0,
   directoryDepartmentCount: 0,
   recentAnnouncements: []

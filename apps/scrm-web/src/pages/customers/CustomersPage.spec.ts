@@ -2,8 +2,9 @@ import { flushPromises, shallowMount } from "@vue/test-utils";
 
 import CustomersPage from "@/pages/customers/CustomersPage.vue";
 
-const { getMock } = vi.hoisted(() => ({
-  getMock: vi.fn()
+const { getMock, pushMock } = vi.hoisted(() => ({
+  getMock: vi.fn(),
+  pushMock: vi.fn()
 }));
 
 vi.mock("@/api/http", () => ({
@@ -14,6 +15,17 @@ vi.mock("@/api/http", () => ({
   }
 }));
 
+vi.mock("vue-router", async () => {
+  const actual = await vi.importActual("vue-router");
+
+  return {
+    ...actual,
+    useRouter: () => ({
+      push: pushMock
+    })
+  };
+});
+
 vi.mock("element-plus", () => ({
   ElMessage: {
     success: vi.fn(),
@@ -21,60 +33,95 @@ vi.mock("element-plus", () => ({
   }
 }));
 
-describe("CustomersPage", () => {
-  it("requests filtered customer data when keyword changes", async () => {
-    getMock.mockReset();
-    getMock.mockImplementation((url: string, options?: { params?: Record<string, unknown> }) => {
-      if (url === "/users") {
-        return Promise.resolve({ data: [] });
-      }
-      if (url === "/customers/tags") {
-        return Promise.resolve({ data: [] });
-      }
-      if (url === "/dictionaries") {
-        return Promise.resolve({ data: [] });
-      }
-      if (url === "/customers") {
-        return Promise.resolve({
-          data: {
-            items: [],
-            page: 1,
-            pageSize: 10,
-            total: 0,
-            totalPages: 0,
-            sortBy: "createdAt",
-            sortOrder: "desc"
-          }
-        });
-      }
-      return Promise.resolve({ data: [] });
-    });
+const defaultResponses: Record<string, unknown> = {
+  "/users": { data: [] },
+  "/customers/tags": { data: [] },
+  "/dictionaries": { data: [] },
+  "/customers": {
+    data: {
+      items: [],
+      page: 1,
+      pageSize: 10,
+      total: 0,
+      totalPages: 0,
+      sortBy: "createdAt",
+      sortOrder: "desc"
+    }
+  },
+  "/customers/customer-1": {
+    data: {
+      id: "customer-1",
+      name: "Acme",
+      ownerId: "user-1",
+      tags: []
+    }
+  },
+  "/customers/customer-1/follow-ups": { data: [] },
+  "/revenue-operations/customers/customer-1": {
+    data: {
+      customerId: "customer-1",
+      quotes: [],
+      contracts: [],
+      paymentPlans: [],
+      paymentRecords: [],
+      renewalReminders: []
+    }
+  }
+};
 
-    const wrapper = shallowMount(CustomersPage, {
-      global: {
-        stubs: {
-          "el-form": true,
-          "el-form-item": true,
-          "el-input": true,
-          "el-select": true,
-          "el-option": true,
-          "el-button": true,
-          "el-table": true,
-          "el-table-column": true,
-          "el-tag": true,
-          "el-empty": true,
-          "el-pagination": true,
-          "el-row": true,
-          "el-col": true,
-          "el-dialog": true,
-          "el-drawer": true,
-          "el-timeline": true,
-          "el-timeline-item": true,
-          "el-date-picker": true,
-          "RecordUploadPanel": true
-        }
-      }
-    });
+const pageStubs = {
+  "el-form": true,
+  "el-form-item": true,
+  "el-input": true,
+  "el-select": true,
+  "el-option": true,
+  "el-button": true,
+  "el-table": true,
+  "el-table-column": true,
+  "el-tag": true,
+  "el-empty": true,
+  "el-pagination": true,
+  "el-row": true,
+  "el-col": true,
+  "el-dialog": true,
+  "el-drawer": true,
+  "el-timeline": true,
+  "el-timeline-item": true,
+  "el-date-picker": true,
+  "RecordUploadPanel": true
+};
+
+function configureGetMock(overrides: Record<string, unknown> = {}): void {
+  getMock.mockImplementation((url: string) => {
+    if (Object.prototype.hasOwnProperty.call(overrides, url)) {
+      return Promise.resolve(overrides[url]);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(defaultResponses, url)) {
+      return Promise.resolve(defaultResponses[url]);
+    }
+
+    return Promise.resolve({ data: [] });
+  });
+}
+
+function mountCustomersPage() {
+  return shallowMount(CustomersPage, {
+    global: {
+      stubs: pageStubs
+    }
+  });
+}
+
+describe("CustomersPage", () => {
+  beforeEach(() => {
+    getMock.mockReset();
+    pushMock.mockReset();
+    configureGetMock();
+  });
+
+  it("requests filtered customer data when keyword changes", async () => {
+    const wrapper = mountCustomersPage();
     await flushPromises();
 
     (wrapper.vm as any).filters.keyword = "Acme";
@@ -96,65 +143,7 @@ describe("CustomersPage", () => {
   });
 
   it("loads customer detail and follow-up history before opening the drawer", async () => {
-    getMock.mockReset();
-    getMock.mockImplementation((url: string) => {
-      if (url === "/users" || url === "/customers/tags" || url === "/dictionaries") {
-        return Promise.resolve({ data: [] });
-      }
-      if (url === "/customers") {
-        return Promise.resolve({
-          data: {
-            items: [],
-            page: 1,
-            pageSize: 10,
-            total: 0,
-            totalPages: 0,
-            sortBy: "createdAt",
-            sortOrder: "desc"
-          }
-        });
-      }
-      if (url === "/customers/customer-1") {
-        return Promise.resolve({
-          data: {
-            id: "customer-1",
-            name: "Acme",
-            ownerId: "user-1",
-            tags: []
-          }
-        });
-      }
-      if (url === "/customers/customer-1/follow-ups") {
-        return Promise.resolve({ data: [] });
-      }
-      return Promise.resolve({ data: [] });
-    });
-
-    const wrapper = shallowMount(CustomersPage, {
-      global: {
-        stubs: {
-          "el-form": true,
-          "el-form-item": true,
-          "el-input": true,
-          "el-select": true,
-          "el-option": true,
-          "el-button": true,
-          "el-table": true,
-          "el-table-column": true,
-          "el-tag": true,
-          "el-empty": true,
-          "el-pagination": true,
-          "el-row": true,
-          "el-col": true,
-          "el-dialog": true,
-          "el-drawer": true,
-          "el-timeline": true,
-          "el-timeline-item": true,
-          "el-date-picker": true,
-          "RecordUploadPanel": true
-        }
-      }
-    });
+    const wrapper = mountCustomersPage();
     await flushPromises();
 
     await (wrapper.vm as any).openFollowUpDrawer({ id: "customer-1" });
@@ -162,5 +151,6 @@ describe("CustomersPage", () => {
 
     expect(getMock).toHaveBeenCalledWith("/customers/customer-1");
     expect(getMock).toHaveBeenCalledWith("/customers/customer-1/follow-ups");
+    expect(getMock).toHaveBeenCalledWith("/revenue-operations/customers/customer-1");
   });
 });

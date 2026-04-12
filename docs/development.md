@@ -1,6 +1,6 @@
 # 开发与验证说明
 
-本文档补充二期平台硬化、商机管理与主应用 `qiankun` 集成后的开发约定，重点覆盖会话治理、分页接口、商机权限、主应用/子应用边界和本地验证流程。
+本文档补充平台硬化、商机管理、第一阶段企业落地能力与主应用 `qiankun` 集成后的开发约定，重点覆盖会话治理、分页接口、统一待办/通知、赢单后经营闭环、增强经营看板、主应用/子应用边界和本地验证流程。
 
 ## 架构与维护约定
 
@@ -207,6 +207,63 @@ pnpm docker:infra:down
 pnpm docker:up
 ```
 
+## 第一阶段模块说明
+
+### 主应用统一待办与通知
+
+- 主应用原生页路径：`/workfeed`
+- 接口入口：
+  - `GET /api/workfeed/todos`
+  - `GET /api/workfeed/notifications`
+  - `POST /api/workfeed/notifications/read`
+- 页面职责边界：
+  - `main-web` 只负责聚合列表、筛选条件、已读状态与跳转编排
+  - OA / SCRM 子应用继续负责具体详情、审批与业务操作
+- 当前不单独引入新的 `workfeed:*` 权限码；宿主页默认可见，但跳转落点仍受子应用页面权限保护
+
+### OA 高频行政申请
+
+- 申请主路径：
+  - `/oa/administrative-requests/new`
+  - `/oa/administrative-requests/pending`
+  - `/oa/administrative-requests/mine`
+- 权限口径：
+  - `oa:request:apply`：提交行政申请
+  - `oa:request:approve`：审批行政申请
+  - `oa:request:read`：检索行政申请
+- 当前固定支持 `REIMBURSEMENT`、`TRAVEL`、`PURCHASE`、`SEAL` 四类申请
+
+### 赢单后经营闭环
+
+- 经营摘要接口：
+  - `GET /api/revenue-operations/opportunities/:opportunityId`
+  - `GET /api/revenue-operations/customers/:customerId`
+- 写接口：
+  - `POST /api/revenue-operations/quotes`
+  - `POST /api/revenue-operations/contracts`
+  - `POST /api/revenue-operations/payment-plans`
+  - `POST /api/revenue-operations/payment-records`
+  - `POST /api/revenue-operations/renewal-reminders`
+- 权限口径：
+  - `customer:read` / `opportunity:read`：查看上下文经营摘要
+  - `opportunity:write`：创建报价、合同、回款计划、回款记录和续费提醒
+
+### 增强经营看板
+
+- 页面路径：`/scrm/dashboard`
+- 接口入口：`GET /api/dashboard/overview`
+- 查询维度：
+  - `startDate`
+  - `endDate`
+  - `departmentId`
+  - `ownerId`
+- 新增输出内容：
+  - 销售漏斗
+  - 负责人排行
+  - 团队排行
+  - 回款预测
+  - 审批时效
+
 ## 验证清单
 
 建议至少执行一次完整校验：
@@ -242,3 +299,10 @@ curl -s http://localhost:3000/api/health
 - 执行一次阶段推进，并在商机详情中确认阶段轨迹新增记录。
 - 分别执行赢单和输单收口，确认 `closedAt`、输单原因与看板结果指标同步生效。
 - 用相同账号和相同时间范围对照商机列表与看板指标，确认新增商机、进行中预计金额、赢单数量、赢单金额和赢单率口径一致。
+
+第一阶段新增主路径建议覆盖：
+
+- 在主应用 `/workfeed` 中查看待办和通知，按业务域、类型、优先级或未读状态筛选，并确认跳转后进入正确的 OA/SCRM 上下文页面。
+- 以 `oa:request:apply` 身份发起一条行政申请，再以 `oa:request:approve` 身份审批，确认该事项在 OA 页面与主应用统一待办/通知中都能被追踪。
+- 在客户或商机上下文中创建报价、合同、回款计划、回款记录和续费提醒，确认对象可在 `revenue-operations` 页面回看，并能反映到统一待办和经营看板。
+- 在 `dashboard:view` 权限下切换时间范围、团队和负责人，确认漏斗、排行、回款预测和审批时效随筛选联动变化。

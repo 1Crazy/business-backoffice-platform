@@ -26,7 +26,7 @@ export function useApprovalsInboxPage() {
 
   async function loadData(): Promise<void> {
     try {
-      approvals.value = await fetchPendingApprovals();
+      approvals.value = (await fetchPendingApprovals()).filter((item) => item.requestCategory === "LEAVE");
     } catch (error) {
       ElMessage.error(getRequestErrorMessage(error, "待审批列表加载失败，请稍后重试。"));
     }

@@ -2,18 +2,22 @@
 <template>
   <section class="page-card scope-card">
     <div class="scope-copy">
-      <span class="scope-kicker">数据范围</span>
-      <h3>统计范围</h3>
-      <p>看板数字与列表筛选保持一致。</p>
+      <span class="page-kicker">数据范围</span>
+      <h3 class="page-section-title">统计口径说明</h3>
+      <p class="page-section-caption">看板数字与客户、线索、商机、回款和审批数据范围保持一致。</p>
     </div>
     <div class="scope-list">
       <article class="scope-item">
-        <strong>账号范围</strong>
-        <p>不同角色看到的数据可能不同。</p>
+        <strong>当前筛选</strong>
+        <p>{{ `${departmentName} / ${ownerName}` }}</p>
+      </article>
+      <article class="scope-item">
+        <strong>可选范围</strong>
+        <p>{{ `${departmentCount} 个团队，${ownerCount} 位负责人` }}</p>
       </article>
       <article class="scope-item">
         <strong>{{ isOverviewEmpty ? "当前状态" : "校验方式" }}</strong>
-        <p>{{ isOverviewEmpty ? "当前范围暂无数据。" : "同条件下可在列表页复现。" }}</p>
+        <p>{{ isOverviewEmpty ? "当前范围暂无数据。" : "同条件下可在列表页与审批页复现。" }}</p>
       </article>
     </div>
   </section>
@@ -22,62 +26,61 @@
 <script setup lang="ts">
 defineProps<{
   isOverviewEmpty: boolean;
+  departmentName: string;
+  ownerName: string;
+  departmentCount: number;
+  ownerCount: number;
 }>();
 </script>
 
 <style scoped>
 .scope-card {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
-  gap: 20px;
-  background:
-    linear-gradient(135deg, rgba(37, 99, 235, 0.06), transparent 42%),
-    linear-gradient(135deg, rgba(245, 158, 11, 0.08), transparent 58%),
-    #ffffff;
+  gap: 16px;
 }
 
-.scope-kicker {
-  display: inline-flex;
-  margin-bottom: 8px;
-  padding: 4px 10px;
-  border-radius: 999px;
-  background: rgba(37, 99, 235, 0.08);
-  color: #1d4ed8;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
+.scope-copy {
+  display: grid;
+  gap: 8px;
+  align-content: start;
 }
 
-.scope-card h3 {
-  margin: 0 0 8px;
-}
-
-.scope-card p {
-  margin: 0;
-  color: var(--app-text-secondary);
-  line-height: 1.8;
+.scope-copy :deep(.page-kicker) {
+  justify-self: start;
 }
 
 .scope-list {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
 }
 
 .scope-item {
-  padding: 16px 18px;
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-height: 108px;
+  padding: 16px;
   border-radius: 18px;
-  background: rgba(248, 251, 255, 0.82);
+  background: rgba(248, 251, 255, 0.72);
   border: 1px solid rgba(95, 125, 170, 0.14);
 }
 
 .scope-item strong {
   display: block;
-  margin-bottom: 8px;
   color: var(--app-text-primary);
+  font-size: 14px;
+}
+
+.scope-item p {
+  margin: 0;
+  color: var(--app-text-secondary);
+  line-height: 1.7;
+  font-size: 13px;
 }
 
 @media (max-width: 960px) {
-  .scope-card {
+  .scope-list {
     grid-template-columns: 1fr;
   }
 }

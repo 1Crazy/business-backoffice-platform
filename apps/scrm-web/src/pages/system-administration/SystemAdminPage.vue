@@ -39,7 +39,7 @@
             :refreshing="isAuditRefreshing"
             :table-state="auditTableState"
             :current-sort-label="currentAuditSortLabel"
-            @refresh="loadAuditLogs"
+            @reset="resetAuditFilters"
             @update:sort-preset="auditTableState.sortPreset = $event"
             @page-change="handleAuditPageChange"
             @page-size-change="handleAuditPageSizeChange"
@@ -81,8 +81,8 @@ const {
   isAuditLoading,
   isAuditRefreshing,
   isInitialLoading,
-  loadAuditLogs,
   openDictionaryDialog,
+  resetAuditFilters,
   setDictionaryFormRef,
   submitDictionary
 } = useSystemAdministrationPage();

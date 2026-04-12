@@ -10,9 +10,21 @@
         <p class="page-section-caption">按部门查看成员。</p>
       </div>
 
-      <el-select v-model="selectedDepartmentId" placeholder="查看全部部门成员" clearable>
-        <el-option v-for="item in departments" :key="item.id" :label="item.name" :value="item.id" />
-      </el-select>
+      <div class="filter-toolbar">
+        <el-select
+          v-model="selectedDepartmentId"
+          placeholder="查看全部部门成员"
+          clearable
+          size="small"
+          class="filter-field"
+        >
+          <el-option v-for="item in departments" :key="item.id" :label="item.name" :value="item.id" />
+        </el-select>
+        <div class="filter-actions">
+          <el-button type="primary" size="small" @click="loadData">查询</el-button>
+          <el-button size="small" @click="resetFilters">重置</el-button>
+        </div>
+      </div>
     </section>
 
     <section class="member-grid" v-if="members.length">
@@ -32,7 +44,16 @@
 <script setup lang="ts">
 import { useDirectoryPage } from "@/composables/directory/useDirectoryPage";
 
-const { departments, members, selectedDepartmentId } = useDirectoryPage();
+const { departments, loadData, members, selectedDepartmentId } = useDirectoryPage();
+
+function resetFilters(): void {
+  if (!selectedDepartmentId.value) {
+    void loadData();
+    return;
+  }
+
+  selectedDepartmentId.value = null;
+}
 </script>
 
 <style scoped>
@@ -44,6 +65,29 @@ const { departments, members, selectedDepartmentId } = useDirectoryPage();
 .filter-card {
   display: grid;
   gap: 14px;
+}
+
+.filter-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.filter-field {
+  width: 220px;
+}
+
+.filter-field :deep(.el-select__wrapper),
+.filter-actions :deep(.el-button) {
+  min-height: 36px;
+}
+
+.filter-actions {
+  display: inline-flex;
+  gap: 8px;
 }
 
 .section-head {
@@ -103,6 +147,26 @@ const { departments, members, selectedDepartmentId } = useDirectoryPage();
 @media (max-width: 640px) {
   .section-head {
     flex-direction: column;
+  }
+
+  .filter-toolbar {
+    width: 100%;
+  }
+
+  .filter-field {
+    flex: 1 1 200px;
+    min-width: 0;
+  }
+
+  .filter-actions {
+    margin-left: auto;
+  }
+}
+
+@media (max-width: 520px) {
+  .filter-actions {
+    width: 100%;
+    justify-content: flex-end;
   }
 }
 </style>

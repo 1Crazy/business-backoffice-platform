@@ -41,6 +41,37 @@ enum OpportunityStage {
   CLOSED_LOST
 }
 
+enum QuoteStatus {
+  DRAFT
+  SENT
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum ContractStatus {
+  DRAFT
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentPlanStatus {
+  PENDING
+  PARTIAL
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+enum RenewalReminderStatus {
+  PENDING
+  CONTACTED
+  COMPLETED
+  DISMISSED
+}
+
 enum FollowUpEntityType {
   LEAD
   CUSTOMER
@@ -78,6 +109,27 @@ enum AttachmentStorageProvider {
 
 enum LeaveRequestStatus {
   PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum AdministrativeRequestType {
+  REIMBURSEMENT
+  TRAVEL
+  PURCHASE
+  SEAL
+}
+
+enum AdministrativeRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+enum AdministrativeRequestActionType {
+  SUBMITTED
   APPROVED
   REJECTED
   CANCELLED
@@ -128,8 +180,17 @@ model User {
   leaveRequests             LeaveRequest[]            @relation("LeaveRequestApplicant")
   approvalsToHandle         LeaveRequest[]            @relation("LeaveRequestApprover")
   leaveApprovalActions      LeaveApprovalAction[]     @relation("LeaveApprovalActor")
+  administrativeRequests    AdministrativeRequest[]   @relation("AdministrativeRequestApplicant")
+  administrativeApprovals   AdministrativeRequest[]   @relation("AdministrativeRequestApprover")
+  administrativeActions     AdministrativeRequestAction[] @relation("AdministrativeRequestActionActor")
   opportunityStageHistories OpportunityStageHistory[] @relation("OpportunityStageHistoryCreator")
+  ownedQuotes               Quote[]                   @relation("QuoteOwner")
+  ownedContracts            Contract[]                @relation("ContractOwner")
+  ownedPaymentPlans         PaymentPlan[]             @relation("PaymentPlanOwner")
+  ownedPaymentRecords       PaymentRecord[]           @relation("PaymentRecordOwner")
+  ownedRenewalReminders     RenewalReminder[]         @relation("RenewalReminderOwner")
   publishedAnnouncements    Announcement[]            @relation("AnnouncementPublisher")
+  workfeedNotificationReads WorkfeedNotificationRead[] @relation("WorkfeedNotificationReader")
 
   @@index([departmentId])
   @@index([status])
@@ -204,6 +265,11 @@ model Customer {
   reminders          Reminder[]              @relation("CustomerReminders")
   attachments        Attachment[]            @relation("CustomerAttachments")
   opportunities      Opportunity[]
+  quotes             Quote[]                 @relation("CustomerQuotes")
+  contracts          Contract[]              @relation("CustomerContracts")
+  paymentPlans       PaymentPlan[]           @relation("CustomerPaymentPlans")
+  paymentRecords     PaymentRecord[]         @relation("CustomerPaymentRecords")
+  renewalReminders   RenewalReminder[]       @relation("CustomerRenewalReminders")
   convertedFromLeads Lead[]                  @relation("LeadConvertedCustomer")
 
   @@index([ownerId])
@@ -272,6 +338,11 @@ model Opportunity {
   sourceLead        Lead?                     @relation("LeadSourceOpportunity", fields: [sourceLeadId], references: [id], onDelete: SetNull)
   owner             User                      @relation("OpportunityOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   stageHistory      OpportunityStageHistory[]
+  quotes            Quote[]                   @relation("OpportunityQuotes")
+  contracts         Contract[]                @relation("OpportunityContracts")
+  paymentPlans      PaymentPlan[]             @relation("OpportunityPaymentPlans")
+  paymentRecords    PaymentRecord[]           @relation("OpportunityPaymentRecords")
+  renewalReminders  RenewalReminder[]         @relation("OpportunityRenewalReminders")
 
   @@index([ownerId])
   @@index([customerId])
@@ -294,6 +365,134 @@ model OpportunityStageHistory {
 
   @@index([opportunityId, createdAt])
   @@index([createdById])
+}
+
+model Quote {
+  id            String      @id @default(cuid())
+  quoteNo       String      @unique
+  title         String
+  amount        Decimal     @db.Decimal(18, 2)
+  status        QuoteStatus @default(DRAFT)
+  issuedAt      DateTime?
+  expiresAt     DateTime?
+  notes         String?
+  customerId    String
+  opportunityId String
+  ownerId       String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  customer      Customer    @relation("CustomerQuotes", fields: [customerId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity @relation("OpportunityQuotes", fields: [opportunityId], references: [id], onDelete: Cascade)
+  owner         User        @relation("QuoteOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+
+  @@index([customerId, createdAt])
+  @@index([opportunityId, createdAt])
+  @@index([ownerId, status])
+  @@index([status, expiresAt])
+}
+
+model Contract {
+  id               String               @id @default(cuid())
+  contractNo       String               @unique
+  title            String
+  amount           Decimal              @db.Decimal(18, 2)
+  status           ContractStatus       @default(DRAFT)
+  startDate        DateTime
+  endDate          DateTime
+  signedAt         DateTime?
+  notes            String?
+  customerId       String
+  opportunityId    String
+  ownerId          String
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  customer         Customer             @relation("CustomerContracts", fields: [customerId], references: [id], onDelete: Cascade)
+  opportunity      Opportunity          @relation("OpportunityContracts", fields: [opportunityId], references: [id], onDelete: Cascade)
+  owner            User                 @relation("ContractOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  paymentPlans     PaymentPlan[]
+  paymentRecords   PaymentRecord[]
+  renewalReminders RenewalReminder[]
+
+  @@index([customerId, createdAt])
+  @@index([opportunityId, createdAt])
+  @@index([ownerId, status])
+  @@index([status, endDate])
+}
+
+model PaymentPlan {
+  id            String            @id @default(cuid())
+  title         String
+  plannedAmount Decimal           @db.Decimal(18, 2)
+  receivedAmount Decimal          @default(0) @db.Decimal(18, 2)
+  plannedDate   DateTime
+  status        PaymentPlanStatus @default(PENDING)
+  notes         String?
+  customerId    String
+  opportunityId String
+  contractId    String?
+  ownerId       String
+  createdAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+  customer      Customer          @relation("CustomerPaymentPlans", fields: [customerId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity       @relation("OpportunityPaymentPlans", fields: [opportunityId], references: [id], onDelete: Cascade)
+  contract      Contract?         @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  owner         User              @relation("PaymentPlanOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  paymentRecords PaymentRecord[]
+
+  @@index([customerId, plannedDate])
+  @@index([opportunityId, plannedDate])
+  @@index([contractId])
+  @@index([ownerId, status])
+  @@index([status, plannedDate])
+}
+
+model PaymentRecord {
+  id            String      @id @default(cuid())
+  amount        Decimal     @db.Decimal(18, 2)
+  receivedAt    DateTime
+  note          String?
+  customerId    String
+  opportunityId String
+  contractId    String?
+  paymentPlanId String
+  ownerId       String
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  customer      Customer    @relation("CustomerPaymentRecords", fields: [customerId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity @relation("OpportunityPaymentRecords", fields: [opportunityId], references: [id], onDelete: Cascade)
+  contract      Contract?   @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  paymentPlan   PaymentPlan @relation(fields: [paymentPlanId], references: [id], onDelete: Cascade)
+  owner         User        @relation("PaymentRecordOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+
+  @@index([customerId, receivedAt])
+  @@index([opportunityId, receivedAt])
+  @@index([contractId])
+  @@index([paymentPlanId, receivedAt])
+  @@index([ownerId])
+}
+
+model RenewalReminder {
+  id            String                @id @default(cuid())
+  title         String
+  remindAt      DateTime
+  status        RenewalReminderStatus @default(PENDING)
+  note          String?
+  customerId    String
+  opportunityId String?
+  contractId    String
+  ownerId       String
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  customer      Customer              @relation("CustomerRenewalReminders", fields: [customerId], references: [id], onDelete: Cascade)
+  opportunity   Opportunity?          @relation("OpportunityRenewalReminders", fields: [opportunityId], references: [id], onDelete: SetNull)
+  contract      Contract              @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  owner         User                  @relation("RenewalReminderOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+
+  @@index([customerId, remindAt])
+  @@index([opportunityId, remindAt])
+  @@index([contractId, remindAt])
+  @@index([ownerId, status])
+  @@index([status, remindAt])
 }
 
 model FollowUp {
@@ -367,6 +566,21 @@ model UserSession {
   @@index([revokedAt])
 }
 
+model WorkfeedNotificationRead {
+  id               String   @id @default(cuid())
+  userId           String
+  notificationType String
+  sourceId         String
+  readAt           DateTime @default(now())
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  user             User     @relation("WorkfeedNotificationReader", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, notificationType, sourceId])
+  @@index([userId, readAt])
+  @@index([notificationType, sourceId])
+}
+
 model LeaveRequest {
   id          String                @id @default(cuid())
   applicantId String
@@ -398,6 +612,47 @@ model LeaveApprovalAction {
   actor          User                   @relation("LeaveApprovalActor", fields: [actorId], references: [id], onDelete: Restrict)
 
   @@index([leaveRequestId, createdAt])
+  @@index([actorId])
+}
+
+model AdministrativeRequest {
+  id              String                      @id @default(cuid())
+  requestNo       String                      @unique
+  type            AdministrativeRequestType
+  title           String
+  summary         String
+  reason          String
+  formData        Json
+  attachmentNames Json?
+  applicantId     String
+  approverId      String
+  status          AdministrativeRequestStatus @default(PENDING)
+  submittedAt     DateTime                    @default(now())
+  decidedAt       DateTime?
+  createdAt       DateTime                    @default(now())
+  updatedAt       DateTime                    @updatedAt
+  applicant       User                        @relation("AdministrativeRequestApplicant", fields: [applicantId], references: [id], onDelete: Restrict)
+  approver        User                        @relation("AdministrativeRequestApprover", fields: [approverId], references: [id], onDelete: Restrict)
+  actions         AdministrativeRequestAction[]
+
+  @@index([applicantId, createdAt])
+  @@index([approverId, status])
+  @@index([type, status])
+  @@index([submittedAt])
+}
+
+model AdministrativeRequestAction {
+  id        String                          @id @default(cuid())
+  requestId String
+  actorId   String
+  actionType AdministrativeRequestActionType
+  comment   String?
+  snapshot  Json?
+  createdAt DateTime                        @default(now())
+  request   AdministrativeRequest           @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  actor     User                            @relation("AdministrativeRequestActionActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([requestId, createdAt])
   @@index([actorId])
 }
 

@@ -46,6 +46,61 @@ function mapStageHistory(record: OpportunityStageHistoryRecord) {
   };
 }
 
+function mapQuoteSummary(record: OpportunityDetailRecord["quotes"][number]) {
+  return {
+    id: record.id,
+    quoteNo: record.quoteNo,
+    title: record.title,
+    amount: decimalToNumber(record.amount),
+    status: record.status,
+    issuedAt: toIsoString(record.issuedAt) ?? null,
+    expiresAt: toIsoString(record.expiresAt) ?? null
+  };
+}
+
+function mapContractSummary(record: OpportunityDetailRecord["contracts"][number]) {
+  return {
+    id: record.id,
+    contractNo: record.contractNo,
+    title: record.title,
+    amount: decimalToNumber(record.amount),
+    status: record.status,
+    startDate: toIsoString(record.startDate)!,
+    endDate: toIsoString(record.endDate)!,
+    signedAt: toIsoString(record.signedAt) ?? null
+  };
+}
+
+function mapPaymentPlanSummary(record: OpportunityDetailRecord["paymentPlans"][number]) {
+  return {
+    id: record.id,
+    title: record.title,
+    plannedAmount: decimalToNumber(record.plannedAmount),
+    receivedAmount: decimalToNumber(record.receivedAmount),
+    status: record.status,
+    plannedDate: toIsoString(record.plannedDate)!
+  };
+}
+
+function mapPaymentRecordSummary(record: OpportunityDetailRecord["paymentRecords"][number]) {
+  return {
+    id: record.id,
+    amount: decimalToNumber(record.amount),
+    receivedAt: toIsoString(record.receivedAt)!,
+    note: record.note ?? null
+  };
+}
+
+function mapRenewalReminderSummary(record: OpportunityDetailRecord["renewalReminders"][number]) {
+  return {
+    id: record.id,
+    title: record.title,
+    remindAt: toIsoString(record.remindAt)!,
+    status: record.status,
+    note: record.note ?? null
+  };
+}
+
 export function mapSalesOpportunity(record: OpportunityListRecord | OpportunityDetailRecord) {
   return {
     id: record.id,
@@ -65,6 +120,13 @@ export function mapSalesOpportunity(record: OpportunityListRecord | OpportunityD
     closedAt: toIsoString(record.closedAt) ?? null,
     lostReason: record.lostReason ?? null,
     stageHistory: "stageHistory" in record ? record.stageHistory.map((item) => mapStageHistory(item)) : undefined,
+    quotes: "quotes" in record ? record.quotes.map((item) => mapQuoteSummary(item)) : undefined,
+    contracts: "contracts" in record ? record.contracts.map((item) => mapContractSummary(item)) : undefined,
+    paymentPlans: "paymentPlans" in record ? record.paymentPlans.map((item) => mapPaymentPlanSummary(item)) : undefined,
+    paymentRecords:
+      "paymentRecords" in record ? record.paymentRecords.map((item) => mapPaymentRecordSummary(item)) : undefined,
+    renewalReminders:
+      "renewalReminders" in record ? record.renewalReminders.map((item) => mapRenewalReminderSummary(item)) : undefined,
     createdAt: toIsoString(record.createdAt)!,
     updatedAt: toIsoString(record.updatedAt)!
   };

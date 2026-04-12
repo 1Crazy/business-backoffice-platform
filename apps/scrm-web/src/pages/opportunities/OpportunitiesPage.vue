@@ -10,7 +10,7 @@
       :result-options="opportunityResultOptions"
       :sort-options="opportunitySortOptions"
       :sort-preset="opportunityTableState.sortPreset"
-      @refresh="loadOpportunities"
+      @reset="resetOpportunityFilters"
       @create-opportunity="openOpportunityDialog"
       @update:sort-preset="opportunityTableState.sortPreset = $event"
     />
@@ -107,7 +107,6 @@ const {
   isTableRefreshing,
   isTabletOrDown,
   leads,
-  loadOpportunities,
   openCloseDialog,
   openDetailDrawer,
   openOpportunityDialog,
@@ -124,6 +123,7 @@ const {
   ownerDialogVisible,
   ownerForm,
   ownerRules,
+  resetOpportunityFilters,
   selectedOpportunity,
   setCloseFormRef,
   setOpportunityFormRef,

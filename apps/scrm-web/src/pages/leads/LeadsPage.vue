@@ -5,7 +5,7 @@
       :loading="isReminderLoading"
       :reminders="reminders"
       :table-state="reminderTableState"
-      @refresh="loadReminders"
+      @reset="resetReminders"
       @page-change="handleReminderPageChange"
     />
 
@@ -17,7 +17,7 @@
       :lead-statuses="leadStatuses"
       :sort-options="leadSortOptions"
       :sort-preset="leadTableState.sortPreset"
-      @refresh="loadLeads"
+      @reset="resetLeadFilters"
       @create-lead="openLeadDialog"
       @update:sort-preset="leadTableState.sortPreset = $event"
     />
@@ -108,8 +108,6 @@ const {
   leadStatuses,
   leadTableState,
   leads,
-  loadLeads,
-  loadReminders,
   openFollowUpDrawer,
   openLeadDialog,
   openOwnerDialog,
@@ -126,6 +124,8 @@ const {
   submitFollowUp,
   submitLead,
   submitOwner,
+  resetLeadFilters,
+  resetReminders,
   users
 } = useLeadsPage();
 </script>

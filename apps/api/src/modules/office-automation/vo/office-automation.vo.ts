@@ -1,6 +1,11 @@
 /** OA VO：负责定义 OA 工作台、审批、公告和通讯录的对外响应契约。 */
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { LeaveRequestStatus } from "@prisma/client";
+import {
+  AdministrativeRequestActionType,
+  AdministrativeRequestStatus,
+  AdministrativeRequestType,
+  LeaveRequestStatus
+} from "@prisma/client";
 
 export class AnnouncementSummaryVo {
   @ApiProperty({
@@ -50,6 +55,16 @@ export class WorkspaceOverviewVo {
   myRequestCount!: number;
 
   @ApiProperty({
+    description: "高频行政申请待审批数量。"
+  })
+  administrativeRequestPendingCount!: number;
+
+  @ApiProperty({
+    description: "我发起的高频行政申请数量。"
+  })
+  administrativeRequestMyCount!: number;
+
+  @ApiProperty({
     description: "进行中的公告数量。"
   })
   activeAnnouncementCount!: number;
@@ -73,43 +88,47 @@ export class PendingApprovalItemVo {
   id!: string;
 
   @ApiProperty({
+    description: "业务类别，例如 LEAVE 或 ADMINISTRATIVE。"
+  })
+  requestCategory!: string;
+
+  @ApiProperty({
+    description: "业务类型，例如 ANNUAL 或 REIMBURSEMENT。"
+  })
+  requestType!: string;
+
+  @ApiPropertyOptional({
+    description: "申请编号。",
+    nullable: true
+  })
+  requestNo?: string | null;
+
+  @ApiProperty({
     description: "申请人姓名。"
   })
   applicantName!: string;
 
   @ApiProperty({
-    description: "请假类型。"
+    description: "申请标题。"
   })
-  leaveType!: string;
+  title!: string;
 
   @ApiProperty({
-    description: "开始时间。",
+    description: "申请摘要。"
+  })
+  summary!: string;
+
+  @ApiProperty({
+    description: "提交时间。",
     format: "date-time"
   })
-  startAt!: string;
-
-  @ApiProperty({
-    description: "结束时间。",
-    format: "date-time"
-  })
-  endAt!: string;
-
-  @ApiProperty({
-    description: "请假事由。"
-  })
-  reason!: string;
+  submittedAt!: string;
 
   @ApiProperty({
     description: "当前状态。",
-    enum: LeaveRequestStatus
+    enum: [...Object.values(LeaveRequestStatus), ...Object.values(AdministrativeRequestStatus)]
   })
-  status!: LeaveRequestStatus;
-
-  @ApiProperty({
-    description: "申请创建时间。",
-    format: "date-time"
-  })
-  createdAt!: string;
+  status!: string;
 }
 
 export class LeaveRequestItemVo {
@@ -175,6 +194,145 @@ export class LeaveRequestItemVo {
     format: "date-time"
   })
   updatedAt!: string;
+}
+
+export class AdministrativeRequestItemVo {
+  @ApiProperty({
+    description: "记录 ID。"
+  })
+  id!: string;
+
+  @ApiProperty({
+    description: "申请编号。"
+  })
+  requestNo!: string;
+
+  @ApiProperty({
+    description: "申请类型。",
+    enum: AdministrativeRequestType
+  })
+  type!: AdministrativeRequestType;
+
+  @ApiProperty({
+    description: "申请标题。"
+  })
+  title!: string;
+
+  @ApiProperty({
+    description: "申请摘要。"
+  })
+  summary!: string;
+
+  @ApiProperty({
+    description: "申请说明。"
+  })
+  reason!: string;
+
+  @ApiProperty({
+    description: "当前状态。",
+    enum: AdministrativeRequestStatus
+  })
+  status!: AdministrativeRequestStatus;
+
+  @ApiProperty({
+    description: "附件名称列表。",
+    type: [String]
+  })
+  attachmentNames!: string[];
+
+  @ApiPropertyOptional({
+    description: "申请人姓名。",
+    nullable: true
+  })
+  applicantName?: string | null;
+
+  @ApiPropertyOptional({
+    description: "审批人姓名。",
+    nullable: true
+  })
+  approverName?: string | null;
+
+  @ApiPropertyOptional({
+    description: "最近审批意见。",
+    nullable: true
+  })
+  latestComment?: string | null;
+
+  @ApiProperty({
+    description: "提交时间。",
+    format: "date-time"
+  })
+  submittedAt!: string;
+
+  @ApiPropertyOptional({
+    description: "审批完成时间。",
+    format: "date-time",
+    nullable: true
+  })
+  decidedAt?: string | null;
+
+  @ApiProperty({
+    description: "创建时间。",
+    format: "date-time"
+  })
+  createdAt!: string;
+
+  @ApiProperty({
+    description: "更新时间。",
+    format: "date-time"
+  })
+  updatedAt!: string;
+}
+
+export class AdministrativeRequestFieldVo {
+  @ApiProperty({
+    description: "字段标签。"
+  })
+  label!: string;
+
+  @ApiProperty({
+    description: "字段值。"
+  })
+  value!: string;
+}
+
+export class AdministrativeRequestTimelineItemVo {
+  @ApiProperty({
+    description: "动作类型。",
+    enum: AdministrativeRequestActionType
+  })
+  actionType!: AdministrativeRequestActionType;
+
+  @ApiProperty({
+    description: "处理人姓名。"
+  })
+  actorName!: string;
+
+  @ApiPropertyOptional({
+    description: "处理意见。",
+    nullable: true
+  })
+  comment?: string | null;
+
+  @ApiProperty({
+    description: "动作时间。",
+    format: "date-time"
+  })
+  createdAt!: string;
+}
+
+export class AdministrativeRequestDetailVo extends AdministrativeRequestItemVo {
+  @ApiProperty({
+    description: "结构化字段。",
+    type: () => [AdministrativeRequestFieldVo]
+  })
+  formFields!: AdministrativeRequestFieldVo[];
+
+  @ApiProperty({
+    description: "动作轨迹。",
+    type: () => [AdministrativeRequestTimelineItemVo]
+  })
+  timeline!: AdministrativeRequestTimelineItemVo[];
 }
 
 export class DirectoryDepartmentVo {

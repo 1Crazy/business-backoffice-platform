@@ -6,10 +6,14 @@ import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { Permissions } from "@/common/decorators/permissions.decorator";
 import { ApprovalActionDto } from "./dto/approval-action.dto";
+import { CreateAdministrativeRequestDto } from "./dto/create-administrative-request.dto";
 import { CreateLeaveRequestDto } from "./dto/create-leave-request.dto";
 import { DirectoryQueryDto } from "./dto/directory-query.dto";
+import { ListAdministrativeRequestsDto } from "./dto/list-administrative-requests.dto";
 import { OfficeAutomationService } from "./office-automation.service";
 import {
+  AdministrativeRequestDetailVo,
+  AdministrativeRequestItemVo,
   AnnouncementDetailVo,
   AnnouncementSummaryVo,
   DirectorySnapshotVo,
@@ -51,6 +55,20 @@ export class OfficeAutomationController {
     return this.officeAutomationService.getPendingApprovals(user);
   }
 
+  @Get("administrative-requests/pending")
+  @Permissions("oa:request:approve")
+  @ApiOperation({
+    summary: "查询待我审批的行政申请",
+    description: "查询当前账号待处理的报销、出差、采购和用印申请。"
+  })
+  @ApiOkResponse({
+    type: AdministrativeRequestItemVo,
+    isArray: true
+  })
+  getPendingAdministrativeApprovals(@CurrentUser() user: AuthUser, @Query() query: ListAdministrativeRequestsDto) {
+    return this.officeAutomationService.getPendingAdministrativeApprovals(user, query);
+  }
+
   @Post("approvals/leave-requests/:id/actions")
   @Permissions("oa:approval:write")
   @ApiOperation({
@@ -62,6 +80,32 @@ export class OfficeAutomationController {
   })
   decideLeaveRequest(@Param("id") id: string, @Body() dto: ApprovalActionDto, @CurrentUser() user: AuthUser) {
     return this.officeAutomationService.decideLeaveRequest(id, dto, user);
+  }
+
+  @Post("administrative-requests/:id/actions")
+  @Permissions("oa:request:approve")
+  @ApiOperation({
+    summary: "提交行政申请审批动作",
+    description: "对指定行政申请执行通过或驳回。"
+  })
+  @ApiOkResponse({
+    type: AdministrativeRequestItemVo
+  })
+  decideAdministrativeRequest(@Param("id") id: string, @Body() dto: ApprovalActionDto, @CurrentUser() user: AuthUser) {
+    return this.officeAutomationService.decideAdministrativeRequest(id, dto, user);
+  }
+
+  @Post("administrative-requests/:id/cancel")
+  @Permissions("oa:request:apply")
+  @ApiOperation({
+    summary: "撤回行政申请",
+    description: "由申请人撤回仍处于待审批状态的行政申请。"
+  })
+  @ApiOkResponse({
+    type: AdministrativeRequestItemVo
+  })
+  cancelAdministrativeRequest(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.officeAutomationService.cancelAdministrativeRequest(id, user);
   }
 
   @Get("leaves/mine")
@@ -78,6 +122,46 @@ export class OfficeAutomationController {
     return this.officeAutomationService.getMyLeaveRequests(user);
   }
 
+  @Get("administrative-requests/mine")
+  @Permissions("oa:request:apply")
+  @ApiOperation({
+    summary: "查询我发起的行政申请",
+    description: "查询当前账号发起的报销、出差、采购和用印申请列表。"
+  })
+  @ApiOkResponse({
+    type: AdministrativeRequestItemVo,
+    isArray: true
+  })
+  getMyAdministrativeRequests(@CurrentUser() user: AuthUser, @Query() query: ListAdministrativeRequestsDto) {
+    return this.officeAutomationService.getMyAdministrativeRequests(user, query);
+  }
+
+  @Get("administrative-requests")
+  @Permissions("oa:request:read")
+  @ApiOperation({
+    summary: "检索行政申请",
+    description: "按申请类型、申请人、审批人、状态与时间范围检索行政申请。"
+  })
+  @ApiOkResponse({
+    type: AdministrativeRequestItemVo,
+    isArray: true
+  })
+  listAdministrativeRequests(@Query() query: ListAdministrativeRequestsDto) {
+    return this.officeAutomationService.listAdministrativeRequests(query);
+  }
+
+  @Get("administrative-requests/:id")
+  @ApiOperation({
+    summary: "查询行政申请详情",
+    description: "查询行政申请详情、结构化字段和审批轨迹。"
+  })
+  @ApiOkResponse({
+    type: AdministrativeRequestDetailVo
+  })
+  getAdministrativeRequestDetail(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.officeAutomationService.getAdministrativeRequestDetail(id, user);
+  }
+
   @Post("leaves")
   @Permissions("oa:leave:apply")
   @ApiOperation({
@@ -89,6 +173,19 @@ export class OfficeAutomationController {
   })
   createLeaveRequest(@Body() dto: CreateLeaveRequestDto, @CurrentUser() user: AuthUser) {
     return this.officeAutomationService.createLeaveRequest(dto, user);
+  }
+
+  @Post("administrative-requests")
+  @Permissions("oa:request:apply")
+  @ApiOperation({
+    summary: "提交行政申请",
+    description: "提交一条新的高频行政申请。"
+  })
+  @ApiOkResponse({
+    type: AdministrativeRequestItemVo
+  })
+  createAdministrativeRequest(@Body() dto: CreateAdministrativeRequestDto, @CurrentUser() user: AuthUser) {
+    return this.officeAutomationService.createAdministrativeRequest(dto, user);
   }
 
   @Get("announcements")

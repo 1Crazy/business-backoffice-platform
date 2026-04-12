@@ -17,7 +17,9 @@ import { DictionariesModule } from "./modules/dictionaries/dictionaries.module";
 import { LeadsModule } from "./modules/leads/leads.module";
 import { OfficeAutomationModule } from "./modules/office-automation/office-automation.module";
 import { RolesModule } from "./modules/roles/roles.module";
+import { RevenueOperationsModule } from "./modules/revenue-operations/revenue-operations.module";
 import { SalesOpportunitiesModule } from "./modules/sales-opportunities/sales-opportunities.module";
+import { UnifiedWorkfeedModule } from "./modules/unified-workfeed/unified-workfeed.module";
 import { UploadsModule } from "./modules/uploads/uploads.module";
 import { UsersModule } from "./modules/users/users.module";
 
@@ -37,6 +39,8 @@ import { UsersModule } from "./modules/users/users.module";
     CustomersModule,
     LeadsModule,
     SalesOpportunitiesModule,
+    RevenueOperationsModule,
+    UnifiedWorkfeedModule,
     DashboardModule,
     DictionariesModule,
     OfficeAutomationModule,

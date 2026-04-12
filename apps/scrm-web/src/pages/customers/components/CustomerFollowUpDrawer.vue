@@ -7,6 +7,44 @@
     append-to-body
   >
     <div class="drawer-stack">
+      <section v-if="customer" class="page-card">
+        <div class="drawer-head drawer-head-row">
+          <div>
+            <h3>经营闭环摘要</h3>
+            <p>在客户上下文里查看报价、合同、回款与续费状态。</p>
+          </div>
+          <el-button type="primary" plain @click="$emit('open-revenue')">进入经营闭环</el-button>
+        </div>
+
+        <div v-if="revenueOverview" class="revenue-grid">
+          <article class="revenue-card">
+            <span>报价单</span>
+            <strong>{{ revenueOverview.quotes.length }}</strong>
+            <small>{{ revenueOverview.quotes[0]?.title ?? "暂无报价" }}</small>
+          </article>
+          <article class="revenue-card">
+            <span>合同</span>
+            <strong>{{ revenueOverview.contracts.length }}</strong>
+            <small>{{ revenueOverview.contracts[0]?.title ?? "暂无合同" }}</small>
+          </article>
+          <article class="revenue-card">
+            <span>回款计划</span>
+            <strong>{{ revenueOverview.paymentPlans.length }}</strong>
+            <small>{{ revenueOverview.paymentPlans[0]?.title ?? "暂无回款计划" }}</small>
+          </article>
+          <article class="revenue-card">
+            <span>回款记录</span>
+            <strong>{{ revenueOverview.paymentRecords.length }}</strong>
+            <small>{{ revenueOverview.paymentRecords[0]?.note ?? "暂无回款记录" }}</small>
+          </article>
+          <article class="revenue-card">
+            <span>续费提醒</span>
+            <strong>{{ revenueOverview.renewalReminders.length }}</strong>
+            <small>{{ revenueOverview.renewalReminders[0]?.title ?? "暂无续费提醒" }}</small>
+          </article>
+        </div>
+      </section>
+
       <section class="page-card">
         <div class="drawer-head">
           <div>
@@ -63,12 +101,14 @@ import { computed } from "vue";
 import RecordUploadPanel from "@/components/RecordUploadPanel.vue";
 import type { Customer } from "@/types/customers";
 import type { FollowUp, FollowUpFormModel } from "@/types/follow-ups";
+import type { CustomerRevenueOverview } from "@/types/revenue-operations";
 import type { Attachment } from "@/types/uploads";
 import { formatDateTime } from "@/utils/display";
 
 const props = defineProps<{
   visible: boolean;
   customer: Customer | null;
+  revenueOverview: CustomerRevenueOverview | null;
   followUps: FollowUp[];
   form: FollowUpFormModel;
   rules: FormRules<FollowUpFormModel>;
@@ -79,6 +119,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "update:visible": [value: boolean];
+  "open-revenue": [];
   "submit-follow-up": [];
   upload: [options: UploadRequestOptions];
 }>();
@@ -99,9 +140,41 @@ const drawerVisible = computed({
   margin: 0 0 6px;
 }
 
+.drawer-head-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
 .drawer-head p {
   margin: 0;
   color: #64748b;
+}
+
+.revenue-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.revenue-card {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(95, 125, 170, 0.14);
+  background: rgba(248, 251, 255, 0.82);
+}
+
+.revenue-card span,
+.revenue-card small {
+  color: #64748b;
+}
+
+.revenue-card strong {
+  font-size: 24px;
+  line-height: 1;
 }
 
 .full-width {

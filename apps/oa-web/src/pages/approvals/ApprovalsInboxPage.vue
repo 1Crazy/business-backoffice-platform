@@ -13,12 +13,12 @@
       <el-table :data="approvals" border>
         <el-table-column prop="applicantName" label="申请人" min-width="120" />
         <el-table-column label="请假类型" min-width="120">
-          <template #default="{ row }">{{ formatLeaveType(row.leaveType) }}</template>
+          <template #default="{ row }">{{ formatLeaveType(row.requestType) }}</template>
         </el-table-column>
-        <el-table-column label="请假时间" min-width="220">
-          <template #default="{ row }">{{ formatDateTime(row.startAt) }} ~ {{ formatDateTime(row.endAt) }}</template>
+        <el-table-column label="申请标题" min-width="220">
+          <template #default="{ row }">{{ row.title }}</template>
         </el-table-column>
-        <el-table-column prop="reason" label="事由" min-width="240" />
+        <el-table-column prop="summary" label="摘要" min-width="240" />
         <el-table-column label="状态" width="120">
           <template #default="{ row }">
             <span class="status-pill pending">{{ formatLeaveStatus(row.status) }}</span>
@@ -57,9 +57,9 @@
 
       <div v-if="currentApproval" class="decision-meta">
         <p>申请人：{{ currentApproval.applicantName }}</p>
-        <p>请假类型：{{ formatLeaveType(currentApproval.leaveType) }}</p>
-        <p>请假时间：{{ formatDateTime(currentApproval.startAt) }} ~ {{ formatDateTime(currentApproval.endAt) }}</p>
-        <p>事由：{{ currentApproval.reason }}</p>
+        <p>请假类型：{{ formatLeaveType(currentApproval.requestType) }}</p>
+        <p>申请标题：{{ currentApproval.title }}</p>
+        <p>摘要：{{ currentApproval.summary }}</p>
       </div>
 
       <el-form class="dialog-form" label-position="top">
@@ -87,7 +87,7 @@
 import { computed } from "vue";
 
 import { useApprovalsInboxPage } from "@/composables/approvals/useApprovalsInboxPage";
-import { formatDateTime, formatLeaveStatus, formatLeaveType } from "@/utils/display";
+import { formatLeaveStatus, formatLeaveType } from "@/utils/display";
 
 const {
   approvals,
@@ -110,7 +110,7 @@ const decisionAlertDescription = computed(() => {
     return "";
   }
 
-  return `${currentApproval.value.applicantName}的${formatLeaveType(currentApproval.value.leaveType)}申请将被标记为${
+  return `${currentApproval.value.applicantName}的${formatLeaveType(currentApproval.value.requestType)}申请将被标记为${
     pendingDecision.value === "REJECTED" ? "已驳回" : "已通过"
   }。`;
 });

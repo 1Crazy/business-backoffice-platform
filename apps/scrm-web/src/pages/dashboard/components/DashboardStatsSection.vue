@@ -25,17 +25,17 @@ defineProps<{
 <style scoped>
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .stat-card {
   position: relative;
   overflow: hidden;
   display: grid;
-  gap: 12px;
-  min-height: 188px;
-  padding-top: 20px;
+  gap: 10px;
+  min-height: 152px;
+  padding: 18px 18px 16px;
 }
 
 .stat-card::before {
@@ -65,21 +65,21 @@ defineProps<{
 
 .stat-label {
   color: var(--app-text-secondary);
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   line-height: 1.6;
 }
 
 .stat-caption {
+  margin-top: auto;
   max-width: 240px;
   color: var(--app-text-secondary);
-  line-height: 1.6;
-  font-size: 13px;
+  line-height: 1.55;
+  font-size: 12px;
 }
 
 .stat-value {
-  margin-top: auto;
-  font-size: clamp(32px, 4vw, 42px);
+  font-size: clamp(28px, 3.2vw, 36px);
   font-weight: 700;
   color: var(--app-text-primary);
   letter-spacing: -0.04em;
@@ -88,9 +88,15 @@ defineProps<{
 .stat-index {
   flex: none;
   color: rgba(100, 116, 139, 0.22);
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.06em;
+}
+
+@media (max-width: 1280px) {
+  .stats-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 960px) {
@@ -99,7 +105,7 @@ defineProps<{
   }
 }
 
-@media (max-width: 720px) {
+@media (max-width: 640px) {
   .stats-grid {
     grid-template-columns: 1fr;
   }

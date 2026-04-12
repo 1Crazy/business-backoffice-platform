@@ -50,7 +50,7 @@
 
     <div class="toolbar-row">
       <p>按操作人、动作和时间筛选。</p>
-      <el-button @click="$emit('refresh')">刷新</el-button>
+      <el-button @click="$emit('reset')">重置</el-button>
     </div>
 
     <div class="table-meta">
@@ -121,7 +121,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  refresh: [];
+  reset: [];
   "update:sortPreset": [value: string];
   "page-change": [page: number];
   "page-size-change": [pageSize: number];

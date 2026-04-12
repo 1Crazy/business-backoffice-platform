@@ -16,7 +16,7 @@
         >
           <el-option v-for="item in sortOptions" :key="item.value" :label="item.label" :value="item.value" />
         </el-select>
-        <el-button @click="$emit('refresh')">刷新</el-button>
+        <el-button @click="$emit('reset')">重置</el-button>
         <el-button type="primary" @click="$emit('create-opportunity')">新建商机</el-button>
       </div>
     </div>
@@ -103,7 +103,7 @@ defineProps<{
 }>();
 
 defineEmits<{
-  refresh: [];
+  reset: [];
   "create-opportunity": [];
   "update:sort-preset": [value: string];
 }>();

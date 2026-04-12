@@ -2,7 +2,7 @@
 
 这是一个基于 `Vue 3 + TypeScript` 前端、`NestJS + Prisma` 后端、`PostgreSQL` 数据库的多应用后台平台仓库。当前已经落地 `scrm-web` 与 `oa-web` 两个后台前端，并复用统一的账号、角色权限、会话身份与组织架构体系。
 
-当前仓库已经完成 SCRM 核心业务闭环、平台硬化、商机管理能力以及 OA 首批办公协作闭环，能够覆盖认证、客户、线索、商机、跟进、看板、请假审批、公告通知、组织通讯录、审计与附件等核心后台流程。
+当前仓库已经完成 SCRM 核心业务闭环、平台硬化、商机管理能力以及 OA 首批办公协作闭环，并进一步补齐第一阶段企业落地能力：OA 高频行政申请、赢单后经营闭环、统一待办/通知入口和增强版经营看板。当前系统已经能够覆盖认证、客户、线索、商机、跟进、看板、请假与行政审批、公告通知、组织通讯录、审计与附件等核心后台流程。
 
 当前仓库已经包含：
 
@@ -29,8 +29,10 @@
 - 客户中心：客户档案、标签、来源、状态、归属人
 - 商机管理：商机创建、编辑、详情、归属人转交、阶段推进、赢单/输单收口、阶段轨迹
 - 线索与跟进：线索分配、线索转客户、跟进记录、待办提醒
-- 运营看板：新增客户、跟进次数、线索转化率、新增商机、进行中预计金额、赢单数量、赢单金额、赢单率
-- OA 办公协作：工作台、待我审批、我发起的申请、请假申请、公告通知、组织通讯录
+- 赢单后经营闭环：报价、合同、回款计划、回款记录、续费提醒，以及客户/商机上下文联动
+- 统一待办/通知：主应用 `/workfeed` 聚合 OA 审批、SCRM 跟进提醒、续费提醒、审批结果与公告摘要
+- 运营看板：新增客户、跟进次数、线索转化率、新增商机、进行中预计金额、赢单数量、赢单金额、赢单率，以及按时间范围/团队/负责人查看的漏斗、排行、回款预测和审批时效
+- OA 办公协作：工作台、待我审批、我发起的申请、请假申请、报销/出差/采购/用印等行政申请、公告通知、组织通讯录
 - 系统管理：字典配置、审计日志、附件上传
 - 平台硬化：会话续期与退出、统一数据范围、分页列表、附件下载鉴权、仓库级 CI
 
@@ -174,9 +176,10 @@ pnpm prisma:seed
 ```bash
 pnpm --filter platform-api prisma migrate deploy
 pnpm --filter platform-api seed
+pnpm prisma:generate
 ```
 
-这样可以把 `Opportunity` / `OpportunityStageHistory` 相关表结构和 `opportunity:*` 权限同步到本地数据库；否则 `GET /api/dashboard/overview` 可能因为缺表报错，`GET /api/sales-opportunities` 也可能因为权限种子未更新而返回 `403`。
+这样可以把第一阶段新增的 `AdministrativeRequest`、`Quote`、`Contract`、`PaymentPlan`、`PaymentRecord`、`RenewalReminder`、`WorkfeedNotificationRead` 等表结构，以及 `oa:request:*`、`opportunity:*` 等权限同步到本地数据库，同时刷新 Prisma Client；否则 `GET /api/dashboard/overview`、`GET /api/workfeed/*` 或经营闭环相关接口可能因为缺表/类型未更新报错。
 
 商机权限补充：
 
@@ -200,6 +203,20 @@ pnpm --filter platform-api seed
 - `super-admin`：全局数据范围
 - `sales-manager`：部门数据范围
 - `sales-member`：本人数据范围
+
+第一阶段新增权限口径：
+
+- `oa:request:apply`：发起报销、出差、采购、用印等行政申请
+- `oa:request:approve`：审批行政申请，并出现在 OA 行政审批页与主应用统一待办中
+- `oa:request:read`：检索行政申请列表与详情
+- `dashboard:view`：查看增强后的经营看板、漏斗、排行、回款预测与审批时效
+- `customer:read` / `opportunity:read`：查看赢单后经营摘要与客户/商机上下文中的经营对象
+- `opportunity:write`：创建报价、合同、回款计划、回款记录和续费提醒
+
+补充说明：
+
+- 主应用统一待办/通知入口当前为原生宿主页 `/workfeed`，不单独引入新权限码；登录后即可作为跨域工作入口使用。
+- 统一待办中的具体跳转仍然复用 OA 与 SCRM 子应用原有页面权限，如果目标页权限不足，宿主路由守卫会回退到当前账号可访问的页面。
 
 ## 启动开发环境
 
@@ -245,6 +262,15 @@ pnpm docker:infra:down
 
 - `pnpm dev:full` 使用本地热更新链路，不会重新构建前后端镜像；主应用通过 `qiankun` 从 `oa-web` 与 `scrm-web` 开发服务加载内容页。
 - `pnpm docker:up` 仍然保留，用于全量联调和容器化验证。
+
+## 第一阶段联调要点
+
+推荐按下面顺序快速验证第一阶段新增能力：
+
+1. 访问主应用 `http://localhost:5175/workfeed`，确认统一待办与通知可以看到 OA/SCRM 聚合项，并能跳到 `/oa/**` 或 `/scrm/**` 目标页。
+2. 在 OA 中验证 `/oa/administrative-requests/new`、`/oa/administrative-requests/pending`、`/oa/administrative-requests/mine` 三条主路径，确认行政申请的提交、审批和我的申请链路可用。
+3. 在 SCRM 客户或商机上下文中验证经营闭环页面 `/scrm/revenue-operations`，确认报价、合同、回款计划、回款记录和续费提醒能正常联动。
+4. 在 SCRM 看板 `/scrm/dashboard` 上切换时间范围、团队和负责人，确认漏斗、排行、回款预测和审批时效会跟随过滤条件更新。
 
 ## 构建与测试
 

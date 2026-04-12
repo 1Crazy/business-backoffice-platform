@@ -30,7 +30,7 @@
       <p>按归属、状态和来源筛选。</p>
       <div class="toolbar-actions">
         <span v-if="loading" class="loading-badge">筛选项同步中</span>
-        <el-button @click="$emit('refresh')">刷新</el-button>
+        <el-button @click="$emit('reset')">重置</el-button>
         <el-button type="primary" @click="$emit('create-lead')">新增线索</el-button>
       </div>
     </div>
@@ -56,7 +56,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  refresh: [];
+  reset: [];
   "create-lead": [];
   "update:sortPreset": [value: string];
 }>();

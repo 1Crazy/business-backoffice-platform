@@ -1,7 +1,7 @@
 # sales-opportunity-management Specification
 
 ## Purpose
-TBD - created by archiving change sales-opportunity-management. Update Purpose after archive.
+定义围绕客户推进商机的阶段管理、结果收口与成交后经营衔接边界，确保销售主线能够从商机跟进延伸到赢单后的经营动作。
 ## Requirements
 ### Requirement: 销售人员可以围绕客户创建和维护商机
 系统 SHALL 允许具备授权的用户围绕一个已存在客户创建、查看和更新商机。商机 SHALL 至少记录名称、关联客户、归属人、当前阶段、预计金额、预计成交日期以及下一步动作；系统 MAY 额外记录来源线索和补充说明。
@@ -70,3 +70,13 @@ TBD - created by archiving change sales-opportunity-management. Update Purpose a
 - **WHEN** 用户在主应用中打开商机详情抽屉
 - **THEN** 抽屉完整显示并可正常查看摘要信息、阶段轨迹和其他详情内容
 
+### Requirement: 赢单商机可以关联后续经营对象
+系统 SHALL 允许赢单商机继续关联报价、合同、回款计划、回款记录和续费提醒等后续经营对象，使销售经营链路从赢单阶段延伸到成交后经营阶段。用户在商机详情中 MUST 能查看这些后续对象的摘要和最新状态。
+
+#### Scenario: 赢单商机展示后续经营摘要
+- **WHEN** 用户打开一个已赢单商机详情
+- **THEN** 系统展示该商机关联的报价、合同、回款和续费提醒摘要，而不是只停留在赢单结果
+
+#### Scenario: 后续经营对象保持商机上下文关联
+- **WHEN** 用户从商机上下文创建报价、合同或回款计划
+- **THEN** 系统保存这些对象与原商机的关联关系，并允许后续回到商机上下文统一查看

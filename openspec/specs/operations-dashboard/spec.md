@@ -1,7 +1,7 @@
 # operations-dashboard Specification
 
 ## Purpose
-TBD - created by archiving change bootstrap-scrm-mvp. Update Purpose after archive.
+定义 SCRM 运营看板的指标口径、筛选维度与管理视角展示边界，确保经营漏斗、业绩排行、回款预测和协同时效等指标与业务数据保持一致。
 ## Requirements
 ### Requirement: 看板展示核心销售运营指标
 系统 SHALL 提供看板视图，在选定时间范围内以适合运营分析的控制台方式汇总新增客户数、跟进次数、已转化线索数、线索总数、待处理提醒数、线索转化率、新增商机数、进行中商机预计金额、赢单商机数、赢单金额和商机赢单率。上述指标 SHALL 使用与业务列表一致的筛选口径和归属范围计算，并在页面结构上优先呈现筛选区、核心 KPI 区和洞察区，以支持销售主管快速扫读与判断。
@@ -48,3 +48,13 @@ TBD - created by archiving change bootstrap-scrm-mvp. Update Purpose after archi
 - **WHEN** 具备全局数据范围的管理员打开看板
 - **THEN** 系统统计当前租户内全部归属数据
 
+### Requirement: 看板展示经营漏斗、业绩和协同时效指标
+系统 SHALL 在现有销售运营指标之外，继续展示销售漏斗转化、人员业绩排行、回款预测和审批时效等管理指标。新增指标 MUST 与对应业务对象和数据范围规则保持一致，并允许管理者按时间范围和归属范围查看。
+
+#### Scenario: 管理者查看销售漏斗与业绩排行
+- **WHEN** 销售主管或管理者进入运营看板
+- **THEN** 系统展示线索到商机到赢单的阶段漏斗，以及按人员或团队聚合的业绩排行摘要
+
+#### Scenario: 管理者查看回款预测与审批时效
+- **WHEN** 管理者选择经营分析时间范围
+- **THEN** 系统展示预计回款、已回款、逾期回款或审批时效等指标，并保持与对应业务数据口径一致

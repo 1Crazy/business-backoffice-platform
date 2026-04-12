@@ -22,6 +22,10 @@ const accessibleRouteDefinitions: AccessibleRouteDefinition[] = [
     permission: "opportunity:read"
   },
   {
+    path: "/revenue-operations",
+    permission: "opportunity:read"
+  },
+  {
     path: "/leads",
     permission: "lead:read"
   },

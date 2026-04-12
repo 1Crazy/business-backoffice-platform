@@ -228,6 +228,27 @@ export function useSystemAdministrationPage() {
     void loadAuditLogs();
   }
 
+  async function resetAuditFilters(): Promise<void> {
+    const isAlreadyDefault =
+      !auditFilter.actorName &&
+      !auditFilter.actionType &&
+      !auditFilter.targetType &&
+      !auditFilter.dateRange &&
+      auditTableState.sortPreset === auditSortOptions[0].value &&
+      auditTableState.page === 1;
+
+    auditFilter.actorName = "";
+    auditFilter.actionType = "";
+    auditFilter.targetType = "";
+    auditFilter.dateRange = null;
+    auditTableState.page = 1;
+    auditTableState.sortPreset = auditSortOptions[0].value;
+
+    if (isAlreadyDefault) {
+      await loadAuditLogs();
+    }
+  }
+
   onMounted(() => {
     void Promise.all([loadDictionaries(), loadAuditLogs()]);
   });
@@ -250,8 +271,8 @@ export function useSystemAdministrationPage() {
     isAuditRefreshing,
     isDictionaryLoading,
     isInitialLoading,
-    loadAuditLogs,
     openDictionaryDialog,
+    resetAuditFilters,
     setDictionaryFormRef,
     submitDictionary
   };

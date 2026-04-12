@@ -16,18 +16,45 @@ const ApprovalActionDecision = {
 
 type ApprovalActionDecision = (typeof ApprovalActionDecision)[keyof typeof ApprovalActionDecision];
 
+const AdministrativeRequestType = {
+  REIMBURSEMENT: "REIMBURSEMENT",
+  TRAVEL: "TRAVEL",
+  PURCHASE: "PURCHASE",
+  SEAL: "SEAL"
+} as const;
+
+type AdministrativeRequestType = (typeof AdministrativeRequestType)[keyof typeof AdministrativeRequestType];
+
+const AdministrativeRequestStatus = {
+  PENDING: "PENDING",
+  APPROVED: "APPROVED",
+  REJECTED: "REJECTED",
+  CANCELLED: "CANCELLED"
+} as const;
+
+type AdministrativeRequestStatus =
+  (typeof AdministrativeRequestStatus)[keyof typeof AdministrativeRequestStatus];
+
 describe("OfficeAutomationService", () => {
   const mockRepository = {
     findDefaultApprover: jest.fn(),
     findSelfApprover: jest.fn(),
     createLeaveRequest: jest.fn(),
+    createAdministrativeRequest: jest.fn(),
     findLeaveRequestById: jest.fn(),
+    findAdministrativeRequestById: jest.fn(),
     applyApprovalDecision: jest.fn(),
+    applyAdministrativeApprovalDecision: jest.fn(),
+    applyAdministrativeCancellation: jest.fn(),
     countPendingApprovals: jest.fn(),
+    countPendingAdministrativeApprovals: jest.fn(),
     countMyLeaveRequests: jest.fn(),
+    countMyAdministrativeRequests: jest.fn(),
     countActiveAnnouncements: jest.fn(),
     countActiveDepartments: jest.fn(),
-    listRecentAnnouncements: jest.fn()
+    listRecentAnnouncements: jest.fn(),
+    listMyAdministrativeRequests: jest.fn(),
+    listPendingAdministrativeApprovals: jest.fn()
   };
   const mockAuditLogs = {
     create: jest.fn()
@@ -149,5 +176,185 @@ describe("OfficeAutomationService", () => {
       })
     );
     expect(result.status).toBe(LeaveRequestStatus.APPROVED);
+  });
+
+  it("creates an administrative request and records audit log", async () => {
+    mockRepository.findDefaultApprover.mockResolvedValue({ id: "approver-1" });
+    mockRepository.createAdministrativeRequest.mockResolvedValue({
+      id: "admin-request-1",
+      requestNo: "BX-20260411-101010",
+      type: AdministrativeRequestType.REIMBURSEMENT,
+      title: "客户拜访报销",
+      summary: "差旅交通，1280.00 元",
+      reason: "补充客户拜访期间的交通与住宿报销。",
+      status: AdministrativeRequestStatus.PENDING,
+      attachmentNames: ["发票.pdf"],
+      applicant: { displayName: "Alice" },
+      approver: { displayName: "Bob" },
+      actions: [],
+      submittedAt: new Date("2026-04-11T10:10:10.000Z"),
+      decidedAt: null,
+      createdAt: new Date("2026-04-11T10:10:10.000Z"),
+      updatedAt: new Date("2026-04-11T10:10:10.000Z")
+    } as any);
+
+    const result = await service.createAdministrativeRequest(
+      {
+        type: AdministrativeRequestType.REIMBURSEMENT,
+        title: "客户拜访报销",
+        reason: "补充客户拜访期间的交通与住宿报销。",
+        expenseDate: "2026-04-10",
+        expenseCategory: "差旅交通",
+        amount: 1280,
+        payeeName: "Alice",
+        attachmentNames: ["发票.pdf"]
+      },
+      {
+        id: "user-1",
+        username: "alice",
+        displayName: "Alice",
+        roleCodes: ["oa-member"],
+        permissions: ["oa:request:apply"]
+      }
+    );
+
+    expect(mockRepository.findDefaultApprover).toHaveBeenCalledWith("user-1", "oa:request:approve");
+    expect(mockRepository.createAdministrativeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: AdministrativeRequestType.REIMBURSEMENT,
+        applicantId: "user-1",
+        approverId: "approver-1"
+      })
+    );
+    expect(mockAuditLogs.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetType: "oa-administrative-request",
+        targetId: "admin-request-1"
+      })
+    );
+    expect(result.requestNo).toBe("BX-20260411-101010");
+  });
+
+  it("processes administrative approval when actor is assigned approver", async () => {
+    mockRepository.findAdministrativeRequestById.mockResolvedValue({
+      id: "admin-request-2",
+      applicantId: "user-1",
+      approverId: "approver-2",
+      approver: {
+        id: "approver-2",
+        displayName: "Carol"
+      },
+      status: AdministrativeRequestStatus.PENDING
+    } as any);
+    mockRepository.applyAdministrativeApprovalDecision.mockResolvedValue({
+      id: "admin-request-2",
+      requestNo: "CC-20260411-121212",
+      type: AdministrativeRequestType.TRAVEL,
+      title: "上海出差申请",
+      summary: "上海，2026-04-15 至 2026-04-16",
+      reason: "客户现场需求澄清。",
+      status: AdministrativeRequestStatus.APPROVED,
+      attachmentNames: [],
+      applicant: { displayName: "Alice" },
+      approver: { displayName: "Carol" },
+      actions: [
+        {
+          comment: "同意",
+          createdAt: new Date()
+        }
+      ],
+      submittedAt: new Date("2026-04-11T12:12:12.000Z"),
+      decidedAt: new Date("2026-04-11T14:00:00.000Z"),
+      createdAt: new Date("2026-04-11T12:12:12.000Z"),
+      updatedAt: new Date("2026-04-11T14:00:00.000Z")
+    } as any);
+
+    const result = await service.decideAdministrativeRequest(
+      "admin-request-2",
+      {
+        decision: ApprovalActionDecision.APPROVED,
+        comment: "同意"
+      },
+      {
+        id: "approver-2",
+        username: "carol",
+        displayName: "Carol",
+        roleCodes: ["oa-approver"],
+        permissions: ["oa:request:approve"]
+      }
+    );
+
+    expect(mockRepository.findAdministrativeRequestById).toHaveBeenCalledWith("admin-request-2");
+    expect(mockRepository.applyAdministrativeApprovalDecision).toHaveBeenCalledWith(
+      expect.objectContaining({
+        requestId: "admin-request-2",
+        status: AdministrativeRequestStatus.APPROVED
+      })
+    );
+    expect(mockAuditLogs.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetType: "oa-administrative-request",
+        actionType: "UPDATE"
+      })
+    );
+    expect(result.status).toBe(AdministrativeRequestStatus.APPROVED);
+  });
+
+  it("allows applicant to cancel a pending administrative request", async () => {
+    mockRepository.findAdministrativeRequestById.mockResolvedValue({
+      id: "admin-request-3",
+      requestNo: "CG-20260411-151515",
+      applicant: {
+        id: "user-1",
+        displayName: "Alice"
+      },
+      status: AdministrativeRequestStatus.PENDING
+    } as any);
+    mockRepository.applyAdministrativeCancellation.mockResolvedValue({
+      id: "admin-request-3",
+      requestNo: "CG-20260411-151515",
+      type: AdministrativeRequestType.PURCHASE,
+      title: "直播设备采购申请",
+      summary: "补光灯 / 3 件 / ¥1580.00",
+      reason: "补充直播间设备。",
+      status: AdministrativeRequestStatus.CANCELLED,
+      attachmentNames: [],
+      applicant: { displayName: "Alice" },
+      approver: { displayName: "Carol" },
+      actions: [
+        {
+          actionType: "CANCELLED",
+          createdAt: new Date()
+        }
+      ],
+      submittedAt: new Date("2026-04-11T15:15:15.000Z"),
+      decidedAt: new Date("2026-04-11T15:30:00.000Z"),
+      createdAt: new Date("2026-04-11T15:15:15.000Z"),
+      updatedAt: new Date("2026-04-11T15:30:00.000Z")
+    } as any);
+
+    const result = await service.cancelAdministrativeRequest("admin-request-3", {
+      id: "user-1",
+      username: "alice",
+      displayName: "Alice",
+      roleCodes: ["oa-member"],
+      permissions: ["oa:request:apply"]
+    });
+
+    expect(mockRepository.findAdministrativeRequestById).toHaveBeenCalledWith("admin-request-3");
+    expect(mockRepository.applyAdministrativeCancellation).toHaveBeenCalledWith({
+      requestId: "admin-request-3",
+      actorId: "user-1"
+    });
+    expect(mockAuditLogs.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetType: "oa-administrative-request",
+        actionType: "UPDATE",
+        detail: expect.objectContaining({
+          decision: "CANCELLED"
+        })
+      })
+    );
+    expect(result.status).toBe(AdministrativeRequestStatus.CANCELLED);
   });
 });

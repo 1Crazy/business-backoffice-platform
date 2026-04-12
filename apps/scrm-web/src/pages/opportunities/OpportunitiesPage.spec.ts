@@ -116,6 +116,93 @@ describe("OpportunitiesPage", () => {
     });
   });
 
+  it("keeps closedAt filters empty after clearing the close date range", async () => {
+    getMock.mockReset();
+    getMock.mockImplementation((url: string) => {
+      if (url === "/users") {
+        return Promise.resolve({ data: [] });
+      }
+      if (url === "/customers" || url === "/leads") {
+        return Promise.resolve({
+          data: {
+            items: [],
+            page: 1,
+            pageSize: 100,
+            total: 0,
+            totalPages: 0,
+            sortBy: "updatedAt",
+            sortOrder: "desc"
+          }
+        });
+      }
+      if (url === "/sales-opportunities") {
+        return Promise.resolve({
+          data: {
+            items: [],
+            page: 1,
+            pageSize: 10,
+            total: 0,
+            totalPages: 0,
+            sortBy: "createdAt",
+            sortOrder: "desc"
+          }
+        });
+      }
+      return Promise.resolve({ data: [] });
+    });
+
+    const wrapper = shallowMount(OpportunitiesPage, {
+      global: {
+        stubs: {
+          "el-form": true,
+          "el-form-item": true,
+          "el-input": true,
+          "el-input-number": true,
+          "el-select": true,
+          "el-option": true,
+          "el-button": true,
+          "el-table": true,
+          "el-table-column": true,
+          "el-tag": true,
+          "el-empty": true,
+          "el-pagination": true,
+          "el-row": true,
+          "el-col": true,
+          "el-dialog": true,
+          "el-drawer": true,
+          "el-date-picker": true,
+          "el-descriptions": true,
+          "el-descriptions-item": true,
+          "el-timeline": true,
+          "el-timeline-item": true,
+          "el-alert": true
+        }
+      }
+    });
+    await flushPromises();
+
+    (wrapper.vm as any).filters.closedAtRange = null;
+    await flushPromises();
+
+    expect(getMock).toHaveBeenLastCalledWith("/sales-opportunities", {
+      params: {
+        keyword: undefined,
+        customerId: undefined,
+        ownerId: undefined,
+        stage: undefined,
+        resultStatus: undefined,
+        expectedCloseDateStart: undefined,
+        expectedCloseDateEnd: undefined,
+        closedAtStart: undefined,
+        closedAtEnd: undefined,
+        page: 1,
+        pageSize: 10,
+        sortBy: "createdAt",
+        sortOrder: "desc"
+      }
+    });
+  });
+
   it("loads opportunity detail before opening the detail drawer", async () => {
     getMock.mockReset();
     getMock.mockImplementation((url: string) => {

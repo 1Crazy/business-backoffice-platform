@@ -1,6 +1,9 @@
 /** OA repository：负责 OA 领域的 Prisma 查询、写入与关联装载。 */
 import { Injectable } from "@nestjs/common";
 import {
+  AdministrativeRequestActionType,
+  AdministrativeRequestStatus,
+  AdministrativeRequestType,
   ApprovalActionDecision,
   LeaveRequestStatus,
   Prisma,
@@ -67,6 +70,36 @@ const directoryDepartmentSelect = Prisma.validator<Prisma.DepartmentSelect>()({
   code: true
 });
 
+const administrativeRequestActionInclude = Prisma.validator<Prisma.AdministrativeRequestActionInclude>()({
+  actor: {
+    select: {
+      id: true,
+      displayName: true
+    }
+  }
+});
+
+const administrativeRequestInclude = Prisma.validator<Prisma.AdministrativeRequestInclude>()({
+  applicant: {
+    select: {
+      id: true,
+      displayName: true
+    }
+  },
+  approver: {
+    select: {
+      id: true,
+      displayName: true
+    }
+  },
+  actions: {
+    include: administrativeRequestActionInclude,
+    orderBy: {
+      createdAt: "desc"
+    }
+  }
+});
+
 export type AnnouncementRecord = Prisma.AnnouncementGetPayload<{
   include: typeof announcementInclude;
 }>;
@@ -83,11 +116,15 @@ export type DirectoryDepartmentRecord = Prisma.DepartmentGetPayload<{
   select: typeof directoryDepartmentSelect;
 }>;
 
+export type AdministrativeRequestRecord = Prisma.AdministrativeRequestGetPayload<{
+  include: typeof administrativeRequestInclude;
+}>;
+
 @Injectable()
 export class OfficeAutomationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findDefaultApprover(applicantId: string) {
+  async findDefaultApprover(applicantId: string, permissionCode = "oa:approval:write") {
     return this.prisma.user.findFirst({
       where: {
         id: {
@@ -100,7 +137,7 @@ export class OfficeAutomationRepository {
               permissions: {
                 some: {
                   permission: {
-                    code: "oa:approval:write"
+                    code: permissionCode
                   }
                 }
               }
@@ -117,7 +154,7 @@ export class OfficeAutomationRepository {
     });
   }
 
-  async findSelfApprover(applicantId: string) {
+  async findSelfApprover(applicantId: string, permissionCode = "oa:approval:write") {
     return this.prisma.user.findFirst({
       where: {
         id: applicantId,
@@ -128,7 +165,7 @@ export class OfficeAutomationRepository {
               permissions: {
                 some: {
                   permission: {
-                    code: "oa:approval:write"
+                    code: permissionCode
                   }
                 }
               }
@@ -164,10 +201,52 @@ export class OfficeAutomationRepository {
     return this.findLeaveRequestById(request.id);
   }
 
+  async createAdministrativeRequest(input: {
+    requestNo: string;
+    type: AdministrativeRequestType;
+    title: string;
+    summary: string;
+    reason: string;
+    formData: Prisma.InputJsonValue;
+    attachmentNames?: Prisma.InputJsonValue;
+    applicantId: string;
+    approverId: string;
+  }) {
+    const request = await this.prisma.administrativeRequest.create({
+      data: {
+        requestNo: input.requestNo,
+        type: input.type,
+        title: input.title,
+        summary: input.summary,
+        reason: input.reason,
+        formData: input.formData,
+        attachmentNames: input.attachmentNames,
+        applicantId: input.applicantId,
+        approverId: input.approverId,
+        actions: {
+          create: {
+            actorId: input.applicantId,
+            actionType: AdministrativeRequestActionType.SUBMITTED,
+            snapshot: input.formData
+          }
+        }
+      }
+    });
+
+    return this.findAdministrativeRequestById(request.id);
+  }
+
   findLeaveRequestById(id: string) {
     return this.prisma.leaveRequest.findUniqueOrThrow({
       where: { id },
       include: leaveRequestInclude
+    });
+  }
+
+  findAdministrativeRequestById(id: string) {
+    return this.prisma.administrativeRequest.findUniqueOrThrow({
+      where: { id },
+      include: administrativeRequestInclude
     });
   }
 
@@ -205,6 +284,68 @@ export class OfficeAutomationRepository {
     return this.findLeaveRequestById(input.requestId);
   }
 
+  async applyAdministrativeApprovalDecision(input: {
+    requestId: string;
+    actorId: string;
+    status: AdministrativeRequestStatus;
+    comment?: string;
+  }) {
+    const actionType =
+      input.status === AdministrativeRequestStatus.APPROVED
+        ? AdministrativeRequestActionType.APPROVED
+        : AdministrativeRequestActionType.REJECTED;
+
+    await this.prisma.$transaction(async (tx) => {
+      await tx.administrativeRequest.update({
+        where: {
+          id: input.requestId
+        },
+        data: {
+          status: input.status,
+          decidedAt: new Date()
+        }
+      });
+
+      await tx.administrativeRequestAction.create({
+        data: {
+          requestId: input.requestId,
+          actorId: input.actorId,
+          actionType,
+          comment: input.comment
+        }
+      });
+    });
+
+    return this.findAdministrativeRequestById(input.requestId);
+  }
+
+  async applyAdministrativeCancellation(input: {
+    requestId: string;
+    actorId: string;
+  }) {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.administrativeRequest.update({
+        where: {
+          id: input.requestId
+        },
+        data: {
+          status: AdministrativeRequestStatus.CANCELLED,
+          decidedAt: new Date()
+        }
+      });
+
+      await tx.administrativeRequestAction.create({
+        data: {
+          requestId: input.requestId,
+          actorId: input.actorId,
+          actionType: AdministrativeRequestActionType.CANCELLED
+        }
+      });
+    });
+
+    return this.findAdministrativeRequestById(input.requestId);
+  }
+
   listPendingApprovals(approverId: string) {
     return this.prisma.leaveRequest.findMany({
       where: {
@@ -215,6 +356,21 @@ export class OfficeAutomationRepository {
       orderBy: [
         {
           createdAt: "desc"
+        }
+      ]
+    });
+  }
+
+  listPendingAdministrativeApprovals(approverId: string) {
+    return this.prisma.administrativeRequest.findMany({
+      where: {
+        approverId,
+        status: AdministrativeRequestStatus.PENDING
+      },
+      include: administrativeRequestInclude,
+      orderBy: [
+        {
+          submittedAt: "desc"
         }
       ]
     });
@@ -234,6 +390,32 @@ export class OfficeAutomationRepository {
     });
   }
 
+  listMyAdministrativeRequests(applicantId: string) {
+    return this.prisma.administrativeRequest.findMany({
+      where: {
+        applicantId
+      },
+      include: administrativeRequestInclude,
+      orderBy: [
+        {
+          submittedAt: "desc"
+        }
+      ]
+    });
+  }
+
+  listAdministrativeRequests(where: Prisma.AdministrativeRequestWhereInput) {
+    return this.prisma.administrativeRequest.findMany({
+      where,
+      include: administrativeRequestInclude,
+      orderBy: [
+        {
+          submittedAt: "desc"
+        }
+      ]
+    });
+  }
+
   countPendingApprovals(approverId: string) {
     return this.prisma.leaveRequest.count({
       where: {
@@ -243,8 +425,25 @@ export class OfficeAutomationRepository {
     });
   }
 
+  countPendingAdministrativeApprovals(approverId: string) {
+    return this.prisma.administrativeRequest.count({
+      where: {
+        approverId,
+        status: AdministrativeRequestStatus.PENDING
+      }
+    });
+  }
+
   countMyLeaveRequests(applicantId: string) {
     return this.prisma.leaveRequest.count({
+      where: {
+        applicantId
+      }
+    });
+  }
+
+  countMyAdministrativeRequests(applicantId: string) {
+    return this.prisma.administrativeRequest.count({
       where: {
         applicantId
       }

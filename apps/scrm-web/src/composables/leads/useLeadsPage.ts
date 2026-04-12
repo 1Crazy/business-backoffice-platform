@@ -435,6 +435,32 @@ export function useLeadsPage() {
     void loadReminders();
   }
 
+  async function resetLeadFilters(): Promise<void> {
+    const isAlreadyDefault =
+      !filters.keyword &&
+      !filters.source &&
+      !filters.status &&
+      !filters.ownerId &&
+      leadTableState.sortPreset === leadSortOptions[0].value &&
+      leadTableState.page === 1;
+
+    filters.keyword = "";
+    filters.source = "";
+    filters.status = "";
+    filters.ownerId = "";
+    leadTableState.page = 1;
+    leadTableState.sortPreset = leadSortOptions[0].value;
+
+    if (isAlreadyDefault) {
+      await loadLeads();
+    }
+  }
+
+  async function resetReminders(): Promise<void> {
+    reminderTableState.page = 1;
+    await loadReminders();
+  }
+
   onMounted(async () => {
     await loadMeta();
     resetLeadForm();
@@ -475,6 +501,8 @@ export function useLeadsPage() {
     ownerDialogVisible,
     ownerForm,
     ownerRules,
+    resetLeadFilters,
+    resetReminders,
     reminderTableState,
     reminders,
     selectedLead,

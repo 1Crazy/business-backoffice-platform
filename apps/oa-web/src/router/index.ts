@@ -12,6 +12,9 @@ const NoAccessPage = () => import("@/pages/no-access/NoAccessPage.vue");
 const WorkspacePage = () => import("@/pages/workspace/WorkspacePage.vue");
 const ApprovalsInboxPage = () => import("@/pages/approvals/ApprovalsInboxPage.vue");
 const MyRequestsPage = () => import("@/pages/approvals/MyRequestsPage.vue");
+const AdministrativeRequestPage = () => import("@/pages/administrative-requests/AdministrativeRequestPage.vue");
+const AdministrativeRequestsMinePage = () => import("@/pages/administrative-requests/AdministrativeRequestsMinePage.vue");
+const AdministrativeApprovalsPage = () => import("@/pages/administrative-requests/AdministrativeApprovalsPage.vue");
 const LeaveRequestPage = () => import("@/pages/leave/LeaveRequestPage.vue");
 const AnnouncementsPage = () => import("@/pages/announcements/AnnouncementsPage.vue");
 const DirectoryPage = () => import("@/pages/directory/DirectoryPage.vue");
@@ -63,7 +66,43 @@ const routes: RouteRecordRaw[] = [
         component: MyRequestsPage,
         meta: {
           title: "我发起的申请",
-          permission: "oa:leave:apply"
+          permission: "oa:request:apply"
+        }
+      },
+      {
+        path: "administrative-requests/new",
+        name: "administrative-request-create",
+        component: AdministrativeRequestPage,
+        meta: {
+          title: "行政申请",
+          permission: "oa:request:apply"
+        }
+      },
+      {
+        path: "administrative-requests/create",
+        redirect: {
+          name: "administrative-request-create"
+        },
+        meta: {
+          hidden: true
+        }
+      },
+      {
+        path: "administrative-requests/mine",
+        name: "administrative-request-mine",
+        component: AdministrativeRequestsMinePage,
+        meta: {
+          title: "我的行政申请",
+          permission: "oa:request:apply"
+        }
+      },
+      {
+        path: "administrative-requests/pending",
+        name: "administrative-request-pending",
+        component: AdministrativeApprovalsPage,
+        meta: {
+          title: "行政审批",
+          permission: "oa:request:approve"
         }
       },
       {

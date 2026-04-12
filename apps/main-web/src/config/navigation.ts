@@ -40,6 +40,18 @@ const platformItems: HostNavigationItem[] = [
     sectionLabel: "授权治理",
     kicker: "角色授权",
     icon: "system"
+  },
+  {
+    key: "platform-workfeed",
+    title: "统一待办/通知",
+    description: "跨 OA 与 SCRM 的待办与通知汇总。",
+    path: "/workfeed",
+    domain: "platform",
+    domainTitle: "统一门户",
+    domainBadge: "WORKFEED",
+    sectionLabel: "统一协同",
+    kicker: "跨域协同",
+    icon: "checklist"
   }
 ];
 
@@ -73,11 +85,39 @@ const oaItems: HostNavigationItem[] = [
     icon: "checklist"
   },
   {
+    key: "oa-administrative-approvals",
+    title: "行政审批",
+    description: "集中处理报销、出差、采购和用印等行政申请。",
+    path: "/oa/administrative-requests/pending",
+    permission: "oa:request:approve",
+    domain: "oa",
+    domainTitle: "OA 办公",
+    domainBadge: "OA",
+    sectionLabel: "流程协同",
+    kicker: "行政审批",
+    microAppName: "oa-web",
+    icon: "checklist"
+  },
+  {
     key: "oa-approvals-mine",
     title: "我发起的申请",
     description: "跟踪自己发起的请假与审批进度。",
     path: "/oa/approvals/mine",
     permission: "oa:leave:apply",
+    domain: "oa",
+    domainTitle: "OA 办公",
+    domainBadge: "OA",
+    sectionLabel: "流程协同",
+    kicker: "申请跟踪",
+    microAppName: "oa-web",
+    icon: "draft"
+  },
+  {
+    key: "oa-administrative-requests-mine",
+    title: "我的行政申请",
+    description: "跟踪自己发起的报销、出差、采购与用印申请状态。",
+    path: "/oa/administrative-requests/mine",
+    permission: "oa:request:apply",
     domain: "oa",
     domainTitle: "OA 办公",
     domainBadge: "OA",
@@ -96,6 +136,20 @@ const oaItems: HostNavigationItem[] = [
     domainTitle: "OA 办公",
     domainBadge: "OA",
     sectionLabel: "假勤流程",
+    kicker: "流程发起",
+    microAppName: "oa-web",
+    icon: "calendar"
+  },
+  {
+    key: "oa-administrative-request",
+    title: "行政申请",
+    description: "发起报销、出差、采购和用印等高频申请。",
+    path: "/oa/administrative-requests/new",
+    permission: "oa:request:apply",
+    domain: "oa",
+    domainTitle: "OA 办公",
+    domainBadge: "OA",
+    sectionLabel: "高频事务",
     kicker: "流程发起",
     microAppName: "oa-web",
     icon: "calendar"

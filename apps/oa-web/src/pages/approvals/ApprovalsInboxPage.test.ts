@@ -11,13 +11,14 @@ const submitDecisionMock = vi.fn();
 const approvals = ref([
   {
     id: "approval-1",
+    requestCategory: "LEAVE",
+    requestType: "ANNUAL",
+    requestNo: null,
     applicantName: "王小明",
-    leaveType: "ANNUAL",
-    startAt: "2026-04-12 09:00",
-    endAt: "2026-04-12 18:00",
-    reason: "家庭事务",
+    title: "年假申请",
+    summary: "2026-04-12 09:00 至 2026-04-12 18:00",
     status: "PENDING",
-    createdAt: "2026-04-11 09:00"
+    submittedAt: "2026-04-11 09:00"
   }
 ]);
 
@@ -58,13 +59,14 @@ describe("ApprovalsInboxPage", () => {
                 <slot
                   :row="{
                     id: 'approval-1',
+                    requestCategory: 'LEAVE',
+                    requestType: 'ANNUAL',
+                    requestNo: null,
                     applicantName: '王小明',
-                    leaveType: 'ANNUAL',
-                    startAt: '2026-04-12 09:00',
-                    endAt: '2026-04-12 18:00',
-                    reason: '家庭事务',
+                    title: '年假申请',
+                    summary: '2026-04-12 09:00 至 2026-04-12 18:00',
                     status: 'PENDING',
-                    createdAt: '2026-04-11 09:00'
+                    submittedAt: '2026-04-11 09:00'
                   }"
                 />
               </div>
@@ -117,7 +119,8 @@ describe("ApprovalsInboxPage", () => {
     );
     expect(wrapper.text()).toContain("驳回申请");
     expect(wrapper.text()).toContain("驳回后将立即更新审批状态");
-    expect(wrapper.text()).toContain("家庭事务");
+    expect(wrapper.text()).toContain("年假申请");
+    expect(wrapper.text()).toContain("2026-04-12 09:00 至 2026-04-12 18:00");
     expect(wrapper.text()).toContain("确认驳回");
   });
 });

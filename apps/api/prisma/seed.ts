@@ -1,9 +1,17 @@
 import {
+  AdministrativeRequestActionType,
+  AdministrativeRequestStatus,
+  AdministrativeRequestType,
   ApprovalActionDecision,
+  ContractStatus,
   DataScope,
   LeaveRequestStatus,
+  OpportunityStage,
+  PaymentPlanStatus,
   PrismaClient,
+  QuoteStatus,
   RecordStatus,
+  RenewalReminderStatus,
   UserStatus
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
@@ -36,6 +44,9 @@ const permissionSeeds = [
   ["oa", "oa:workspace:view", "查看 OA 工作台", "workspace"],
   ["oa", "oa:approval:read", "查看审批中心", "approval"],
   ["oa", "oa:approval:write", "处理审批", "approval"],
+  ["oa", "oa:request:apply", "提交行政申请", "request"],
+  ["oa", "oa:request:approve", "审批行政申请", "request"],
+  ["oa", "oa:request:read", "检索行政申请", "request"],
   ["oa", "oa:leave:apply", "提交请假申请", "leave"],
   ["oa", "oa:announcement:read", "查看公告通知", "announcement"],
   ["oa", "oa:directory:read", "查看组织通讯录", "directory"]
@@ -217,6 +228,8 @@ async function main(): Promise<void> {
     .filter((item) =>
       [
         "oa:workspace:view",
+        "oa:approval:read",
+        "oa:request:apply",
         "oa:leave:apply",
         "oa:announcement:read",
         "oa:directory:read"
@@ -293,6 +306,293 @@ async function main(): Promise<void> {
     create: {
       userId: staffUser.id,
       roleId: oaMemberRole.id
+    }
+  });
+
+  await prisma.customer.upsert({
+    where: { id: "scrm-customer-acme" },
+    update: {
+      name: "Acme 科技",
+      contactName: "王经理",
+      phone: "13900000001",
+      email: "contact@acme.example",
+      source: "website",
+      status: "active",
+      notes: "年度框架合作客户。",
+      ownerId: adminUser.id
+    },
+    create: {
+      id: "scrm-customer-acme",
+      name: "Acme 科技",
+      contactName: "王经理",
+      phone: "13900000001",
+      email: "contact@acme.example",
+      source: "website",
+      status: "active",
+      notes: "年度框架合作客户。",
+      ownerId: adminUser.id
+    }
+  });
+
+  await prisma.lead.upsert({
+    where: { id: "scrm-lead-acme-referral" },
+    update: {
+      name: "Acme 年度合作线索",
+      contactName: "王经理",
+      phone: "13900000001",
+      source: "campaign",
+      status: "CONVERTED",
+      notes: "已转客户并进入成交后经营阶段。",
+      ownerId: adminUser.id,
+      convertedCustomerId: "scrm-customer-acme"
+    },
+    create: {
+      id: "scrm-lead-acme-referral",
+      name: "Acme 年度合作线索",
+      contactName: "王经理",
+      phone: "13900000001",
+      source: "campaign",
+      status: "CONVERTED",
+      notes: "已转客户并进入成交后经营阶段。",
+      ownerId: adminUser.id,
+      convertedCustomerId: "scrm-customer-acme"
+    }
+  });
+
+  await prisma.opportunity.upsert({
+    where: { id: "scrm-opportunity-acme-framework" },
+    update: {
+      name: "Acme 年度框架合作",
+      customerId: "scrm-customer-acme",
+      sourceLeadId: "scrm-lead-acme-referral",
+      ownerId: adminUser.id,
+      stage: OpportunityStage.CLOSED_WON,
+      expectedAmount: 320000,
+      expectedCloseDate: new Date("2026-04-30T10:00:00+08:00"),
+      nextAction: "推进年度交付与回款节点执行",
+      notes: "已赢单，进入合同履约与回款阶段。",
+      closedAt: new Date("2026-04-12T15:00:00+08:00"),
+      lostReason: null
+    },
+    create: {
+      id: "scrm-opportunity-acme-framework",
+      name: "Acme 年度框架合作",
+      customerId: "scrm-customer-acme",
+      sourceLeadId: "scrm-lead-acme-referral",
+      ownerId: adminUser.id,
+      stage: OpportunityStage.CLOSED_WON,
+      expectedAmount: 320000,
+      expectedCloseDate: new Date("2026-04-30T10:00:00+08:00"),
+      nextAction: "推进年度交付与回款节点执行",
+      notes: "已赢单，进入合同履约与回款阶段。",
+      closedAt: new Date("2026-04-12T15:00:00+08:00")
+    }
+  });
+
+  await prisma.opportunityStageHistory.deleteMany({
+    where: {
+      opportunityId: "scrm-opportunity-acme-framework"
+    }
+  });
+
+  await prisma.opportunityStageHistory.createMany({
+    data: [
+      {
+        id: "scrm-opportunity-stage-acme-create",
+        opportunityId: "scrm-opportunity-acme-framework",
+        fromStage: null,
+        toStage: OpportunityStage.DISCOVERY,
+        comment: "商机创建",
+        createdById: adminUser.id,
+        createdAt: new Date("2026-04-01T10:00:00+08:00")
+      },
+      {
+        id: "scrm-opportunity-stage-acme-proposal",
+        opportunityId: "scrm-opportunity-acme-framework",
+        fromStage: OpportunityStage.QUALIFICATION,
+        toStage: OpportunityStage.PROPOSAL,
+        comment: "完成年度报价方案。",
+        createdById: adminUser.id,
+        createdAt: new Date("2026-04-05T14:00:00+08:00")
+      },
+      {
+        id: "scrm-opportunity-stage-acme-win",
+        opportunityId: "scrm-opportunity-acme-framework",
+        fromStage: OpportunityStage.NEGOTIATION,
+        toStage: OpportunityStage.CLOSED_WON,
+        comment: "客户确认年度框架合作。",
+        createdById: adminUser.id,
+        createdAt: new Date("2026-04-12T15:00:00+08:00")
+      }
+    ],
+    skipDuplicates: true
+  });
+
+  await prisma.quote.upsert({
+    where: { id: "scrm-quote-acme-annual" },
+    update: {
+      quoteNo: "Q-202604-ACME-001",
+      title: "Acme 年度解决方案报价",
+      amount: 320000,
+      status: QuoteStatus.ACCEPTED,
+      issuedAt: new Date("2026-04-06T10:00:00+08:00"),
+      expiresAt: new Date("2026-04-20T23:59:59+08:00"),
+      notes: "年度 SaaS 授权与实施服务。",
+      customerId: "scrm-customer-acme",
+      opportunityId: "scrm-opportunity-acme-framework",
+      ownerId: adminUser.id
+    },
+    create: {
+      id: "scrm-quote-acme-annual",
+      quoteNo: "Q-202604-ACME-001",
+      title: "Acme 年度解决方案报价",
+      amount: 320000,
+      status: QuoteStatus.ACCEPTED,
+      issuedAt: new Date("2026-04-06T10:00:00+08:00"),
+      expiresAt: new Date("2026-04-20T23:59:59+08:00"),
+      notes: "年度 SaaS 授权与实施服务。",
+      customerId: "scrm-customer-acme",
+      opportunityId: "scrm-opportunity-acme-framework",
+      ownerId: adminUser.id
+    }
+  });
+
+  await prisma.contract.upsert({
+    where: { id: "scrm-contract-acme-annual" },
+    update: {
+      contractNo: "C-202604-ACME-001",
+      title: "Acme 年度框架合同",
+      amount: 320000,
+      status: ContractStatus.ACTIVE,
+      startDate: new Date("2026-04-15T00:00:00+08:00"),
+      endDate: new Date("2027-04-14T23:59:59+08:00"),
+      signedAt: new Date("2026-04-14T16:00:00+08:00"),
+      notes: "年度合同，分两期回款。",
+      customerId: "scrm-customer-acme",
+      opportunityId: "scrm-opportunity-acme-framework",
+      ownerId: adminUser.id
+    },
+    create: {
+      id: "scrm-contract-acme-annual",
+      contractNo: "C-202604-ACME-001",
+      title: "Acme 年度框架合同",
+      amount: 320000,
+      status: ContractStatus.ACTIVE,
+      startDate: new Date("2026-04-15T00:00:00+08:00"),
+      endDate: new Date("2027-04-14T23:59:59+08:00"),
+      signedAt: new Date("2026-04-14T16:00:00+08:00"),
+      notes: "年度合同，分两期回款。",
+      customerId: "scrm-customer-acme",
+      opportunityId: "scrm-opportunity-acme-framework",
+      ownerId: adminUser.id
+    }
+  });
+
+  await prisma.paymentPlan.upsert({
+    where: { id: "scrm-payment-plan-acme-initial" },
+    update: {
+      title: "首期预付款",
+      plannedAmount: 160000,
+      receivedAmount: 80000,
+      plannedDate: new Date("2026-04-20T00:00:00+08:00"),
+      status: PaymentPlanStatus.PARTIAL,
+      notes: "签约后 5 个工作日内支付。",
+      customerId: "scrm-customer-acme",
+      opportunityId: "scrm-opportunity-acme-framework",
+      contractId: "scrm-contract-acme-annual",
+      ownerId: adminUser.id
+    },
+    create: {
+      id: "scrm-payment-plan-acme-initial",
+      title: "首期预付款",
+      plannedAmount: 160000,
+      receivedAmount: 80000,
+      plannedDate: new Date("2026-04-20T00:00:00+08:00"),
+      status: PaymentPlanStatus.PARTIAL,
+      notes: "签约后 5 个工作日内支付。",
+      customerId: "scrm-customer-acme",
+      opportunityId: "scrm-opportunity-acme-framework",
+      contractId: "scrm-contract-acme-annual",
+      ownerId: adminUser.id
+    }
+  });
+
+  await prisma.paymentPlan.upsert({
+    where: { id: "scrm-payment-plan-acme-final" },
+    update: {
+      title: "尾款回收",
+      plannedAmount: 160000,
+      receivedAmount: 0,
+      plannedDate: new Date("2026-10-15T00:00:00+08:00"),
+      status: PaymentPlanStatus.PENDING,
+      notes: "验收后支付尾款。",
+      customerId: "scrm-customer-acme",
+      opportunityId: "scrm-opportunity-acme-framework",
+      contractId: "scrm-contract-acme-annual",
+      ownerId: adminUser.id
+    },
+    create: {
+      id: "scrm-payment-plan-acme-final",
+      title: "尾款回收",
+      plannedAmount: 160000,
+      receivedAmount: 0,
+      plannedDate: new Date("2026-10-15T00:00:00+08:00"),
+      status: PaymentPlanStatus.PENDING,
+      notes: "验收后支付尾款。",
+      customerId: "scrm-customer-acme",
+      opportunityId: "scrm-opportunity-acme-framework",
+      contractId: "scrm-contract-acme-annual",
+      ownerId: adminUser.id
+    }
+  });
+
+  await prisma.paymentRecord.upsert({
+    where: { id: "scrm-payment-record-acme-first" },
+    update: {
+      amount: 80000,
+      receivedAt: new Date("2026-04-22T11:30:00+08:00"),
+      note: "客户已支付首笔预付款。",
+      customerId: "scrm-customer-acme",
+      opportunityId: "scrm-opportunity-acme-framework",
+      contractId: "scrm-contract-acme-annual",
+      paymentPlanId: "scrm-payment-plan-acme-initial",
+      ownerId: adminUser.id
+    },
+    create: {
+      id: "scrm-payment-record-acme-first",
+      amount: 80000,
+      receivedAt: new Date("2026-04-22T11:30:00+08:00"),
+      note: "客户已支付首笔预付款。",
+      customerId: "scrm-customer-acme",
+      opportunityId: "scrm-opportunity-acme-framework",
+      contractId: "scrm-contract-acme-annual",
+      paymentPlanId: "scrm-payment-plan-acme-initial",
+      ownerId: adminUser.id
+    }
+  });
+
+  await prisma.renewalReminder.upsert({
+    where: { id: "scrm-renewal-reminder-acme-annual" },
+    update: {
+      title: "Acme 年度框架合同续费跟进",
+      remindAt: new Date("2027-02-15T09:00:00+08:00"),
+      status: RenewalReminderStatus.PENDING,
+      note: "提前两个月启动续费评估。",
+      customerId: "scrm-customer-acme",
+      opportunityId: "scrm-opportunity-acme-framework",
+      contractId: "scrm-contract-acme-annual",
+      ownerId: adminUser.id
+    },
+    create: {
+      id: "scrm-renewal-reminder-acme-annual",
+      title: "Acme 年度框架合同续费跟进",
+      remindAt: new Date("2027-02-15T09:00:00+08:00"),
+      status: RenewalReminderStatus.PENDING,
+      note: "提前两个月启动续费评估。",
+      customerId: "scrm-customer-acme",
+      opportunityId: "scrm-opportunity-acme-framework",
+      contractId: "scrm-contract-acme-annual",
+      ownerId: adminUser.id
     }
   });
 
@@ -450,6 +750,269 @@ async function main(): Promise<void> {
       decision: ApprovalActionDecision.APPROVED,
       comment: "已阅，注意同步交接安排。"
     }
+  });
+
+  const administrativeRequestIds = [
+    "oa-admin-request-reimbursement",
+    "oa-admin-request-travel",
+    "oa-admin-request-purchase",
+    "oa-admin-request-seal"
+  ];
+
+  await prisma.administrativeRequestAction.deleteMany({
+    where: {
+      requestId: {
+        in: administrativeRequestIds
+      }
+    }
+  });
+
+  await prisma.administrativeRequest.upsert({
+    where: {
+      id: "oa-admin-request-reimbursement"
+    },
+    update: {
+      requestNo: "AR-REI-20260409-DEMO01",
+      type: AdministrativeRequestType.REIMBURSEMENT,
+      title: "华东客户差旅报销",
+      summary: "差旅交通 / kyle / 1280.50",
+      reason: "补充 4 月初客户拜访期间的交通与住宿报销。",
+      formData: {
+        expenseDate: "2026-04-06 00:00:00",
+        expenseCategory: "差旅交通",
+        payeeName: "kyle",
+        amount: 1280.5
+      },
+      attachmentNames: ["行程单.pdf", "酒店发票.jpg"],
+      applicantId: staffUser.id,
+      approverId: adminUser.id,
+      status: AdministrativeRequestStatus.PENDING,
+      submittedAt: new Date("2026-04-09T10:20:00+08:00"),
+      decidedAt: null
+    },
+    create: {
+      id: "oa-admin-request-reimbursement",
+      requestNo: "AR-REI-20260409-DEMO01",
+      type: AdministrativeRequestType.REIMBURSEMENT,
+      title: "华东客户差旅报销",
+      summary: "差旅交通 / kyle / 1280.50",
+      reason: "补充 4 月初客户拜访期间的交通与住宿报销。",
+      formData: {
+        expenseDate: "2026-04-06 00:00:00",
+        expenseCategory: "差旅交通",
+        payeeName: "kyle",
+        amount: 1280.5
+      },
+      attachmentNames: ["行程单.pdf", "酒店发票.jpg"],
+      applicantId: staffUser.id,
+      approverId: adminUser.id,
+      status: AdministrativeRequestStatus.PENDING,
+      submittedAt: new Date("2026-04-09T10:20:00+08:00")
+    }
+  });
+
+  await prisma.administrativeRequest.upsert({
+    where: {
+      id: "oa-admin-request-travel"
+    },
+    update: {
+      requestNo: "AR-TRA-20260408-DEMO02",
+      type: AdministrativeRequestType.TRAVEL,
+      title: "上海客户现场出差申请",
+      summary: "上海 / 2026-04-15 09:00:00 至 2026-04-16 18:00:00 / 高铁",
+      reason: "前往客户现场完成需求澄清和项目启动。",
+      formData: {
+        startAt: "2026-04-15T09:00:00.000Z",
+        endAt: "2026-04-16T18:00:00.000Z",
+        destination: "上海",
+        transportation: "高铁",
+        estimatedAmount: 1800
+      },
+      attachmentNames: ["客户行程说明.docx"],
+      applicantId: staffUser.id,
+      approverId: adminUser.id,
+      status: AdministrativeRequestStatus.APPROVED,
+      submittedAt: new Date("2026-04-08T14:00:00+08:00"),
+      decidedAt: new Date("2026-04-08T16:00:00+08:00")
+    },
+    create: {
+      id: "oa-admin-request-travel",
+      requestNo: "AR-TRA-20260408-DEMO02",
+      type: AdministrativeRequestType.TRAVEL,
+      title: "上海客户现场出差申请",
+      summary: "上海 / 2026-04-15 09:00:00 至 2026-04-16 18:00:00 / 高铁",
+      reason: "前往客户现场完成需求澄清和项目启动。",
+      formData: {
+        startAt: "2026-04-15T09:00:00.000Z",
+        endAt: "2026-04-16T18:00:00.000Z",
+        destination: "上海",
+        transportation: "高铁",
+        estimatedAmount: 1800
+      },
+      attachmentNames: ["客户行程说明.docx"],
+      applicantId: staffUser.id,
+      approverId: adminUser.id,
+      status: AdministrativeRequestStatus.APPROVED,
+      submittedAt: new Date("2026-04-08T14:00:00+08:00"),
+      decidedAt: new Date("2026-04-08T16:00:00+08:00")
+    }
+  });
+
+  await prisma.administrativeRequest.upsert({
+    where: {
+      id: "oa-admin-request-purchase"
+    },
+    update: {
+      requestNo: "AR-PUR-20260410-DEMO03",
+      type: AdministrativeRequestType.PURCHASE,
+      title: "销售团队直播设备采购",
+      summary: "补光灯套装 / 3 件 / 3600.00",
+      reason: "为下周线上宣讲活动准备直播补光设备。",
+      formData: {
+        itemName: "补光灯套装",
+        quantity: 3,
+        budgetAmount: 3600,
+        neededBy: "2026-04-14 18:00:00"
+      },
+      attachmentNames: ["采购比价表.xlsx"],
+      applicantId: adminUser.id,
+      approverId: adminUser.id,
+      status: AdministrativeRequestStatus.PENDING,
+      submittedAt: new Date("2026-04-10T09:30:00+08:00"),
+      decidedAt: null
+    },
+    create: {
+      id: "oa-admin-request-purchase",
+      requestNo: "AR-PUR-20260410-DEMO03",
+      type: AdministrativeRequestType.PURCHASE,
+      title: "销售团队直播设备采购",
+      summary: "补光灯套装 / 3 件 / 3600.00",
+      reason: "为下周线上宣讲活动准备直播补光设备。",
+      formData: {
+        itemName: "补光灯套装",
+        quantity: 3,
+        budgetAmount: 3600,
+        neededBy: "2026-04-14 18:00:00"
+      },
+      attachmentNames: ["采购比价表.xlsx"],
+      applicantId: adminUser.id,
+      approverId: adminUser.id,
+      status: AdministrativeRequestStatus.PENDING,
+      submittedAt: new Date("2026-04-10T09:30:00+08:00")
+    }
+  });
+
+  await prisma.administrativeRequest.upsert({
+    where: {
+      id: "oa-admin-request-seal"
+    },
+    update: {
+      requestNo: "AR-SEA-20260407-DEMO04",
+      type: AdministrativeRequestType.SEAL,
+      title: "框架合同盖章申请",
+      summary: "2026 框架采购合同 / 合同章 / 2 份",
+      reason: "客户已完成法务确认，需要尽快寄回盖章纸质件。",
+      formData: {
+        documentName: "2026 框架采购合同",
+        sealType: "合同章",
+        useDate: "2026-04-07 15:00:00",
+        copyCount: 2
+      },
+      attachmentNames: ["框架合同-v5.pdf"],
+      applicantId: staffUser.id,
+      approverId: adminUser.id,
+      status: AdministrativeRequestStatus.REJECTED,
+      submittedAt: new Date("2026-04-07T11:00:00+08:00"),
+      decidedAt: new Date("2026-04-07T13:20:00+08:00")
+    },
+    create: {
+      id: "oa-admin-request-seal",
+      requestNo: "AR-SEA-20260407-DEMO04",
+      type: AdministrativeRequestType.SEAL,
+      title: "框架合同盖章申请",
+      summary: "2026 框架采购合同 / 合同章 / 2 份",
+      reason: "客户已完成法务确认，需要尽快寄回盖章纸质件。",
+      formData: {
+        documentName: "2026 框架采购合同",
+        sealType: "合同章",
+        useDate: "2026-04-07 15:00:00",
+        copyCount: 2
+      },
+      attachmentNames: ["框架合同-v5.pdf"],
+      applicantId: staffUser.id,
+      approverId: adminUser.id,
+      status: AdministrativeRequestStatus.REJECTED,
+      submittedAt: new Date("2026-04-07T11:00:00+08:00"),
+      decidedAt: new Date("2026-04-07T13:20:00+08:00")
+    }
+  });
+
+  await prisma.administrativeRequestAction.createMany({
+    data: [
+      {
+        id: "oa-admin-action-reimbursement-submitted",
+        requestId: "oa-admin-request-reimbursement",
+        actorId: staffUser.id,
+        actionType: AdministrativeRequestActionType.SUBMITTED,
+        snapshot: {
+          expenseDate: "2026-04-06 00:00:00",
+          expenseCategory: "差旅交通",
+          payeeName: "kyle",
+          amount: 1280.5
+        },
+        createdAt: new Date("2026-04-09T10:20:00+08:00")
+      },
+      {
+        id: "oa-admin-action-travel-submitted",
+        requestId: "oa-admin-request-travel",
+        actorId: staffUser.id,
+        actionType: AdministrativeRequestActionType.SUBMITTED,
+        snapshot: {
+          destination: "上海",
+          transportation: "高铁"
+        },
+        createdAt: new Date("2026-04-08T14:00:00+08:00")
+      },
+      {
+        id: "oa-admin-action-travel-approved",
+        requestId: "oa-admin-request-travel",
+        actorId: adminUser.id,
+        actionType: AdministrativeRequestActionType.APPROVED,
+        comment: "行程明确，注意同步拜访纪要。",
+        createdAt: new Date("2026-04-08T16:00:00+08:00")
+      },
+      {
+        id: "oa-admin-action-purchase-submitted",
+        requestId: "oa-admin-request-purchase",
+        actorId: adminUser.id,
+        actionType: AdministrativeRequestActionType.SUBMITTED,
+        snapshot: {
+          itemName: "补光灯套装",
+          quantity: 3
+        },
+        createdAt: new Date("2026-04-10T09:30:00+08:00")
+      },
+      {
+        id: "oa-admin-action-seal-submitted",
+        requestId: "oa-admin-request-seal",
+        actorId: staffUser.id,
+        actionType: AdministrativeRequestActionType.SUBMITTED,
+        snapshot: {
+          documentName: "2026 框架采购合同",
+          sealType: "合同章"
+        },
+        createdAt: new Date("2026-04-07T11:00:00+08:00")
+      },
+      {
+        id: "oa-admin-action-seal-rejected",
+        requestId: "oa-admin-request-seal",
+        actorId: adminUser.id,
+        actionType: AdministrativeRequestActionType.REJECTED,
+        comment: "请补充最终定稿版本后重新提交。",
+        createdAt: new Date("2026-04-07T13:20:00+08:00")
+      }
+    ],
+    skipDuplicates: true
   });
 }
 

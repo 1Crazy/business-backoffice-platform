@@ -15,12 +15,87 @@ const stageHistoryInclude = Prisma.validator<Prisma.OpportunityStageHistoryInclu
   createdBy: true
 });
 
+const quoteSummarySelect = Prisma.validator<Prisma.QuoteSelect>()({
+  id: true,
+  quoteNo: true,
+  title: true,
+  amount: true,
+  status: true,
+  issuedAt: true,
+  expiresAt: true
+});
+
+const contractSummarySelect = Prisma.validator<Prisma.ContractSelect>()({
+  id: true,
+  contractNo: true,
+  title: true,
+  amount: true,
+  status: true,
+  startDate: true,
+  endDate: true,
+  signedAt: true
+});
+
+const paymentPlanSummarySelect = Prisma.validator<Prisma.PaymentPlanSelect>()({
+  id: true,
+  title: true,
+  plannedAmount: true,
+  receivedAmount: true,
+  status: true,
+  plannedDate: true
+});
+
+const paymentRecordSummarySelect = Prisma.validator<Prisma.PaymentRecordSelect>()({
+  id: true,
+  amount: true,
+  receivedAt: true,
+  note: true
+});
+
+const renewalReminderSummarySelect = Prisma.validator<Prisma.RenewalReminderSelect>()({
+  id: true,
+  title: true,
+  remindAt: true,
+  status: true,
+  note: true
+});
+
 const opportunityDetailInclude = Prisma.validator<Prisma.OpportunityInclude>()({
   ...opportunityListInclude,
   stageHistory: {
     include: stageHistoryInclude,
     orderBy: {
       createdAt: "asc"
+    }
+  },
+  quotes: {
+    select: quoteSummarySelect,
+    orderBy: {
+      createdAt: "desc"
+    }
+  },
+  contracts: {
+    select: contractSummarySelect,
+    orderBy: {
+      createdAt: "desc"
+    }
+  },
+  paymentPlans: {
+    select: paymentPlanSummarySelect,
+    orderBy: {
+      plannedDate: "asc"
+    }
+  },
+  paymentRecords: {
+    select: paymentRecordSummarySelect,
+    orderBy: {
+      receivedAt: "desc"
+    }
+  },
+  renewalReminders: {
+    select: renewalReminderSummarySelect,
+    orderBy: {
+      remindAt: "asc"
     }
   }
 });

@@ -11,6 +11,10 @@ export type OpportunityStage =
   | "CLOSED_LOST";
 
 export type OpportunityResultStatus = "IN_PROGRESS" | "WON" | "LOST";
+export type QuoteStatus = "DRAFT" | "SENT" | "ACCEPTED" | "REJECTED" | "EXPIRED";
+export type ContractStatus = "DRAFT" | "ACTIVE" | "COMPLETED" | "CANCELLED" | "EXPIRED";
+export type PaymentPlanStatus = "PENDING" | "PARTIAL" | "PAID" | "OVERDUE" | "CANCELLED";
+export type RenewalReminderStatus = "PENDING" | "CONTACTED" | "COMPLETED" | "DISMISSED";
 
 export interface OpportunityCustomerSummary {
   id: string;
@@ -35,6 +39,51 @@ export interface OpportunityStageHistory {
   createdAt: string;
 }
 
+export interface QuoteSummary {
+  id: string;
+  quoteNo: string;
+  title: string;
+  amount: number;
+  status: QuoteStatus;
+  issuedAt?: string | null;
+  expiresAt?: string | null;
+}
+
+export interface ContractSummary {
+  id: string;
+  contractNo: string;
+  title: string;
+  amount: number;
+  status: ContractStatus;
+  startDate: string;
+  endDate: string;
+  signedAt?: string | null;
+}
+
+export interface PaymentPlanSummary {
+  id: string;
+  title: string;
+  plannedAmount: number;
+  receivedAmount: number;
+  status: PaymentPlanStatus;
+  plannedDate: string;
+}
+
+export interface PaymentRecordSummary {
+  id: string;
+  amount: number;
+  receivedAt: string;
+  note?: string | null;
+}
+
+export interface RenewalReminderSummary {
+  id: string;
+  title: string;
+  remindAt: string;
+  status: RenewalReminderStatus;
+  note?: string | null;
+}
+
 export interface Opportunity {
   id: string;
   name: string;
@@ -53,6 +102,11 @@ export interface Opportunity {
   closedAt?: string | null;
   lostReason?: string | null;
   stageHistory?: OpportunityStageHistory[];
+  quotes?: QuoteSummary[];
+  contracts?: ContractSummary[];
+  paymentPlans?: PaymentPlanSummary[];
+  paymentRecords?: PaymentRecordSummary[];
+  renewalReminders?: RenewalReminderSummary[];
   createdAt: string;
   updatedAt: string;
 }
@@ -63,8 +117,8 @@ export interface OpportunityFilters {
   ownerId: string;
   stage: OpportunityStage | "";
   resultStatus: OpportunityResultStatus | "";
-  expectedCloseDateRange: [string, string] | [];
-  closedAtRange: [string, string] | [];
+  expectedCloseDateRange: [string, string] | [] | null;
+  closedAtRange: [string, string] | [] | null;
 }
 
 export interface OpportunityTableState extends PaginatedQuery {

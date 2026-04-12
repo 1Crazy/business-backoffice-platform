@@ -213,8 +213,8 @@ export function useOpportunitiesPage() {
   }
 
   function buildOpportunityListQuery(): OpportunityListQuery {
-    const [expectedCloseDateStart, expectedCloseDateEnd] = filters.expectedCloseDateRange;
-    const [closedAtStart, closedAtEnd] = filters.closedAtRange;
+    const [expectedCloseDateStart, expectedCloseDateEnd] = normalizeDateRange(filters.expectedCloseDateRange);
+    const [closedAtStart, closedAtEnd] = normalizeDateRange(filters.closedAtRange);
 
     return {
       keyword: filters.keyword || undefined,
@@ -499,6 +499,33 @@ export function useOpportunitiesPage() {
     void loadOpportunities();
   }
 
+  async function resetOpportunityFilters(): Promise<void> {
+    const isAlreadyDefault =
+      !filters.keyword &&
+      !filters.customerId &&
+      !filters.ownerId &&
+      !filters.stage &&
+      !filters.resultStatus &&
+      isDateRangeEmpty(filters.expectedCloseDateRange) &&
+      isDateRangeEmpty(filters.closedAtRange) &&
+      opportunityTableState.sortPreset === opportunitySortOptions[0].value &&
+      opportunityTableState.page === 1;
+
+    filters.keyword = "";
+    filters.customerId = "";
+    filters.ownerId = "";
+    filters.stage = "";
+    filters.resultStatus = "";
+    filters.expectedCloseDateRange = [];
+    filters.closedAtRange = [];
+    opportunityTableState.page = 1;
+    opportunityTableState.sortPreset = opportunitySortOptions[0].value;
+
+    if (isAlreadyDefault) {
+      await loadOpportunities();
+    }
+  }
+
   watch(
     filters,
     () => {
@@ -527,6 +554,19 @@ export function useOpportunitiesPage() {
     resetOpportunityForm();
     await loadOpportunities();
   });
+
+  // Element Plus 的 datetimerange 在点击清空时会把 v-model 置为 null，这里统一归一化，避免把空值带进查询参数。
+  function normalizeDateRange(range: OpportunityFilters["closedAtRange"]): [string | undefined, string | undefined] {
+    if (!Array.isArray(range) || range.length !== 2) {
+      return [undefined, undefined];
+    }
+
+    return [range[0] || undefined, range[1] || undefined];
+  }
+
+  function isDateRangeEmpty(range: OpportunityFilters["closedAtRange"]): boolean {
+    return !Array.isArray(range) || range.length === 0;
+  }
 
   return {
     closeDialogVisible,
@@ -562,6 +602,7 @@ export function useOpportunitiesPage() {
     ownerDialogVisible,
     ownerForm,
     ownerRules,
+    resetOpportunityFilters,
     selectedOpportunity,
     setCloseFormRef,
     setOpportunityFormRef,

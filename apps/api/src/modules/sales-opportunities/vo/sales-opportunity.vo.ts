@@ -1,6 +1,12 @@
 /** sales-opportunities 模块 VO：负责 Swagger 与接口返回契约，避免直接暴露持久化结构。 */
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { OpportunityStage } from "@prisma/client";
+import {
+  ContractStatus,
+  OpportunityStage,
+  PaymentPlanStatus,
+  QuoteStatus,
+  RenewalReminderStatus
+} from "@prisma/client";
 
 import { PaginatedResponseDto } from "@/common/pagination/paginated-response.dto";
 import { UserSummaryVo } from "@/common/vo/access-control.vo";
@@ -90,6 +96,183 @@ export class OpportunityStageHistoryVo {
     format: "date-time"
   })
   createdAt!: string;
+}
+
+export class QuoteSummaryVo {
+  @ApiProperty({
+    description: "报价单 ID。"
+  })
+  id!: string;
+
+  @ApiProperty({
+    description: "报价单编号。"
+  })
+  quoteNo!: string;
+
+  @ApiProperty({
+    description: "报价标题。"
+  })
+  title!: string;
+
+  @ApiProperty({
+    description: "报价金额。"
+  })
+  amount!: number;
+
+  @ApiProperty({
+    description: "报价状态。",
+    enum: QuoteStatus
+  })
+  status!: QuoteStatus;
+
+  @ApiPropertyOptional({
+    description: "报价日期。",
+    format: "date-time",
+    nullable: true
+  })
+  issuedAt?: string | null;
+
+  @ApiPropertyOptional({
+    description: "报价有效期。",
+    format: "date-time",
+    nullable: true
+  })
+  expiresAt?: string | null;
+}
+
+export class ContractSummaryVo {
+  @ApiProperty({
+    description: "合同 ID。"
+  })
+  id!: string;
+
+  @ApiProperty({
+    description: "合同编号。"
+  })
+  contractNo!: string;
+
+  @ApiProperty({
+    description: "合同标题。"
+  })
+  title!: string;
+
+  @ApiProperty({
+    description: "合同金额。"
+  })
+  amount!: number;
+
+  @ApiProperty({
+    description: "合同状态。",
+    enum: ContractStatus
+  })
+  status!: ContractStatus;
+
+  @ApiProperty({
+    description: "合同开始日期。",
+    format: "date-time"
+  })
+  startDate!: string;
+
+  @ApiProperty({
+    description: "合同结束日期。",
+    format: "date-time"
+  })
+  endDate!: string;
+
+  @ApiPropertyOptional({
+    description: "签约时间。",
+    format: "date-time",
+    nullable: true
+  })
+  signedAt?: string | null;
+}
+
+export class PaymentPlanSummaryVo {
+  @ApiProperty({
+    description: "回款计划 ID。"
+  })
+  id!: string;
+
+  @ApiProperty({
+    description: "回款计划标题。"
+  })
+  title!: string;
+
+  @ApiProperty({
+    description: "计划金额。"
+  })
+  plannedAmount!: number;
+
+  @ApiProperty({
+    description: "已回金额。"
+  })
+  receivedAmount!: number;
+
+  @ApiProperty({
+    description: "计划状态。",
+    enum: PaymentPlanStatus
+  })
+  status!: PaymentPlanStatus;
+
+  @ApiProperty({
+    description: "计划日期。",
+    format: "date-time"
+  })
+  plannedDate!: string;
+}
+
+export class PaymentRecordSummaryVo {
+  @ApiProperty({
+    description: "回款记录 ID。"
+  })
+  id!: string;
+
+  @ApiProperty({
+    description: "回款金额。"
+  })
+  amount!: number;
+
+  @ApiProperty({
+    description: "回款时间。",
+    format: "date-time"
+  })
+  receivedAt!: string;
+
+  @ApiPropertyOptional({
+    description: "回款说明。",
+    nullable: true
+  })
+  note?: string | null;
+}
+
+export class RenewalReminderSummaryVo {
+  @ApiProperty({
+    description: "续费提醒 ID。"
+  })
+  id!: string;
+
+  @ApiProperty({
+    description: "提醒标题。"
+  })
+  title!: string;
+
+  @ApiProperty({
+    description: "提醒时间。",
+    format: "date-time"
+  })
+  remindAt!: string;
+
+  @ApiProperty({
+    description: "提醒状态。",
+    enum: RenewalReminderStatus
+  })
+  status!: RenewalReminderStatus;
+
+  @ApiPropertyOptional({
+    description: "提醒说明。",
+    nullable: true
+  })
+  note?: string | null;
 }
 
 export class SalesOpportunityVo {
@@ -190,6 +373,36 @@ export class SalesOpportunityVo {
     type: () => [OpportunityStageHistoryVo]
   })
   stageHistory?: OpportunityStageHistoryVo[];
+
+  @ApiPropertyOptional({
+    description: "报价摘要。",
+    type: () => [QuoteSummaryVo]
+  })
+  quotes?: QuoteSummaryVo[];
+
+  @ApiPropertyOptional({
+    description: "合同摘要。",
+    type: () => [ContractSummaryVo]
+  })
+  contracts?: ContractSummaryVo[];
+
+  @ApiPropertyOptional({
+    description: "回款计划摘要。",
+    type: () => [PaymentPlanSummaryVo]
+  })
+  paymentPlans?: PaymentPlanSummaryVo[];
+
+  @ApiPropertyOptional({
+    description: "回款记录摘要。",
+    type: () => [PaymentRecordSummaryVo]
+  })
+  paymentRecords?: PaymentRecordSummaryVo[];
+
+  @ApiPropertyOptional({
+    description: "续费提醒摘要。",
+    type: () => [RenewalReminderSummaryVo]
+  })
+  renewalReminders?: RenewalReminderSummaryVo[];
 
   @ApiProperty({
     description: "创建时间。",

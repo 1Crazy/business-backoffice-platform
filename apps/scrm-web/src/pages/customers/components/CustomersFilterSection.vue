@@ -4,7 +4,7 @@
     <div class="filter-toolbar">
       <div class="filter-actions">
         <span v-if="loading" class="loading-badge">筛选项同步中</span>
-        <el-button @click="$emit('refresh')">刷新</el-button>
+        <el-button @click="$emit('reset')">重置</el-button>
         <el-button @click="$emit('create-tag')">新建标签</el-button>
         <el-button type="primary" @click="$emit('create-customer')">新增客户</el-button>
       </div>
@@ -61,7 +61,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  refresh: [];
+  reset: [];
   "create-tag": [];
   "create-customer": [];
   "update:sortPreset": [value: string];

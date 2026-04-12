@@ -46,20 +46,60 @@
     </template>
 
     <template v-else>
-      <DashboardToolbarSection v-model="dateRange" :refreshing="isRefreshing" @change="loadOverview" />
+      <DashboardToolbarSection
+        v-model:date-range="dateRange"
+        v-model:department-id="selectedDepartmentId"
+        v-model:owner-id="selectedOwnerId"
+        :departments="departmentOptions"
+        :owners="ownerOptions"
+        :refreshing="isRefreshing"
+        @change="loadOverview"
+        @reset="resetOverviewFilters"
+      />
       <DashboardStatsSection :cards="cards" />
-      <DashboardInsightSection :overview="overview" />
+      <DashboardSalesOverviewSection :items="salesFunnel" :overview="overview" />
+      <DashboardRankingSection
+        :owner-ranking="ownerPerformanceRanking"
+        :department-ranking="departmentPerformanceRanking"
+      />
+      <DashboardScopeSection
+        :is-overview-empty="isOverviewEmpty"
+        :department-name="selectedDepartmentName"
+        :owner-name="selectedOwnerName"
+        :department-count="departmentOptions.length"
+        :owner-count="ownerOptions.length"
+      />
     </template>
   </div>
 </template>
 
 <script setup lang="ts">
-import DashboardInsightSection from "@/pages/dashboard/components/DashboardInsightSection.vue";
+import DashboardSalesOverviewSection from "@/pages/dashboard/components/DashboardFunnelSection.vue";
+import DashboardRankingSection from "@/pages/dashboard/components/DashboardRankingSection.vue";
+import DashboardScopeSection from "@/pages/dashboard/components/DashboardScopeSection.vue";
 import DashboardStatsSection from "@/pages/dashboard/components/DashboardStatsSection.vue";
 import DashboardToolbarSection from "@/pages/dashboard/components/DashboardToolbarSection.vue";
 import { useDashboardOverview } from "@/composables/dashboard/useDashboardOverview";
 
-const { cards, dateRange, isLoading, isRefreshing, loadOverview, overview } = useDashboardOverview();
+const {
+  cards,
+  dateRange,
+  departmentOptions,
+  departmentPerformanceRanking,
+  isLoading,
+  isOverviewEmpty,
+  isRefreshing,
+  loadOverview,
+  overview,
+  ownerOptions,
+  ownerPerformanceRanking,
+  salesFunnel,
+  resetOverviewFilters,
+  selectedDepartmentId,
+  selectedDepartmentName,
+  selectedOwnerId,
+  selectedOwnerName
+} = useDashboardOverview();
 </script>
 
 <style scoped>
