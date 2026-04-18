@@ -4,13 +4,27 @@ import { useRoute } from "vue-router";
 
 import { findNavigationItemByPath, getVisibleNavigationGroups } from "@/config/navigation";
 import { useAuthStore } from "@/stores/auth";
+import { useProductConfigStore } from "@/stores/product-config";
 import type { HostDomain } from "@/types/navigation";
 
 export function useHostNavigation() {
   const route = useRoute();
   const authStore = useAuthStore();
+  const productConfigStore = useProductConfigStore();
 
-  const visibleGroups = computed(() => getVisibleNavigationGroups(authStore.currentUser?.permissions ?? []));
+  const visibleGroups = computed(() =>
+    getVisibleNavigationGroups(authStore.currentUser?.permissions ?? [])
+      .map((group) => ({
+        ...group,
+        items: group.items
+          .filter((item) => !productConfigStore.hiddenNavigationKeys.includes(item.key))
+          .map((item) => ({
+            ...item,
+            title: productConfigStore.navigationLabels[item.key] ?? item.title
+          }))
+      }))
+      .filter((group) => group.items.length > 0)
+  );
   const currentItem = computed(() => findNavigationItemByPath(route.path));
   const currentTitle = computed(() => route.meta.title?.toString() ?? currentItem.value?.title ?? "主应用工作台");
   const currentDescription = computed(

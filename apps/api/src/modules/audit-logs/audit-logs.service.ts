@@ -6,11 +6,14 @@ import {
   getPaginationParams,
   resolveSort
 } from "@/common/pagination/pagination.util";
+import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AUDIT_LOG_SORT_FIELDS, type AuditLogSortField, ListAuditLogsDto } from "./dto/list-audit-logs.dto";
 import { mapPaginatedAuditLogs } from "./mappers/audit-logs.mapper";
 import { AuditLogsRepository } from "./repositories/audit-logs.repository";
 
 interface CreateAuditLogInput {
+  tenantId?: string;
   actorId?: string;
   actorName?: string;
   actionType: AuditActionType;
@@ -32,7 +35,7 @@ export class AuditLogsService {
     await this.auditLogsRepository.create(input);
   }
 
-  async list(query: ListAuditLogsDto) {
+  async list(query: ListAuditLogsDto, actor?: AuthUser) {
     const pagination = getPaginationParams(query);
     const sort = resolveSort(query, AUDIT_LOG_SORT_FIELDS, AUDIT_LOG_DEFAULT_SORT);
     const where: Prisma.AuditLogWhereInput = {
@@ -58,7 +61,8 @@ export class AuditLogsService {
       { [sort.field]: sort.order } as Prisma.AuditLogOrderByWithRelationInput,
       { id: "desc" }
     ];
-    const { items, total } = await this.auditLogsRepository.list(where, orderBy, pagination);
+    const tenantId = actor ? requireTenantId(actor) : undefined;
+    const { items, total } = await this.auditLogsRepository.list(tenantId, where, orderBy, pagination);
 
     return mapPaginatedAuditLogs(items, total, pagination, sort);
   }

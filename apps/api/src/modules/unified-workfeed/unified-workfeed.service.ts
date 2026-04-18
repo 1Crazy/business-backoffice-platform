@@ -2,6 +2,10 @@ import { Injectable } from "@nestjs/common";
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { toIsoString } from "@/common/mappers/date-time.mapper";
+import {
+  type NotificationRecordEntity,
+  NotificationCenterRepository
+} from "../notification-center/repositories/notification-center.repository";
 import { ListWorkfeedNotificationsDto } from "./dto/list-workfeed-notifications.dto";
 import { ListWorkfeedTodosDto } from "./dto/list-workfeed-todos.dto";
 import { MarkWorkfeedNotificationReadDto } from "./dto/mark-workfeed-notification-read.dto";
@@ -13,7 +17,7 @@ import {
   type ReminderFeedRecord,
   type RenewalReminderFeedRecord,
   UnifiedWorkfeedRepository
-} from "./unified-workfeed.repository";
+} from "./repositories/unified-workfeed.repository";
 import type {
   WorkfeedDomain,
   WorkfeedNotificationType,
@@ -53,7 +57,10 @@ type WorkfeedNotificationItem = {
 
 @Injectable()
 export class UnifiedWorkfeedService {
-  constructor(private readonly unifiedWorkfeedRepository: UnifiedWorkfeedRepository) {}
+  constructor(
+    private readonly unifiedWorkfeedRepository: UnifiedWorkfeedRepository,
+    private readonly notificationCenterRepository: NotificationCenterRepository
+  ) {}
 
   async listTodos(query: ListWorkfeedTodosDto, actor: AuthUser) {
     const [leaveApprovals, administrativeApprovals, reminders, renewalReminders] = await Promise.all([
@@ -76,24 +83,21 @@ export class UnifiedWorkfeedService {
   }
 
   async listNotifications(query: ListWorkfeedNotificationsDto, actor: AuthUser) {
-    const [leaveResults, administrativeResults, reminders, renewalReminders, announcements] = await Promise.all([
-      this.unifiedWorkfeedRepository.listApplicantLeaveResults(actor.id),
-      this.unifiedWorkfeedRepository.listApplicantAdministrativeResults(actor.id),
-      this.unifiedWorkfeedRepository.listPendingReminders(actor.id),
-      this.unifiedWorkfeedRepository.listPendingRenewalReminders(actor.id),
+    const [notificationRecords, announcements] = await Promise.all([
+      this.notificationCenterRepository.listNotificationRecords({
+        recipientId: actor.id,
+        unreadOnly: query.unreadOnly
+      }),
       this.unifiedWorkfeedRepository.listActiveAnnouncements()
     ]);
 
-    const rawItems = [
-      ...leaveResults.map((item) => this.mapLeaveResultNotification(item)),
-      ...administrativeResults.map((item) => this.mapAdministrativeResultNotification(item)),
-      ...reminders.map((item) => this.mapReminderNotification(item)),
-      ...renewalReminders.map((item) => this.mapRenewalReminderNotification(item)),
-      ...announcements.map((item) => this.mapAnnouncementNotification(item))
-    ];
+    const notificationItems = notificationRecords
+      .filter((item) => this.isSupportedNotificationEventType(item.eventType))
+      .map((item) => this.mapNotificationCenterNotification(item));
+    const announcementItems = announcements.map((item) => this.mapAnnouncementNotification(item));
     const readStates = await this.unifiedWorkfeedRepository.listNotificationReadStates(
       actor.id,
-      rawItems.map((item) => ({
+      announcementItems.map((item) => ({
         notificationType: item.type,
         sourceId: item.sourceId
       }))
@@ -104,17 +108,18 @@ export class UnifiedWorkfeedService {
         toIsoString(item.readAt) ?? null
       ])
     );
+    const resolvedAnnouncementItems: WorkfeedNotificationItem[] = announcementItems.map((item) => {
+      const readAt = readStateMap.get(`${item.type}:${item.sourceId}`) ?? null;
 
-    return rawItems
-      .map((item) => {
-        const readAt = readStateMap.get(`${item.type}:${item.sourceId}`) ?? null;
+      return {
+        ...item,
+        isRead: readAt !== null,
+        readAt
+      };
+    });
+    const resolvedItems: WorkfeedNotificationItem[] = [...notificationItems, ...resolvedAnnouncementItems];
 
-        return {
-          ...item,
-          isRead: readAt !== null,
-          readAt
-        };
-      })
+    return resolvedItems
       .filter((item) => (query.domain ? item.domain === query.domain : true))
       .filter((item) => (query.type ? item.type === query.type : true))
       .filter((item) => (query.unreadOnly ? !item.isRead : true))
@@ -122,6 +127,16 @@ export class UnifiedWorkfeedService {
   }
 
   async markNotificationRead(dto: MarkWorkfeedNotificationReadDto, actor: AuthUser) {
+    if (dto.notificationType !== "ANNOUNCEMENT") {
+      const record = await this.notificationCenterRepository.markNotificationRead(dto.sourceId, actor.id);
+
+      return {
+        notificationType: dto.notificationType,
+        sourceId: dto.sourceId,
+        readAt: toIsoString(record.readAt) ?? null
+      };
+    }
+
     const record = await this.unifiedWorkfeedRepository.markNotificationRead(actor.id, dto.notificationType, dto.sourceId);
 
     return {
@@ -292,6 +307,49 @@ export class UnifiedWorkfeedService {
       sourceId: record.id,
       occurredAt: toIsoString(record.publishedAt)!
     };
+  }
+
+  private mapNotificationCenterNotification(record: NotificationRecordEntity): WorkfeedNotificationItem {
+    return {
+      id: `notification-center:${record.id}`,
+      domain: this.mapNotificationDomain(record.domain),
+      type: record.eventType as WorkfeedNotificationType,
+      title: record.title,
+      summary: record.summary ?? null,
+      priority: this.mapNotificationPriority(record.priority),
+      targetPath: record.targetPath ?? "/",
+      targetLabel: record.targetLabel ?? "查看详情",
+      sourceId: record.id,
+      occurredAt: toIsoString(record.deliveredAt ?? record.createdAt)!,
+      isRead: record.status !== "UNREAD",
+      readAt: toIsoString(record.readAt) ?? null
+    };
+  }
+
+  private mapNotificationDomain(domain: NotificationRecordEntity["domain"]): WorkfeedDomain {
+    return domain === "OA" ? "oa" : "scrm";
+  }
+
+  private mapNotificationPriority(priority: NotificationRecordEntity["priority"]): WorkfeedPriority {
+    if (priority === "CRITICAL" || priority === "HIGH") {
+      return "HIGH";
+    }
+
+    if (priority === "MEDIUM") {
+      return "MEDIUM";
+    }
+
+    return "LOW";
+  }
+
+  private isSupportedNotificationEventType(eventType: string): eventType is WorkfeedNotificationType {
+    return (
+      eventType === "LEAVE_RESULT" ||
+      eventType === "ADMINISTRATIVE_RESULT" ||
+      eventType === "CUSTOMER_REMINDER" ||
+      eventType === "LEAD_REMINDER" ||
+      eventType === "RENEWAL_REMINDER"
+    );
   }
 
   private resolvePriority(referenceAt: Date): WorkfeedPriority {

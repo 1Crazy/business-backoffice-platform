@@ -3,6 +3,7 @@ import { Injectable } from "@nestjs/common";
 import { AuditActionType } from "@prisma/client";
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { mapDictionaryEntry } from "./mappers/dictionaries.mapper";
 import { DictionariesRepository } from "./repositories/dictionaries.repository";
@@ -17,14 +18,15 @@ export class DictionariesService {
     private readonly auditLogsService: AuditLogsService
   ) {}
 
-  async list(query: ListDictionariesDto) {
-    const entries = await this.dictionariesRepository.list(query.type, query.enabled);
+  async list(query: ListDictionariesDto, actor: AuthUser) {
+    const entries = await this.dictionariesRepository.list(requireTenantId(actor), query.type, query.enabled);
 
     return entries.map((entry) => mapDictionaryEntry(entry));
   }
 
   async create(dto: CreateDictionaryEntryDto, actor: AuthUser) {
     const entry = await this.dictionariesRepository.createEntry({
+      tenantId: requireTenantId(actor),
       type: dto.type,
       label: dto.label,
       value: dto.value,
@@ -44,7 +46,7 @@ export class DictionariesService {
   }
 
   async update(id: string, dto: UpdateDictionaryEntryDto, actor: AuthUser) {
-    const entry = await this.dictionariesRepository.updateEntry(id, {
+    const entry = await this.dictionariesRepository.updateEntry(id, requireTenantId(actor), {
       type: dto.type,
       label: dto.label,
       value: dto.value,

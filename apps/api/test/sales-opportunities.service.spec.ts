@@ -5,15 +5,16 @@ import { SalesOpportunitiesService } from "../src/modules/sales-opportunities/sa
 describe("SalesOpportunitiesService", () => {
   it("rejects creating an opportunity when the linked customer is outside scope", async () => {
     const salesOpportunitiesRepository = {
-      findCustomerScopeById: jest.fn().mockResolvedValue({
-        id: "customer-1",
-        ownerId: "user-2",
-        name: "Acme"
-      })
+      findLeadScopeById: jest.fn()
     } as any;
     const dataScopeService = {
-      buildScopedOwnerFilter: jest.fn(),
+      buildScopedOpportunityFilter: jest.fn(),
+      assertCustomerAccessible: jest.fn().mockRejectedValue(new ForbiddenException("out of scope")),
       assertOwnerAccessible: jest.fn().mockRejectedValue(new ForbiddenException("out of scope"))
+    } as any;
+    const accessPolicyService = {
+      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: jest.fn()
     } as any;
 
     const service = new SalesOpportunitiesService(
@@ -21,7 +22,8 @@ describe("SalesOpportunitiesService", () => {
       {
         create: jest.fn()
       } as any,
-      dataScopeService
+      dataScopeService,
+      accessPolicyService
     );
 
     await expect(
@@ -36,6 +38,8 @@ describe("SalesOpportunitiesService", () => {
         },
         {
           id: "user-1",
+          tenantId: "tenant-default",
+          tenantCode: "default",
           username: "sales",
           displayName: "销售",
           roleCodes: ["sales-member"],
@@ -44,7 +48,11 @@ describe("SalesOpportunitiesService", () => {
       )
     ).rejects.toBeInstanceOf(ForbiddenException);
 
-    expect(salesOpportunitiesRepository.findCustomerScopeById).toHaveBeenCalledWith("customer-1");
+    expect(dataScopeService.assertCustomerAccessible).toHaveBeenCalledWith(
+      expect.objectContaining({ permissions: ["opportunity:write"] }),
+      "customer-1",
+      "You do not have access to the linked customer."
+    );
   });
 
   it("prevents stage actions after the opportunity is closed", async () => {
@@ -62,8 +70,14 @@ describe("SalesOpportunitiesService", () => {
       })
     } as any;
     const dataScopeService = {
-      buildScopedOwnerFilter: jest.fn(),
+      buildScopedOpportunityFilter: jest.fn(),
+      assertOpportunityAccessible: jest.fn().mockResolvedValue(undefined),
+      assertCustomerAccessible: jest.fn().mockResolvedValue(undefined),
       assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+    } as any;
+    const accessPolicyService = {
+      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: jest.fn()
     } as any;
 
     const service = new SalesOpportunitiesService(
@@ -71,7 +85,8 @@ describe("SalesOpportunitiesService", () => {
       {
         create: jest.fn()
       } as any,
-      dataScopeService
+      dataScopeService,
+      accessPolicyService
     );
 
     await expect(
@@ -83,6 +98,8 @@ describe("SalesOpportunitiesService", () => {
         },
         {
           id: "user-1",
+          tenantId: "tenant-default",
+          tenantCode: "default",
           username: "sales",
           displayName: "销售",
           roleCodes: ["sales-member"],
@@ -143,14 +160,21 @@ describe("SalesOpportunitiesService", () => {
       create: jest.fn().mockResolvedValue(undefined)
     } as any;
     const dataScopeService = {
-      buildScopedOwnerFilter: jest.fn(),
+      buildScopedOpportunityFilter: jest.fn(),
+      assertOpportunityAccessible: jest.fn().mockResolvedValue(undefined),
+      assertCustomerAccessible: jest.fn().mockResolvedValue(undefined),
       assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+    } as any;
+    const accessPolicyService = {
+      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: jest.fn()
     } as any;
 
     const service = new SalesOpportunitiesService(
       salesOpportunitiesRepository,
       auditLogsService,
-      dataScopeService
+      dataScopeService,
+      accessPolicyService
     );
 
     const result = await service.markWon(
@@ -160,6 +184,8 @@ describe("SalesOpportunitiesService", () => {
       },
       {
         id: "user-1",
+        tenantId: "tenant-default",
+        tenantCode: "default",
         username: "sales",
         displayName: "销售",
         roleCodes: ["sales-member"],
@@ -230,14 +256,21 @@ describe("SalesOpportunitiesService", () => {
       create: jest.fn().mockResolvedValue(undefined)
     } as any;
     const dataScopeService = {
-      buildScopedOwnerFilter: jest.fn(),
+      buildScopedOpportunityFilter: jest.fn(),
+      assertOpportunityAccessible: jest.fn().mockResolvedValue(undefined),
+      assertCustomerAccessible: jest.fn().mockResolvedValue(undefined),
       assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+    } as any;
+    const accessPolicyService = {
+      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: jest.fn()
     } as any;
 
     const service = new SalesOpportunitiesService(
       salesOpportunitiesRepository,
       auditLogsService,
-      dataScopeService
+      dataScopeService,
+      accessPolicyService
     );
 
     const result = await service.markLost(
@@ -248,6 +281,8 @@ describe("SalesOpportunitiesService", () => {
       },
       {
         id: "user-1",
+        tenantId: "tenant-default",
+        tenantCode: "default",
         username: "sales",
         displayName: "销售",
         roleCodes: ["sales-member"],

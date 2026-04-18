@@ -42,6 +42,32 @@ const platformItems: HostNavigationItem[] = [
     icon: "system"
   },
   {
+    key: "platform-tenants",
+    title: "租户运营",
+    description: "维护租户开通、配额与运行状态。",
+    path: "/platform/tenants",
+    permission: "tenant:read",
+    domain: "platform",
+    domainTitle: "平台治理",
+    domainBadge: "PLATFORM",
+    sectionLabel: "平台运营",
+    kicker: "租户控制台",
+    icon: "platform"
+  },
+  {
+    key: "platform-product-config",
+    title: "产品配置中心",
+    description: "查看默认值、行业模板和租户覆盖的继承关系。",
+    path: "/platform/configuration",
+    permission: "product-config:read",
+    domain: "platform",
+    domainTitle: "平台治理",
+    domainBadge: "PLATFORM",
+    sectionLabel: "产品配置",
+    kicker: "配置中心",
+    icon: "system"
+  },
+  {
     key: "platform-workfeed",
     title: "统一待办/通知",
     description: "跨 OA 与 SCRM 的待办与通知汇总。",
@@ -103,7 +129,7 @@ const oaItems: HostNavigationItem[] = [
     title: "我发起的申请",
     description: "跟踪自己发起的请假与审批进度。",
     path: "/oa/approvals/mine",
-    permission: "oa:leave:apply",
+    permission: "oa:request:apply",
     domain: "oa",
     domainTitle: "OA 办公",
     domainBadge: "OA",

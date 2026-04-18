@@ -2,14 +2,16 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import { AuditActionType, FollowUpEntityType, LeadStatus, Prisma, ReminderStatus } from "@prisma/client";
 
+import { AccessPolicyService } from "@/common/access-policy/access-policy.service";
 import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { DataScopeService } from "@/common/data-scope/data-scope.service";
+import { requireTenantId } from "@/common/tenant/tenant.util";
 import {
-  buildPaginatedResponse,
   getPaginationParams,
   resolveSort
 } from "@/common/pagination/pagination.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { NotificationCenterService } from "../notification-center/notification-center.service";
 import { CreateLeadDto } from "./dto/create-lead.dto";
 import { CreateLeadFollowUpDto } from "./dto/create-lead-follow-up.dto";
 import { ListLeadRemindersDto, REMINDER_SORT_FIELDS, type ReminderSortField } from "./dto/list-lead-reminders.dto";
@@ -40,7 +42,9 @@ export class LeadsService {
   constructor(
     private readonly leadsRepository: LeadsRepository,
     private readonly auditLogsService: AuditLogsService,
-    private readonly dataScopeService: DataScopeService
+    private readonly dataScopeService: DataScopeService,
+    private readonly accessPolicyService: AccessPolicyService,
+    private readonly notificationCenterService: NotificationCenterService
   ) {}
 
   async list(query: ListLeadsDto, actor: AuthUser) {
@@ -64,19 +68,23 @@ export class LeadsService {
       { [sort.field]: sort.order } as Prisma.LeadOrderByWithRelationInput,
       { id: "desc" }
     ];
-    const { items, total } = await this.leadsRepository.list(where, orderBy, pagination);
+    const { items, total } = await this.leadsRepository.list(requireTenantId(actor), where, orderBy, pagination);
+    const response = mapPaginatedLeads(items, total, pagination, sort);
 
-    return mapPaginatedLeads(items, total, pagination, sort);
+    response.items = response.items.map((item) => this.accessPolicyService.sanitizeReadFields(actor, "lead", item));
+    return response;
   }
 
   async detail(id: string, actor: AuthUser) {
-    const lead = await this.leadsRepository.findDetailById(id);
+    const lead = await this.leadsRepository.findDetailById(id, requireTenantId(actor));
 
     await this.assertLeadAccessible(lead.ownerId, actor);
-    return mapLead(lead);
+    return this.accessPolicyService.sanitizeReadFields(actor, "lead", mapLead(lead));
   }
 
   async create(dto: CreateLeadDto, actor: AuthUser) {
+    this.accessPolicyService.assertWritableFields(actor, "lead", dto as unknown as Record<string, unknown>);
+
     if (dto.ownerId) {
       await this.dataScopeService.assertOwnerAccessible(
         actor,
@@ -86,6 +94,7 @@ export class LeadsService {
     }
 
     const lead = await this.leadsRepository.createLead({
+      tenantId: requireTenantId(actor),
       name: dto.name,
       contactName: dto.contactName,
       phone: dto.phone,
@@ -103,13 +112,14 @@ export class LeadsService {
       targetId: lead.id
     });
 
-    return mapLead(lead);
+    return this.accessPolicyService.sanitizeReadFields(actor, "lead", mapLead(lead));
   }
 
   async update(id: string, dto: UpdateLeadDto, actor: AuthUser) {
-    const lead = await this.leadsRepository.findOwnerById(id);
+    const lead = await this.leadsRepository.findOwnerById(id, requireTenantId(actor));
 
     await this.assertLeadAccessible(lead.ownerId, actor);
+    this.accessPolicyService.assertWritableFields(actor, "lead", dto as unknown as Record<string, unknown>);
 
     if (dto.ownerId) {
       await this.dataScopeService.assertOwnerAccessible(
@@ -119,7 +129,7 @@ export class LeadsService {
       );
     }
 
-    const updated = await this.leadsRepository.updateLead(id, {
+    const updated = await this.leadsRepository.updateLead(id, requireTenantId(actor), {
       name: dto.name,
       contactName: dto.contactName,
       phone: dto.phone,
@@ -137,11 +147,11 @@ export class LeadsService {
       targetId: updated.id
     });
 
-    return mapLead(updated);
+    return this.accessPolicyService.sanitizeReadFields(actor, "lead", mapLead(updated));
   }
 
   async reassignOwner(id: string, dto: ReassignLeadOwnerDto, actor: AuthUser) {
-    const lead = await this.leadsRepository.findOwnerById(id);
+    const lead = await this.leadsRepository.findOwnerById(id, requireTenantId(actor));
 
     await this.assertLeadAccessible(lead.ownerId, actor);
     await this.dataScopeService.assertOwnerAccessible(
@@ -150,7 +160,7 @@ export class LeadsService {
       "You cannot assign leads outside your data scope."
     );
 
-    const updated = await this.leadsRepository.updateOwner(id, dto.ownerId);
+    const updated = await this.leadsRepository.updateOwner(id, requireTenantId(actor), dto.ownerId);
 
     await this.auditLogsService.create({
       actorId: actor.id,
@@ -164,11 +174,11 @@ export class LeadsService {
       }
     });
 
-    return mapLead(updated);
+    return this.accessPolicyService.sanitizeReadFields(actor, "lead", mapLead(updated));
   }
 
   async convert(id: string, actor: AuthUser) {
-    const lead = await this.leadsRepository.findSnapshotById(id);
+    const lead = await this.leadsRepository.findSnapshotById(id, requireTenantId(actor));
 
     await this.assertLeadAccessible(lead.ownerId, actor);
 
@@ -194,21 +204,22 @@ export class LeadsService {
   }
 
   async listFollowUps(id: string, actor: AuthUser) {
-    const lead = await this.leadsRepository.findOwnerById(id);
+    const lead = await this.leadsRepository.findOwnerById(id, requireTenantId(actor));
 
     await this.assertLeadAccessible(lead.ownerId, actor);
 
-    const followUps = await this.leadsRepository.listFollowUps(id);
+    const followUps = await this.leadsRepository.listFollowUps(id, requireTenantId(actor));
 
     return followUps.map((followUp) => mapLeadFollowUp(followUp));
   }
 
   async createFollowUp(id: string, dto: CreateLeadFollowUpDto, actor: AuthUser) {
-    const lead = await this.leadsRepository.findOwnerById(id);
+    const lead = await this.leadsRepository.findOwnerById(id, requireTenantId(actor));
 
     await this.assertLeadAccessible(lead.ownerId, actor);
 
     const followUp = await this.leadsRepository.createFollowUp({
+      tenantId: requireTenantId(actor),
       leadId: id,
       ownerId: lead.ownerId,
       createdById: actor.id,
@@ -224,6 +235,33 @@ export class LeadsService {
       targetType: "lead-followup",
       targetId: followUp.id
     });
+
+    if (dto.nextFollowUpAt) {
+      const remindAt = new Date(dto.nextFollowUpAt);
+
+      await this.notificationCenterService.publishEvent({
+        event: {
+          tenantId: requireTenantId(actor),
+          eventType: "LEAD_REMINDER",
+          domain: "SCRM",
+          sourceType: "lead-follow-up",
+          sourceId: followUp.id,
+          title: "线索跟进提醒",
+          summary: followUp.content,
+          priority: this.resolveReminderPriority(remindAt),
+          payload: {
+            leadId: id,
+            followUpId: followUp.id
+          },
+          targetPath: "/scrm/leads",
+          targetLabel: "进入线索中心",
+          actorId: actor.id,
+          occurredAt: remindAt
+        },
+        recipientIds: [lead.ownerId],
+        nudgeBaseAt: remindAt
+      });
+    }
 
     return mapLeadFollowUp(followUp);
   }
@@ -241,12 +279,33 @@ export class LeadsService {
       { [sort.field]: sort.order } as Prisma.ReminderOrderByWithRelationInput,
       { id: "desc" }
     ];
-    const { items, total } = await this.leadsRepository.listPendingReminders(where, orderBy, pagination);
+    const { items, total } = await this.leadsRepository.listPendingReminders(
+      requireTenantId(actor),
+      where,
+      orderBy,
+      pagination
+    );
+    const response = mapPaginatedLeadReminders(items, total, pagination, sort);
 
-    return mapPaginatedLeadReminders(items, total, pagination, sort);
+    response.items = response.items.map((item) => this.accessPolicyService.sanitizeReadFields(actor, "lead", item));
+    return response;
   }
 
   private async assertLeadAccessible(ownerId: string, actor: AuthUser) {
     await this.dataScopeService.assertOwnerAccessible(actor, ownerId, "You do not have access to this lead.");
+  }
+
+  private resolveReminderPriority(referenceAt: Date) {
+    const diff = referenceAt.getTime() - Date.now();
+
+    if (diff <= 1000 * 60 * 60 * 24) {
+      return "HIGH" as const;
+    }
+
+    if (diff <= 1000 * 60 * 60 * 24 * 3) {
+      return "MEDIUM" as const;
+    }
+
+    return "LOW" as const;
   }
 }

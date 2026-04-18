@@ -12,6 +12,7 @@ describe("LeadsRepository", () => {
     const repository = new LeadsRepository(prisma);
 
     const result = await repository.listPendingReminders(
+      "tenant-default",
       {
         status: "PENDING"
       },
@@ -27,7 +28,7 @@ describe("LeadsRepository", () => {
     expect(prisma.reminder.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          status: "PENDING"
+          AND: [{ tenantId: "tenant-default" }, { status: "PENDING" }]
         },
         skip: 0,
         take: 2

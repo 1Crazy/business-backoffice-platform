@@ -146,8 +146,8 @@ export class OfficeAutomationController {
     type: AdministrativeRequestItemVo,
     isArray: true
   })
-  listAdministrativeRequests(@Query() query: ListAdministrativeRequestsDto) {
-    return this.officeAutomationService.listAdministrativeRequests(query);
+  listAdministrativeRequests(@Query() query: ListAdministrativeRequestsDto, @CurrentUser() user: AuthUser) {
+    return this.officeAutomationService.listAdministrativeRequests(query, user);
   }
 
   @Get("administrative-requests/:id")
@@ -198,8 +198,8 @@ export class OfficeAutomationController {
     type: AnnouncementSummaryVo,
     isArray: true
   })
-  getAnnouncements() {
-    return this.officeAutomationService.getAnnouncements();
+  getAnnouncements(@CurrentUser() user: AuthUser) {
+    return this.officeAutomationService.getAnnouncements(user);
   }
 
   @Get("announcements/:id")
@@ -211,8 +211,8 @@ export class OfficeAutomationController {
   @ApiOkResponse({
     type: AnnouncementDetailVo
   })
-  getAnnouncementDetail(@Param("id") id: string) {
-    return this.officeAutomationService.getAnnouncementDetail(id);
+  getAnnouncementDetail(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.officeAutomationService.getAnnouncementDetail(id, user);
   }
 
   @Get("directory")
@@ -224,7 +224,7 @@ export class OfficeAutomationController {
   @ApiOkResponse({
     type: DirectorySnapshotVo
   })
-  getDirectorySnapshot(@Query() query: DirectoryQueryDto) {
-    return this.officeAutomationService.getDirectorySnapshot(query.departmentId);
+  getDirectorySnapshot(@Query() query: DirectoryQueryDto, @CurrentUser() user: AuthUser) {
+    return this.officeAutomationService.getDirectorySnapshot(user, query.departmentId);
   }
 }

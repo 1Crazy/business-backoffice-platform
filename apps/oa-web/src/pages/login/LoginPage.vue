@@ -2,7 +2,7 @@
 <template>
   <div class="login-shell">
     <section class="hero">
-      <div class="hero-chip">OA Office</div>
+      <div class="hero-chip">办公协同</div>
       <div class="hero-brand">
         <div>
           <strong>OA 办公台</strong>

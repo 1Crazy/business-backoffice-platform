@@ -86,6 +86,8 @@ enum ReminderStatus {
 enum AuditActionType {
   SIGN_IN
   SIGN_IN_FAILED
+  ACCESS
+  ACCESS_DENIED
   CREATE
   UPDATE
   DELETE
@@ -94,6 +96,10 @@ enum AuditActionType {
   ASSIGN
   CONVERT
   UPLOAD
+  DOWNLOAD
+  PREVIEW
+  WEBHOOK_DELIVERY
+  WEBHOOK_DELIVERY_FAILED
   SESSION_REVOKE
 }
 
@@ -105,6 +111,63 @@ enum AttachmentBusinessType {
 
 enum AttachmentStorageProvider {
   LOCAL
+  OBJECT_STORAGE
+}
+
+enum BatchTaskCategory {
+  IMPORT
+  EXPORT
+}
+
+enum BatchTaskStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+}
+
+enum GovernanceHealthStatus {
+  HEALTHY
+  WARNING
+  ERROR
+}
+
+enum OpenApiCredentialStatus {
+  ACTIVE
+  REVOKED
+}
+
+enum WebhookSubscriptionStatus {
+  ACTIVE
+  DISABLED
+}
+
+enum WebhookDeliveryStatus {
+  PENDING
+  SUCCEEDED
+  FAILED
+}
+
+enum IdentityConnectorType {
+  SSO
+  LDAP
+  OAUTH
+}
+
+enum IdentityConnectorMatchField {
+  USERNAME
+  EMAIL
+}
+
+enum SchedulerJobStatus {
+  RUNNING
+  PAUSED
+}
+
+enum SchedulerExecutionStatus {
+  RUNNING
+  SUCCEEDED
+  FAILED
 }
 
 enum LeaveRequestStatus {
@@ -140,75 +203,287 @@ enum ApprovalActionDecision {
   REJECTED
 }
 
+enum WorkflowTemplateStatus {
+  DRAFT
+  ACTIVE
+  DISABLED
+}
+
+enum WorkflowNodeType {
+  APPROVAL
+  NOTICE
+}
+
+enum WorkflowAssignmentType {
+  USER
+  PERMISSION
+  INITIATOR
+}
+
+enum WorkflowInstanceStatus {
+  IN_PROGRESS
+  APPROVED
+  REJECTED
+  CANCELLED
+  TERMINATED
+}
+
+enum WorkflowTaskStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  TRANSFERRED
+  CANCELLED
+}
+
+enum WorkflowActionType {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  CC
+  ADDED_SIGN
+  TRANSFERRED
+  CANCELLED
+  TERMINATED
+}
+
+enum NotificationDomain {
+  OA
+  SCRM
+  PLATFORM
+  SYSTEM
+}
+
+enum NotificationPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum NotificationEventStatus {
+  PENDING
+  ROUTED
+  CANCELLED
+}
+
+enum NotificationRecordStatus {
+  UNREAD
+  READ
+  ARCHIVED
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  ENTERPRISE_IM
+}
+
+enum NotificationDeliveryStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum NotificationDigestMode {
+  IMMEDIATE
+  HOURLY
+  DAILY
+  WEEKLY
+}
+
+enum ProductConfigLayer {
+  PLATFORM_DEFAULT
+  INDUSTRY_TEMPLATE
+  TENANT_OVERRIDE
+}
+
+enum ProductConfigScope {
+  MENU
+  FIELD_SCHEME
+  FORM_TEMPLATE
+  THEME
+  TEMPLATE
+}
+
+model Tenant {
+  id                          String                        @id @default(cuid())
+  code                        String                        @unique
+  name                        String
+  status                      RecordStatus                  @default(ACTIVE)
+  isDefault                   Boolean                       @default(false)
+  industry                    String?
+  planName                    String                        @default("标准版")
+  ownerName                   String                        @default("平台运营")
+  ownerEmail                  String                        @default("platform@example.com")
+  ownerPhone                  String?
+  initializedAt               DateTime?
+  disabledAt                  DateTime?
+  archivedAt                  DateTime?
+  userQuota                   Int                           @default(50)
+  storageQuotaMb              Int                           @default(5120)
+  monthlyTaskQuota            Int                           @default(10000)
+  createdAt                   DateTime                      @default(now())
+  updatedAt                   DateTime                      @updatedAt
+  ProductConfig               ProductConfig[]
+  Department                  Department[]
+  User                        User[]
+  Role                        Role[]
+  Customer                    Customer[]
+  CustomerTag                 CustomerTag[]
+  Lead                        Lead[]
+  Opportunity                 Opportunity[]
+  OpportunityStageHistory     OpportunityStageHistory[]
+  Quote                       Quote[]
+  Contract                    Contract[]
+  PaymentPlan                 PaymentPlan[]
+  PaymentRecord               PaymentRecord[]
+  RenewalReminder             RenewalReminder[]
+  FollowUp                    FollowUp[]
+  Reminder                    Reminder[]
+  AuditLog                    AuditLog[]
+  UserSession                 UserSession[]
+  WorkfeedNotificationRead    WorkfeedNotificationRead[]
+  NotificationEvent           NotificationEvent[]
+  NotificationRecord          NotificationRecord[]
+  NotificationPreference      NotificationPreference[]
+  BatchTask                   BatchTask[]
+  LeaveRequest                LeaveRequest[]
+  LeaveApprovalAction         LeaveApprovalAction[]
+  AdministrativeRequest       AdministrativeRequest[]
+  AdministrativeRequestAction AdministrativeRequestAction[]
+  WorkflowTemplate            WorkflowTemplate[]
+  WorkflowTemplateNode        WorkflowTemplateNode[]
+  WorkflowInstance            WorkflowInstance[]
+  WorkflowTask                WorkflowTask[]
+  WorkflowAction              WorkflowAction[]
+  WorkflowCcRecipient         WorkflowCcRecipient[]
+  Announcement                Announcement[]
+  DictionaryEntry             DictionaryEntry[]
+  Attachment                  Attachment[]
+  OpenApiCredential           OpenApiCredential[]
+  WebhookSubscription         WebhookSubscription[]
+  WebhookDelivery             WebhookDelivery[]
+  IdentityConnector           IdentityConnector[]
+  IdentityConnectorBinding    IdentityConnectorBinding[]
+}
+
+model ProductConfig {
+  id           String             @id @default(cuid())
+  code         String             @unique
+  tenantId     String?
+  industryCode String?
+  layer        ProductConfigLayer
+  scope        ProductConfigScope
+  configKey    String
+  displayName  String
+  description  String?
+  value        Json
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+  tenant       Tenant?            @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId])
+  @@index([industryCode])
+  @@index([layer, scope])
+  @@index([configKey])
+}
+
 model Department {
   id        String       @id @default(cuid())
+  tenantId  String
   name      String
   code      String       @unique
   parentId  String?
   status    RecordStatus @default(ACTIVE)
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
+  tenant    Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   parent    Department?  @relation("DepartmentHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
   children  Department[] @relation("DepartmentHierarchy")
   users     User[]
 
+  @@index([tenantId])
   @@index([parentId])
   @@index([status])
 }
 
 model User {
-  id                        String                    @id @default(cuid())
-  username                  String                    @unique
+  id                        String                        @id @default(cuid())
+  tenantId                  String
+  username                  String                        @unique
   passwordHash              String
   displayName               String
   email                     String?
   phone                     String?
-  status                    UserStatus                @default(ACTIVE)
+  status                    UserStatus                    @default(ACTIVE)
   departmentId              String?
-  createdAt                 DateTime                  @default(now())
-  updatedAt                 DateTime                  @updatedAt
-  department                Department?               @relation(fields: [departmentId], references: [id], onDelete: SetNull)
+  createdAt                 DateTime                      @default(now())
+  updatedAt                 DateTime                      @updatedAt
+  tenant                    Tenant                        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  department                Department?                   @relation(fields: [departmentId], references: [id], onDelete: SetNull)
   roles                     UserRole[]
-  ownedCustomers            Customer[]                @relation("CustomerOwner")
-  ownedLeads                Lead[]                    @relation("LeadOwner")
-  ownedOpportunities        Opportunity[]             @relation("OpportunityOwner")
-  followUps                 FollowUp[]                @relation("FollowUpCreator")
-  reminders                 Reminder[]                @relation("ReminderOwner")
-  auditLogs                 AuditLog[]                @relation("AuditActor")
-  uploadedAttachments       Attachment[]              @relation("AttachmentUploader")
+  ownedCustomers            Customer[]                    @relation("CustomerOwner")
+  ownedLeads                Lead[]                        @relation("LeadOwner")
+  ownedOpportunities        Opportunity[]                 @relation("OpportunityOwner")
+  followUps                 FollowUp[]                    @relation("FollowUpCreator")
+  reminders                 Reminder[]                    @relation("ReminderOwner")
+  auditLogs                 AuditLog[]                    @relation("AuditActor")
+  uploadedAttachments       Attachment[]                  @relation("AttachmentUploader")
   sessions                  UserSession[]
-  leaveRequests             LeaveRequest[]            @relation("LeaveRequestApplicant")
-  approvalsToHandle         LeaveRequest[]            @relation("LeaveRequestApprover")
-  leaveApprovalActions      LeaveApprovalAction[]     @relation("LeaveApprovalActor")
-  administrativeRequests    AdministrativeRequest[]   @relation("AdministrativeRequestApplicant")
-  administrativeApprovals   AdministrativeRequest[]   @relation("AdministrativeRequestApprover")
+  leaveRequests             LeaveRequest[]                @relation("LeaveRequestApplicant")
+  approvalsToHandle         LeaveRequest[]                @relation("LeaveRequestApprover")
+  leaveApprovalActions      LeaveApprovalAction[]         @relation("LeaveApprovalActor")
+  administrativeRequests    AdministrativeRequest[]       @relation("AdministrativeRequestApplicant")
+  administrativeApprovals   AdministrativeRequest[]       @relation("AdministrativeRequestApprover")
   administrativeActions     AdministrativeRequestAction[] @relation("AdministrativeRequestActionActor")
-  opportunityStageHistories OpportunityStageHistory[] @relation("OpportunityStageHistoryCreator")
-  ownedQuotes               Quote[]                   @relation("QuoteOwner")
-  ownedContracts            Contract[]                @relation("ContractOwner")
-  ownedPaymentPlans         PaymentPlan[]             @relation("PaymentPlanOwner")
-  ownedPaymentRecords       PaymentRecord[]           @relation("PaymentRecordOwner")
-  ownedRenewalReminders     RenewalReminder[]         @relation("RenewalReminderOwner")
-  publishedAnnouncements    Announcement[]            @relation("AnnouncementPublisher")
-  workfeedNotificationReads WorkfeedNotificationRead[] @relation("WorkfeedNotificationReader")
+  opportunityStageHistories OpportunityStageHistory[]     @relation("OpportunityStageHistoryCreator")
+  ownedQuotes               Quote[]                       @relation("QuoteOwner")
+  ownedContracts            Contract[]                    @relation("ContractOwner")
+  ownedPaymentPlans         PaymentPlan[]                 @relation("PaymentPlanOwner")
+  ownedPaymentRecords       PaymentRecord[]               @relation("PaymentRecordOwner")
+  ownedRenewalReminders     RenewalReminder[]             @relation("RenewalReminderOwner")
+  publishedAnnouncements    Announcement[]                @relation("AnnouncementPublisher")
+  workfeedNotificationReads WorkfeedNotificationRead[]    @relation("WorkfeedNotificationReader")
+  notificationEvents        NotificationEvent[]           @relation("NotificationEventActor")
+  notificationRecords       NotificationRecord[]          @relation("NotificationRecordRecipient")
+  notificationPreferences   NotificationPreference[]      @relation("NotificationPreferenceUser")
+  batchTasks                BatchTask[]                   @relation("BatchTaskOperator")
+  createdWorkflowTemplates  WorkflowTemplate[]            @relation("WorkflowTemplateCreator")
+  updatedWorkflowTemplates  WorkflowTemplate[]            @relation("WorkflowTemplateUpdater")
+  workflowInstances         WorkflowInstance[]            @relation("WorkflowInstanceApplicant")
+  assignedWorkflowTasks     WorkflowTask[]                @relation("WorkflowTaskAssignee")
+  createdWorkflowTasks      WorkflowTask[]                @relation("WorkflowTaskCreator")
+  workflowActions           WorkflowAction[]              @relation("WorkflowActionActor")
+  workflowCcRecipients      WorkflowCcRecipient[]         @relation("WorkflowCcRecipientUser")
+  createdWorkflowCcEntries  WorkflowCcRecipient[]         @relation("WorkflowCcRecipientCreator")
+  identityConnectorBindings IdentityConnectorBinding[]
 
+  @@index([tenantId])
   @@index([departmentId])
   @@index([status])
 }
 
 model Role {
-  id          String           @id @default(cuid())
-  name        String
-  code        String           @unique
-  description String?
-  isSystem    Boolean          @default(false)
-  status      RecordStatus     @default(ACTIVE)
-  dataScope   DataScope        @default(SELF)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
-  users       UserRole[]
-  permissions RolePermission[]
+  id                    String           @id @default(cuid())
+  tenantId              String
+  name                  String
+  code                  String           @unique
+  description           String?
+  isSystem              Boolean          @default(false)
+  status                RecordStatus     @default(ACTIVE)
+  dataScope             DataScope        @default(SELF)
+  extendedDataScopes    Json?
+  fieldPermissionRules  Json?
+  actionPermissionRules Json?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+  tenant                Tenant           @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  users                 UserRole[]
+  permissions           RolePermission[]
 
+  @@index([tenantId])
   @@index([dataScope])
   @@index([status])
 }
@@ -249,6 +524,7 @@ model RolePermission {
 
 model Customer {
   id                 String                  @id @default(cuid())
+  tenantId           String
   name               String
   contactName        String?
   phone              String?
@@ -259,6 +535,7 @@ model Customer {
   ownerId            String
   createdAt          DateTime                @default(now())
   updatedAt          DateTime                @updatedAt
+  tenant             Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   owner              User                    @relation("CustomerOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   tags               CustomerTagOnCustomer[]
   followUps          FollowUp[]              @relation("CustomerFollowUps")
@@ -272,6 +549,7 @@ model Customer {
   renewalReminders   RenewalReminder[]       @relation("CustomerRenewalReminders")
   convertedFromLeads Lead[]                  @relation("LeadConvertedCustomer")
 
+  @@index([tenantId])
   @@index([ownerId])
   @@index([source])
   @@index([status])
@@ -279,11 +557,15 @@ model Customer {
 
 model CustomerTag {
   id        String                  @id @default(cuid())
+  tenantId  String
   name      String                  @unique
   color     String?
   createdAt DateTime                @default(now())
   updatedAt DateTime                @updatedAt
+  tenant    Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   customers CustomerTagOnCustomer[]
+
+  @@index([tenantId])
 }
 
 model CustomerTagOnCustomer {
@@ -297,6 +579,7 @@ model CustomerTagOnCustomer {
 
 model Lead {
   id                  String        @id @default(cuid())
+  tenantId            String
   name                String
   contactName         String?
   phone               String?
@@ -307,6 +590,7 @@ model Lead {
   convertedCustomerId String?
   createdAt           DateTime      @default(now())
   updatedAt           DateTime      @updatedAt
+  tenant              Tenant        @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   owner               User          @relation("LeadOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   convertedCustomer   Customer?     @relation("LeadConvertedCustomer", fields: [convertedCustomerId], references: [id], onDelete: SetNull)
   followUps           FollowUp[]    @relation("LeadFollowUps")
@@ -314,6 +598,7 @@ model Lead {
   attachments         Attachment[]  @relation("LeadAttachments")
   sourceOpportunities Opportunity[] @relation("LeadSourceOpportunity")
 
+  @@index([tenantId])
   @@index([ownerId])
   @@index([source])
   @@index([status])
@@ -321,6 +606,7 @@ model Lead {
 
 model Opportunity {
   id                String                    @id @default(cuid())
+  tenantId          String
   name              String
   customerId        String
   sourceLeadId      String?
@@ -334,6 +620,7 @@ model Opportunity {
   lostReason        String?
   createdAt         DateTime                  @default(now())
   updatedAt         DateTime                  @updatedAt
+  tenant            Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   customer          Customer                  @relation(fields: [customerId], references: [id], onDelete: Restrict)
   sourceLead        Lead?                     @relation("LeadSourceOpportunity", fields: [sourceLeadId], references: [id], onDelete: SetNull)
   owner             User                      @relation("OpportunityOwner", fields: [ownerId], references: [id], onDelete: Restrict)
@@ -344,6 +631,7 @@ model Opportunity {
   paymentRecords    PaymentRecord[]           @relation("OpportunityPaymentRecords")
   renewalReminders  RenewalReminder[]         @relation("OpportunityRenewalReminders")
 
+  @@index([tenantId])
   @@index([ownerId])
   @@index([customerId])
   @@index([sourceLeadId])
@@ -354,21 +642,25 @@ model Opportunity {
 
 model OpportunityStageHistory {
   id            String            @id @default(cuid())
+  tenantId      String
   opportunityId String
   fromStage     OpportunityStage?
   toStage       OpportunityStage
   comment       String?
   createdById   String
   createdAt     DateTime          @default(now())
+  tenant        Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   opportunity   Opportunity       @relation(fields: [opportunityId], references: [id], onDelete: Cascade)
   createdBy     User              @relation("OpportunityStageHistoryCreator", fields: [createdById], references: [id], onDelete: Restrict)
 
+  @@index([tenantId])
   @@index([opportunityId, createdAt])
   @@index([createdById])
 }
 
 model Quote {
   id            String      @id @default(cuid())
+  tenantId      String
   quoteNo       String      @unique
   title         String
   amount        Decimal     @db.Decimal(18, 2)
@@ -381,10 +673,12 @@ model Quote {
   ownerId       String
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   customer      Customer    @relation("CustomerQuotes", fields: [customerId], references: [id], onDelete: Cascade)
   opportunity   Opportunity @relation("OpportunityQuotes", fields: [opportunityId], references: [id], onDelete: Cascade)
   owner         User        @relation("QuoteOwner", fields: [ownerId], references: [id], onDelete: Restrict)
 
+  @@index([tenantId])
   @@index([customerId, createdAt])
   @@index([opportunityId, createdAt])
   @@index([ownerId, status])
@@ -392,11 +686,12 @@ model Quote {
 }
 
 model Contract {
-  id               String               @id @default(cuid())
-  contractNo       String               @unique
+  id               String            @id @default(cuid())
+  tenantId         String
+  contractNo       String            @unique
   title            String
-  amount           Decimal              @db.Decimal(18, 2)
-  status           ContractStatus       @default(DRAFT)
+  amount           Decimal           @db.Decimal(18, 2)
+  status           ContractStatus    @default(DRAFT)
   startDate        DateTime
   endDate          DateTime
   signedAt         DateTime?
@@ -404,15 +699,17 @@ model Contract {
   customerId       String
   opportunityId    String
   ownerId          String
-  createdAt        DateTime             @default(now())
-  updatedAt        DateTime             @updatedAt
-  customer         Customer             @relation("CustomerContracts", fields: [customerId], references: [id], onDelete: Cascade)
-  opportunity      Opportunity          @relation("OpportunityContracts", fields: [opportunityId], references: [id], onDelete: Cascade)
-  owner            User                 @relation("ContractOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  tenant           Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  customer         Customer          @relation("CustomerContracts", fields: [customerId], references: [id], onDelete: Cascade)
+  opportunity      Opportunity       @relation("OpportunityContracts", fields: [opportunityId], references: [id], onDelete: Cascade)
+  owner            User              @relation("ContractOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   paymentPlans     PaymentPlan[]
   paymentRecords   PaymentRecord[]
   renewalReminders RenewalReminder[]
 
+  @@index([tenantId])
   @@index([customerId, createdAt])
   @@index([opportunityId, createdAt])
   @@index([ownerId, status])
@@ -420,25 +717,28 @@ model Contract {
 }
 
 model PaymentPlan {
-  id            String            @id @default(cuid())
-  title         String
-  plannedAmount Decimal           @db.Decimal(18, 2)
-  receivedAmount Decimal          @default(0) @db.Decimal(18, 2)
-  plannedDate   DateTime
-  status        PaymentPlanStatus @default(PENDING)
-  notes         String?
-  customerId    String
-  opportunityId String
-  contractId    String?
-  ownerId       String
-  createdAt     DateTime          @default(now())
-  updatedAt     DateTime          @updatedAt
-  customer      Customer          @relation("CustomerPaymentPlans", fields: [customerId], references: [id], onDelete: Cascade)
-  opportunity   Opportunity       @relation("OpportunityPaymentPlans", fields: [opportunityId], references: [id], onDelete: Cascade)
-  contract      Contract?         @relation(fields: [contractId], references: [id], onDelete: SetNull)
-  owner         User              @relation("PaymentPlanOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  id             String            @id @default(cuid())
+  tenantId       String
+  title          String
+  plannedAmount  Decimal           @db.Decimal(18, 2)
+  receivedAmount Decimal           @default(0) @db.Decimal(18, 2)
+  plannedDate    DateTime
+  status         PaymentPlanStatus @default(PENDING)
+  notes          String?
+  customerId     String
+  opportunityId  String
+  contractId     String?
+  ownerId        String
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  tenant         Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  customer       Customer          @relation("CustomerPaymentPlans", fields: [customerId], references: [id], onDelete: Cascade)
+  opportunity    Opportunity       @relation("OpportunityPaymentPlans", fields: [opportunityId], references: [id], onDelete: Cascade)
+  contract       Contract?         @relation(fields: [contractId], references: [id], onDelete: SetNull)
+  owner          User              @relation("PaymentPlanOwner", fields: [ownerId], references: [id], onDelete: Restrict)
   paymentRecords PaymentRecord[]
 
+  @@index([tenantId])
   @@index([customerId, plannedDate])
   @@index([opportunityId, plannedDate])
   @@index([contractId])
@@ -448,6 +748,7 @@ model PaymentPlan {
 
 model PaymentRecord {
   id            String      @id @default(cuid())
+  tenantId      String
   amount        Decimal     @db.Decimal(18, 2)
   receivedAt    DateTime
   note          String?
@@ -458,12 +759,14 @@ model PaymentRecord {
   ownerId       String
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
+  tenant        Tenant      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   customer      Customer    @relation("CustomerPaymentRecords", fields: [customerId], references: [id], onDelete: Cascade)
   opportunity   Opportunity @relation("OpportunityPaymentRecords", fields: [opportunityId], references: [id], onDelete: Cascade)
   contract      Contract?   @relation(fields: [contractId], references: [id], onDelete: SetNull)
   paymentPlan   PaymentPlan @relation(fields: [paymentPlanId], references: [id], onDelete: Cascade)
   owner         User        @relation("PaymentRecordOwner", fields: [ownerId], references: [id], onDelete: Restrict)
 
+  @@index([tenantId])
   @@index([customerId, receivedAt])
   @@index([opportunityId, receivedAt])
   @@index([contractId])
@@ -473,6 +776,7 @@ model PaymentRecord {
 
 model RenewalReminder {
   id            String                @id @default(cuid())
+  tenantId      String
   title         String
   remindAt      DateTime
   status        RenewalReminderStatus @default(PENDING)
@@ -483,11 +787,13 @@ model RenewalReminder {
   ownerId       String
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
+  tenant        Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   customer      Customer              @relation("CustomerRenewalReminders", fields: [customerId], references: [id], onDelete: Cascade)
   opportunity   Opportunity?          @relation("OpportunityRenewalReminders", fields: [opportunityId], references: [id], onDelete: SetNull)
   contract      Contract              @relation(fields: [contractId], references: [id], onDelete: Cascade)
   owner         User                  @relation("RenewalReminderOwner", fields: [ownerId], references: [id], onDelete: Restrict)
 
+  @@index([tenantId])
   @@index([customerId, remindAt])
   @@index([opportunityId, remindAt])
   @@index([contractId, remindAt])
@@ -497,6 +803,7 @@ model RenewalReminder {
 
 model FollowUp {
   id             String             @id @default(cuid())
+  tenantId       String
   entityType     FollowUpEntityType
   content        String
   nextFollowUpAt DateTime?
@@ -504,17 +811,20 @@ model FollowUp {
   customerId     String?
   createdById    String
   createdAt      DateTime           @default(now())
+  tenant         Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   createdBy      User               @relation("FollowUpCreator", fields: [createdById], references: [id], onDelete: Restrict)
   lead           Lead?              @relation("LeadFollowUps", fields: [leadId], references: [id], onDelete: Cascade)
   customer       Customer?          @relation("CustomerFollowUps", fields: [customerId], references: [id], onDelete: Cascade)
   reminder       Reminder?
 
+  @@index([tenantId])
   @@index([leadId])
   @@index([customerId])
 }
 
 model Reminder {
   id         String             @id @default(cuid())
+  tenantId   String
   entityType FollowUpEntityType
   remindAt   DateTime
   status     ReminderStatus     @default(PENDING)
@@ -524,17 +834,20 @@ model Reminder {
   ownerId    String
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @updatedAt
+  tenant     Tenant             @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   lead       Lead?              @relation("LeadReminders", fields: [leadId], references: [id], onDelete: Cascade)
   customer   Customer?          @relation("CustomerReminders", fields: [customerId], references: [id], onDelete: Cascade)
   followUp   FollowUp?          @relation(fields: [followUpId], references: [id], onDelete: SetNull)
   owner      User               @relation("ReminderOwner", fields: [ownerId], references: [id], onDelete: Restrict)
 
+  @@index([tenantId])
   @@index([ownerId])
   @@index([status])
 }
 
 model AuditLog {
   id         String          @id @default(cuid())
+  tenantId   String
   actorId    String?
   actorName  String?
   actionType AuditActionType
@@ -542,14 +855,17 @@ model AuditLog {
   targetId   String?
   detail     Json?
   createdAt  DateTime        @default(now())
+  tenant     Tenant          @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   actor      User?           @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
 
+  @@index([tenantId])
   @@index([actionType])
   @@index([targetType])
 }
 
 model UserSession {
   id               String    @id @default(cuid())
+  tenantId         String
   userId           String
   refreshTokenHash String    @unique
   expiresAt        DateTime
@@ -559,30 +875,388 @@ model UserSession {
   userAgent        String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
+  tenant           Tenant    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([tenantId])
   @@index([userId])
   @@index([expiresAt])
   @@index([revokedAt])
 }
 
+model OpenApiCredential {
+  id            String                  @id @default(cuid())
+  tenantId      String
+  name          String
+  accessKey     String                  @unique
+  secretHash    String
+  scopes        Json
+  status        OpenApiCredentialStatus @default(ACTIVE)
+  expiresAt     DateTime?
+  lastUsedAt    DateTime?
+  rotatedAt     DateTime?
+  revokedAt     DateTime?
+  createdByName String?
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  tenant        Tenant                  @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([status, createdAt])
+}
+
+model WebhookSubscription {
+  id                 String                    @id @default(cuid())
+  tenantId           String
+  name               String
+  endpointUrl        String
+  eventTypes         Json
+  status             WebhookSubscriptionStatus @default(ACTIVE)
+  signingSecret      String
+  signingSecretHint  String
+  maxAttempts        Int                       @default(3)
+  timeoutSeconds     Int                       @default(10)
+  lastTriggeredAt    DateTime?
+  lastDeliveryStatus WebhookDeliveryStatus?
+  lastFailureMessage String?
+  createdByName      String?
+  updatedByName      String?
+  createdAt          DateTime                  @default(now())
+  updatedAt          DateTime                  @updatedAt
+  tenant             Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  deliveries         WebhookDelivery[]
+
+  @@index([tenantId])
+  @@index([status, createdAt])
+}
+
+model WebhookDelivery {
+  id                 String                @id @default(cuid())
+  tenantId           String
+  subscriptionId     String
+  eventType          String
+  sourceType         String
+  sourceId           String
+  payload            Json
+  signature          String
+  status             WebhookDeliveryStatus @default(PENDING)
+  attemptCount       Int                   @default(0)
+  responseStatusCode Int?
+  responseBody       String?
+  errorMessage       String?
+  nextRetryAt        DateTime?
+  deliveredAt        DateTime?
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+  tenant             Tenant                @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  subscription       WebhookSubscription   @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([subscriptionId, createdAt])
+  @@index([status, createdAt])
+}
+
+model IdentityConnector {
+  id                  String                      @id @default(cuid())
+  tenantId            String
+  name                String
+  type                IdentityConnectorType
+  status              RecordStatus                @default(ACTIVE)
+  matchField          IdentityConnectorMatchField @default(EMAIL)
+  issuerUrl           String?
+  authorizeUrl        String?
+  tokenUrl            String?
+  directoryUrl        String?
+  clientId            String?
+  clientSecretHash    String?
+  clientSecretHint    String?
+  allowedDomains      Json?
+  config              Json?
+  lastAuthenticatedAt DateTime?
+  lastFailureAt       DateTime?
+  lastFailureMessage  String?
+  createdByName       String?
+  updatedByName       String?
+  createdAt           DateTime                    @default(now())
+  updatedAt           DateTime                    @updatedAt
+  tenant              Tenant                      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  bindings            IdentityConnectorBinding[]
+
+  @@index([tenantId])
+  @@index([status, type])
+}
+
+model IdentityConnectorBinding {
+  id                  String            @id @default(cuid())
+  tenantId            String
+  connectorId         String
+  userId              String
+  externalSubject     String
+  externalUsername    String?
+  externalEmail       String?
+  lastAuthenticatedAt DateTime?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  tenant              Tenant            @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  connector           IdentityConnector @relation(fields: [connectorId], references: [id], onDelete: Cascade)
+  user                User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([connectorId, externalSubject])
+  @@index([tenantId])
+  @@index([userId])
+}
+
 model WorkfeedNotificationRead {
   id               String   @id @default(cuid())
+  tenantId         String?
   userId           String
   notificationType String
   sourceId         String
   readAt           DateTime @default(now())
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt
+  tenant           Tenant?  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   user             User     @relation("WorkfeedNotificationReader", fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, notificationType, sourceId])
+  @@index([tenantId])
   @@index([userId, readAt])
   @@index([notificationType, sourceId])
 }
 
+model NotificationEvent {
+  id            String                  @id @default(cuid())
+  tenantId      String?
+  eventType     String
+  domain        NotificationDomain
+  sourceType    String
+  sourceId      String
+  title         String
+  summary       String?
+  priority      NotificationPriority    @default(MEDIUM)
+  status        NotificationEventStatus @default(PENDING)
+  payload       Json
+  metadata      Json?
+  targetPath    String?
+  targetLabel   String?
+  actorId       String?
+  occurredAt    DateTime
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  tenant        Tenant?                 @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  actor         User?                   @relation("NotificationEventActor", fields: [actorId], references: [id], onDelete: SetNull)
+  notifications NotificationRecord[]
+
+  @@index([tenantId])
+  @@index([domain, occurredAt])
+  @@index([eventType, occurredAt])
+  @@index([sourceType, sourceId])
+  @@index([status, createdAt])
+  @@index([actorId, createdAt])
+}
+
+model NotificationRecord {
+  id                 String                   @id @default(cuid())
+  tenantId           String?
+  eventId            String
+  recipientId        String
+  domain             NotificationDomain
+  eventType          String
+  title              String
+  summary            String?
+  priority           NotificationPriority     @default(MEDIUM)
+  status             NotificationRecordStatus @default(UNREAD)
+  targetPath         String?
+  targetLabel        String?
+  channelPreferences Json?
+  routingSnapshot    Json?
+  deliveredAt        DateTime?
+  readAt             DateTime?
+  archivedAt         DateTime?
+  createdAt          DateTime                 @default(now())
+  updatedAt          DateTime                 @updatedAt
+  tenant             Tenant?                  @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  event              NotificationEvent        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  recipient          User                     @relation("NotificationRecordRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  deliveries         NotificationDelivery[]
+
+  @@index([tenantId])
+  @@index([recipientId, status, createdAt])
+  @@index([eventId])
+  @@index([domain, eventType])
+  @@index([readAt])
+}
+
+model NotificationDelivery {
+  id                String                     @id @default(cuid())
+  notificationId    String
+  channel           NotificationChannel
+  adapterCode       String?
+  provider          String?
+  status            NotificationDeliveryStatus @default(PENDING)
+  externalMessageId String?
+  attemptCount      Int                        @default(0)
+  payload           Json?
+  response          Json?
+  errorMessage      String?
+  lastAttemptedAt   DateTime?
+  sentAt            DateTime?
+  failedAt          DateTime?
+  createdAt         DateTime                   @default(now())
+  updatedAt         DateTime                   @updatedAt
+  notification      NotificationRecord         @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+
+  @@index([notificationId, channel])
+  @@index([status, createdAt])
+  @@index([adapterCode])
+}
+
+model NotificationPreference {
+  id                       String                 @id @default(cuid())
+  tenantId                 String?
+  userId                   String
+  domain                   NotificationDomain
+  eventType                String
+  subscribed               Boolean                @default(true)
+  inAppEnabled             Boolean                @default(true)
+  emailEnabled             Boolean                @default(false)
+  enterpriseImEnabled      Boolean                @default(false)
+  digestMode               NotificationDigestMode @default(IMMEDIATE)
+  reminderFrequencyMinutes Int?
+  nudgeThresholdMinutes    Int?
+  quietHours               Json?
+  createdAt                DateTime               @default(now())
+  updatedAt                DateTime               @updatedAt
+  tenant                   Tenant?                @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  user                     User                   @relation("NotificationPreferenceUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, domain, eventType])
+  @@index([tenantId])
+  @@index([userId, domain])
+}
+
+model NotificationChannelConfig {
+  id           String              @id @default(cuid())
+  channel      NotificationChannel
+  adapterCode  String              @unique
+  provider     String
+  displayName  String
+  description  String?
+  isEnabled    Boolean             @default(false)
+  config       Json?
+  capabilities Json?
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([channel, isEnabled])
+}
+
+model StorageConfig {
+  id             String                    @id @default(cuid())
+  code           String                    @unique
+  displayName    String
+  provider       AttachmentStorageProvider
+  isEnabled      Boolean                   @default(true)
+  status         GovernanceHealthStatus    @default(HEALTHY)
+  bucketName     String
+  regionLabel    String
+  previewEnabled Boolean                   @default(true)
+  config         Json?
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  @@index([provider, isEnabled])
+}
+
+model SchedulerJob {
+  id                  String                    @id @default(cuid())
+  code                String                    @unique
+  displayName         String
+  description         String?
+  cronExpression      String
+  status              SchedulerJobStatus        @default(RUNNING)
+  ownerName           String
+  nextRunAt           DateTime?
+  lastRunAt           DateTime?
+  lastExecutionStatus SchedulerExecutionStatus?
+  lastErrorMessage    String?
+  createdAt           DateTime                  @default(now())
+  updatedAt           DateTime                  @updatedAt
+  executions          SchedulerJobExecution[]
+
+  @@index([status, updatedAt])
+}
+
+model SchedulerJobExecution {
+  id           String                   @id @default(cuid())
+  jobId        String
+  status       SchedulerExecutionStatus @default(RUNNING)
+  summary      String?
+  errorMessage String?
+  startedAt    DateTime
+  finishedAt   DateTime?
+  durationMs   Int?
+  createdAt    DateTime                 @default(now())
+  job          SchedulerJob             @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, createdAt])
+  @@index([status, createdAt])
+}
+
+model BatchTask {
+  id                     String                     @id @default(cuid())
+  tenantId               String?
+  category               BatchTaskCategory
+  resourceType           String
+  label                  String
+  status                 BatchTaskStatus            @default(PENDING)
+  progress               Int                        @default(0)
+  totalCount             Int                        @default(0)
+  successCount           Int                        @default(0)
+  failureCount           Int                        @default(0)
+  operatorId             String
+  filterSnapshot         Json?
+  summary                String?
+  failureSummary         String?
+  inputFileName          String?
+  resultFileName         String?
+  resultMimeType         String?
+  resultStorageProvider  AttachmentStorageProvider?
+  resultStorageKey       String?
+  failureFileName        String?
+  failureMimeType        String?
+  failureStorageProvider AttachmentStorageProvider?
+  failureStorageKey      String?
+  startedAt              DateTime?
+  finishedAt             DateTime?
+  createdAt              DateTime                   @default(now())
+  updatedAt              DateTime                   @updatedAt
+  tenant                 Tenant?                    @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  operator               User                       @relation("BatchTaskOperator", fields: [operatorId], references: [id], onDelete: Restrict)
+  failures               BatchTaskFailure[]
+
+  @@index([tenantId])
+  @@index([category, status, createdAt])
+  @@index([resourceType, createdAt])
+  @@index([operatorId, createdAt])
+}
+
+model BatchTaskFailure {
+  id         String    @id @default(cuid())
+  taskId     String
+  rowNumber  Int?
+  identifier String?
+  reason     String
+  payload    Json?
+  createdAt  DateTime  @default(now())
+  task       BatchTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId, createdAt])
+}
+
 model LeaveRequest {
   id          String                @id @default(cuid())
+  tenantId    String?
   applicantId String
   approverId  String
   leaveType   String
@@ -592,10 +1266,12 @@ model LeaveRequest {
   status      LeaveRequestStatus    @default(PENDING)
   createdAt   DateTime              @default(now())
   updatedAt   DateTime              @updatedAt
+  tenant      Tenant?               @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   applicant   User                  @relation("LeaveRequestApplicant", fields: [applicantId], references: [id], onDelete: Restrict)
   approver    User                  @relation("LeaveRequestApprover", fields: [approverId], references: [id], onDelete: Restrict)
   actions     LeaveApprovalAction[]
 
+  @@index([tenantId])
   @@index([applicantId, createdAt])
   @@index([approverId, status])
   @@index([status])
@@ -603,21 +1279,25 @@ model LeaveRequest {
 
 model LeaveApprovalAction {
   id             String                 @id @default(cuid())
+  tenantId       String?
   leaveRequestId String
   actorId        String
   decision       ApprovalActionDecision
   comment        String?
   createdAt      DateTime               @default(now())
+  tenant         Tenant?                @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   leaveRequest   LeaveRequest           @relation(fields: [leaveRequestId], references: [id], onDelete: Cascade)
   actor          User                   @relation("LeaveApprovalActor", fields: [actorId], references: [id], onDelete: Restrict)
 
+  @@index([tenantId])
   @@index([leaveRequestId, createdAt])
   @@index([actorId])
 }
 
 model AdministrativeRequest {
-  id              String                      @id @default(cuid())
-  requestNo       String                      @unique
+  id              String                        @id @default(cuid())
+  tenantId        String?
+  requestNo       String                        @unique
   type            AdministrativeRequestType
   title           String
   summary         String
@@ -626,15 +1306,17 @@ model AdministrativeRequest {
   attachmentNames Json?
   applicantId     String
   approverId      String
-  status          AdministrativeRequestStatus @default(PENDING)
-  submittedAt     DateTime                    @default(now())
+  status          AdministrativeRequestStatus   @default(PENDING)
+  submittedAt     DateTime                      @default(now())
   decidedAt       DateTime?
-  createdAt       DateTime                    @default(now())
-  updatedAt       DateTime                    @updatedAt
-  applicant       User                        @relation("AdministrativeRequestApplicant", fields: [applicantId], references: [id], onDelete: Restrict)
-  approver        User                        @relation("AdministrativeRequestApprover", fields: [approverId], references: [id], onDelete: Restrict)
+  createdAt       DateTime                      @default(now())
+  updatedAt       DateTime                      @updatedAt
+  tenant          Tenant?                       @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  applicant       User                          @relation("AdministrativeRequestApplicant", fields: [applicantId], references: [id], onDelete: Restrict)
+  approver        User                          @relation("AdministrativeRequestApprover", fields: [approverId], references: [id], onDelete: Restrict)
   actions         AdministrativeRequestAction[]
 
+  @@index([tenantId])
   @@index([applicantId, createdAt])
   @@index([approverId, status])
   @@index([type, status])
@@ -642,22 +1324,176 @@ model AdministrativeRequest {
 }
 
 model AdministrativeRequestAction {
-  id        String                          @id @default(cuid())
-  requestId String
-  actorId   String
+  id         String                          @id @default(cuid())
+  tenantId   String?
+  requestId  String
+  actorId    String
   actionType AdministrativeRequestActionType
-  comment   String?
-  snapshot  Json?
-  createdAt DateTime                        @default(now())
-  request   AdministrativeRequest           @relation(fields: [requestId], references: [id], onDelete: Cascade)
-  actor     User                            @relation("AdministrativeRequestActionActor", fields: [actorId], references: [id], onDelete: Restrict)
+  comment    String?
+  snapshot   Json?
+  createdAt  DateTime                        @default(now())
+  tenant     Tenant?                         @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  request    AdministrativeRequest           @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  actor      User                            @relation("AdministrativeRequestActionActor", fields: [actorId], references: [id], onDelete: Restrict)
 
+  @@index([tenantId])
   @@index([requestId, createdAt])
   @@index([actorId])
 }
 
+model WorkflowTemplate {
+  id               String                 @id @default(cuid())
+  tenantId         String?
+  key              String                 @unique
+  name             String
+  description      String?
+  businessType     String
+  version          Int                    @default(1)
+  status           WorkflowTemplateStatus @default(DRAFT)
+  formSchema       Json
+  defaultCcUserIds Json?
+  createdById      String
+  updatedById      String
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  tenant           Tenant?                @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  createdBy        User                   @relation("WorkflowTemplateCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  updatedBy        User                   @relation("WorkflowTemplateUpdater", fields: [updatedById], references: [id], onDelete: Restrict)
+  nodes            WorkflowTemplateNode[]
+  instances        WorkflowInstance[]
+
+  @@index([tenantId])
+  @@index([businessType, status])
+}
+
+model WorkflowTemplateNode {
+  id               String                 @id @default(cuid())
+  tenantId         String?
+  templateId       String
+  nodeKey          String
+  name             String
+  nodeType         WorkflowNodeType       @default(APPROVAL)
+  position         Int
+  assignmentType   WorkflowAssignmentType
+  assignmentConfig Json
+  branchRules      Json?
+  fallbackNodeKey  String?
+  allowAddSign     Boolean                @default(true)
+  allowTransfer    Boolean                @default(true)
+  ccUserIds        Json?
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
+  tenant           Tenant?                @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  template         WorkflowTemplate       @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  tasks            WorkflowTask[]
+
+  @@unique([templateId, nodeKey])
+  @@unique([templateId, position])
+  @@index([tenantId])
+  @@index([templateId, position])
+}
+
+model WorkflowInstance {
+  id             String                 @id @default(cuid())
+  tenantId       String?
+  templateId     String
+  applicantId    String
+  businessKey    String?
+  title          String
+  formData       Json
+  currentNodeKey String?
+  status         WorkflowInstanceStatus @default(IN_PROGRESS)
+  submittedAt    DateTime               @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  tenant         Tenant?                @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  template       WorkflowTemplate       @relation(fields: [templateId], references: [id], onDelete: Restrict)
+  applicant      User                   @relation("WorkflowInstanceApplicant", fields: [applicantId], references: [id], onDelete: Restrict)
+  tasks          WorkflowTask[]
+  actions        WorkflowAction[]
+  ccRecipients   WorkflowCcRecipient[]
+
+  @@index([tenantId])
+  @@index([templateId, status])
+  @@index([applicantId, submittedAt])
+  @@index([status, submittedAt])
+}
+
+model WorkflowTask {
+  id             String                @id @default(cuid())
+  tenantId       String?
+  instanceId     String
+  templateNodeId String?
+  nodeKey        String
+  nodeName       String
+  assigneeId     String
+  createdById    String?
+  sourceTaskId   String?
+  isAddSign      Boolean               @default(false)
+  status         WorkflowTaskStatus    @default(PENDING)
+  decidedAt      DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+  tenant         Tenant?               @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  instance       WorkflowInstance      @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  templateNode   WorkflowTemplateNode? @relation(fields: [templateNodeId], references: [id], onDelete: SetNull)
+  assignee       User                  @relation("WorkflowTaskAssignee", fields: [assigneeId], references: [id], onDelete: Restrict)
+  createdBy      User?                 @relation("WorkflowTaskCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  sourceTask     WorkflowTask?         @relation("WorkflowTaskDerivation", fields: [sourceTaskId], references: [id], onDelete: SetNull)
+  derivedTasks   WorkflowTask[]        @relation("WorkflowTaskDerivation")
+  actions        WorkflowAction[]
+
+  @@index([tenantId])
+  @@index([instanceId, nodeKey, status])
+  @@index([assigneeId, status, createdAt])
+  @@index([templateNodeId])
+  @@index([sourceTaskId])
+}
+
+model WorkflowAction {
+  id         String             @id @default(cuid())
+  tenantId   String?
+  instanceId String
+  taskId     String?
+  actorId    String
+  actionType WorkflowActionType
+  comment    String?
+  payload    Json?
+  createdAt  DateTime           @default(now())
+  tenant     Tenant?            @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  instance   WorkflowInstance   @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  task       WorkflowTask?      @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  actor      User               @relation("WorkflowActionActor", fields: [actorId], references: [id], onDelete: Restrict)
+
+  @@index([tenantId])
+  @@index([instanceId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([taskId])
+}
+
+model WorkflowCcRecipient {
+  id            String           @id @default(cuid())
+  tenantId      String?
+  instanceId    String
+  userId        String
+  createdById   String
+  sourceNodeKey String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+  tenant        Tenant?          @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+  instance      WorkflowInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  user          User             @relation("WorkflowCcRecipientUser", fields: [userId], references: [id], onDelete: Restrict)
+  createdBy     User             @relation("WorkflowCcRecipientCreator", fields: [createdById], references: [id], onDelete: Restrict)
+
+  @@unique([instanceId, userId, sourceNodeKey])
+  @@index([tenantId])
+  @@index([userId, createdAt])
+}
+
 model Announcement {
   id            String       @id @default(cuid())
+  tenantId      String?
   title         String
   summary       String?
   content       String
@@ -666,14 +1502,17 @@ model Announcement {
   publishedAt   DateTime     @default(now())
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
+  tenant        Tenant?      @relation(fields: [tenantId], references: [id], onDelete: SetNull)
   publishedBy   User         @relation("AnnouncementPublisher", fields: [publishedById], references: [id], onDelete: Restrict)
 
+  @@index([tenantId])
   @@index([status, publishedAt])
   @@index([publishedById])
 }
 
 model DictionaryEntry {
   id        String   @id @default(cuid())
+  tenantId  String
   type      String
   label     String
   value     String
@@ -681,13 +1520,16 @@ model DictionaryEntry {
   enabled   Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  tenant    Tenant   @relation(fields: [tenantId], references: [id], onDelete: Restrict)
 
   @@unique([type, value])
+  @@index([tenantId])
   @@index([type, enabled])
 }
 
 model Attachment {
   id              String                    @id @default(cuid())
+  tenantId        String
   businessType    AttachmentBusinessType
   businessId      String
   fileName        String
@@ -700,10 +1542,12 @@ model Attachment {
   leadId          String?
   uploadedById    String
   createdAt       DateTime                  @default(now())
+  tenant          Tenant                    @relation(fields: [tenantId], references: [id], onDelete: Restrict)
   customer        Customer?                 @relation("CustomerAttachments", fields: [customerId], references: [id], onDelete: Cascade)
   lead            Lead?                     @relation("LeadAttachments", fields: [leadId], references: [id], onDelete: Cascade)
   uploadedBy      User                      @relation("AttachmentUploader", fields: [uploadedById], references: [id], onDelete: Restrict)
 
+  @@index([tenantId])
   @@index([businessType, businessId])
   @@index([uploadedById])
 }

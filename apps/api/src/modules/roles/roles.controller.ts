@@ -27,8 +27,8 @@ export class RolesController {
     type: RoleVo,
     isArray: true
   })
-  list() {
-    return this.rolesService.list();
+  list(@CurrentUser() user: AuthUser) {
+    return this.rolesService.list(user);
   }
 
   @Get("permissions/catalog")

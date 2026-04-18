@@ -5,6 +5,7 @@ import { mount, RouterLinkStub } from "@vue/test-utils";
 import AdministrativeRequestPage from "./AdministrativeRequestPage.vue";
 
 const openAdministrativeRequestDetail = vi.fn();
+const submitMock = vi.fn();
 
 vi.mock("@/composables/administrative-requests/useAdministrativeRequestPage", () => ({
   useAdministrativeRequestPage: () => ({
@@ -33,7 +34,7 @@ vi.mock("@/composables/administrative-requests/useAdministrativeRequestPage", ()
     requestTypes: ["REIMBURSEMENT", "TRAVEL", "PURCHASE", "SEAL"],
     rules: {},
     setFormRef: vi.fn(),
-    submit: vi.fn(),
+    submit: submitMock,
     submitting: ref(false)
   })
 }));
@@ -51,14 +52,19 @@ vi.mock("@/composables/administrative-requests/useAdministrativeRequestDetailDra
 describe("AdministrativeRequestPage", () => {
   it("renders four request types and recent administrative requests", async () => {
     openAdministrativeRequestDetail.mockClear();
+    submitMock.mockClear();
 
     const wrapper = mount(AdministrativeRequestPage, {
       global: {
         stubs: {
           AdministrativeRequestDetailDrawer: true,
           RouterLink: RouterLinkStub,
-          "el-form": true,
-          "el-form-item": true,
+          "el-form": {
+            template: "<form><slot /></form>"
+          },
+          "el-form-item": {
+            template: "<div><slot /></div>"
+          },
           "el-input": true,
           "el-input-number": true,
           "el-button": true,
@@ -76,8 +82,13 @@ describe("AdministrativeRequestPage", () => {
     expect(wrapper.text()).toContain("用印申请");
     expect(wrapper.text()).toContain("华东客户拜访报销");
 
-    await wrapper.get("el-button-stub").trigger("click");
+    const buttons = wrapper.findAll("el-button-stub");
+    expect(buttons).toHaveLength(2);
 
+    await buttons[0].trigger("click");
+    await buttons[1].trigger("click");
+
+    expect(submitMock).toHaveBeenCalledTimes(1);
     expect(openAdministrativeRequestDetail).toHaveBeenCalledWith("req-1");
   });
 });

@@ -124,9 +124,10 @@ export type AdministrativeRequestRecord = Prisma.AdministrativeRequestGetPayload
 export class OfficeAutomationRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findDefaultApprover(applicantId: string, permissionCode = "oa:approval:write") {
+  async findDefaultApprover(applicantId: string, tenantId: string, permissionCode = "oa:approval:write") {
     return this.prisma.user.findFirst({
       where: {
+        tenantId,
         id: {
           not: applicantId
         },
@@ -154,9 +155,10 @@ export class OfficeAutomationRepository {
     });
   }
 
-  async findSelfApprover(applicantId: string, permissionCode = "oa:approval:write") {
+  async findSelfApprover(applicantId: string, tenantId: string, permissionCode = "oa:approval:write") {
     return this.prisma.user.findFirst({
       where: {
+        tenantId,
         id: applicantId,
         status: UserStatus.ACTIVE,
         roles: {
@@ -180,6 +182,7 @@ export class OfficeAutomationRepository {
   }
 
   async createLeaveRequest(input: {
+    tenantId: string;
     applicantId: string;
     approverId: string;
     leaveType: string;
@@ -189,6 +192,7 @@ export class OfficeAutomationRepository {
   }) {
     const request = await this.prisma.leaveRequest.create({
       data: {
+        tenantId: input.tenantId,
         applicantId: input.applicantId,
         approverId: input.approverId,
         leaveType: input.leaveType,
@@ -198,10 +202,11 @@ export class OfficeAutomationRepository {
       }
     });
 
-    return this.findLeaveRequestById(request.id);
+    return this.findLeaveRequestById(request.id, input.tenantId);
   }
 
   async createAdministrativeRequest(input: {
+    tenantId: string;
     requestNo: string;
     type: AdministrativeRequestType;
     title: string;
@@ -214,6 +219,7 @@ export class OfficeAutomationRepository {
   }) {
     const request = await this.prisma.administrativeRequest.create({
       data: {
+        tenantId: input.tenantId,
         requestNo: input.requestNo,
         type: input.type,
         title: input.title,
@@ -225,6 +231,7 @@ export class OfficeAutomationRepository {
         approverId: input.approverId,
         actions: {
           create: {
+            tenantId: input.tenantId,
             actorId: input.applicantId,
             actionType: AdministrativeRequestActionType.SUBMITTED,
             snapshot: input.formData
@@ -233,24 +240,25 @@ export class OfficeAutomationRepository {
       }
     });
 
-    return this.findAdministrativeRequestById(request.id);
+    return this.findAdministrativeRequestById(request.id, input.tenantId);
   }
 
-  findLeaveRequestById(id: string) {
-    return this.prisma.leaveRequest.findUniqueOrThrow({
-      where: { id },
+  findLeaveRequestById(id: string, tenantId: string) {
+    return this.prisma.leaveRequest.findFirstOrThrow({
+      where: { id, tenantId },
       include: leaveRequestInclude
     });
   }
 
-  findAdministrativeRequestById(id: string) {
-    return this.prisma.administrativeRequest.findUniqueOrThrow({
-      where: { id },
+  findAdministrativeRequestById(id: string, tenantId: string) {
+    return this.prisma.administrativeRequest.findFirstOrThrow({
+      where: { id, tenantId },
       include: administrativeRequestInclude
     });
   }
 
   async applyApprovalDecision(input: {
+    tenantId: string;
     requestId: string;
     actorId: string;
     status: LeaveRequestStatus;
@@ -262,9 +270,10 @@ export class OfficeAutomationRepository {
         : ApprovalActionDecision.REJECTED;
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.leaveRequest.update({
+      await tx.leaveRequest.updateMany({
         where: {
-          id: input.requestId
+          id: input.requestId,
+          tenantId: input.tenantId
         },
         data: {
           status: input.status
@@ -273,6 +282,7 @@ export class OfficeAutomationRepository {
 
       await tx.leaveApprovalAction.create({
         data: {
+          tenantId: input.tenantId,
           leaveRequestId: input.requestId,
           actorId: input.actorId,
           decision,
@@ -281,10 +291,11 @@ export class OfficeAutomationRepository {
       });
     });
 
-    return this.findLeaveRequestById(input.requestId);
+    return this.findLeaveRequestById(input.requestId, input.tenantId);
   }
 
   async applyAdministrativeApprovalDecision(input: {
+    tenantId: string;
     requestId: string;
     actorId: string;
     status: AdministrativeRequestStatus;
@@ -296,9 +307,10 @@ export class OfficeAutomationRepository {
         : AdministrativeRequestActionType.REJECTED;
 
     await this.prisma.$transaction(async (tx) => {
-      await tx.administrativeRequest.update({
+      await tx.administrativeRequest.updateMany({
         where: {
-          id: input.requestId
+          id: input.requestId,
+          tenantId: input.tenantId
         },
         data: {
           status: input.status,
@@ -308,6 +320,7 @@ export class OfficeAutomationRepository {
 
       await tx.administrativeRequestAction.create({
         data: {
+          tenantId: input.tenantId,
           requestId: input.requestId,
           actorId: input.actorId,
           actionType,
@@ -316,17 +329,19 @@ export class OfficeAutomationRepository {
       });
     });
 
-    return this.findAdministrativeRequestById(input.requestId);
+    return this.findAdministrativeRequestById(input.requestId, input.tenantId);
   }
 
   async applyAdministrativeCancellation(input: {
+    tenantId: string;
     requestId: string;
     actorId: string;
   }) {
     await this.prisma.$transaction(async (tx) => {
-      await tx.administrativeRequest.update({
+      await tx.administrativeRequest.updateMany({
         where: {
-          id: input.requestId
+          id: input.requestId,
+          tenantId: input.tenantId
         },
         data: {
           status: AdministrativeRequestStatus.CANCELLED,
@@ -336,6 +351,7 @@ export class OfficeAutomationRepository {
 
       await tx.administrativeRequestAction.create({
         data: {
+          tenantId: input.tenantId,
           requestId: input.requestId,
           actorId: input.actorId,
           actionType: AdministrativeRequestActionType.CANCELLED
@@ -343,12 +359,13 @@ export class OfficeAutomationRepository {
       });
     });
 
-    return this.findAdministrativeRequestById(input.requestId);
+    return this.findAdministrativeRequestById(input.requestId, input.tenantId);
   }
 
-  listPendingApprovals(approverId: string) {
+  listPendingApprovals(approverId: string, tenantId: string) {
     return this.prisma.leaveRequest.findMany({
       where: {
+        tenantId,
         approverId,
         status: LeaveRequestStatus.PENDING
       },
@@ -361,9 +378,10 @@ export class OfficeAutomationRepository {
     });
   }
 
-  listPendingAdministrativeApprovals(approverId: string) {
+  listPendingAdministrativeApprovals(approverId: string, tenantId: string) {
     return this.prisma.administrativeRequest.findMany({
       where: {
+        tenantId,
         approverId,
         status: AdministrativeRequestStatus.PENDING
       },
@@ -376,9 +394,10 @@ export class OfficeAutomationRepository {
     });
   }
 
-  listMyLeaveRequests(applicantId: string) {
+  listMyLeaveRequests(applicantId: string, tenantId: string) {
     return this.prisma.leaveRequest.findMany({
       where: {
+        tenantId,
         applicantId
       },
       include: leaveRequestInclude,
@@ -390,9 +409,10 @@ export class OfficeAutomationRepository {
     });
   }
 
-  listMyAdministrativeRequests(applicantId: string) {
+  listMyAdministrativeRequests(applicantId: string, tenantId: string) {
     return this.prisma.administrativeRequest.findMany({
       where: {
+        tenantId,
         applicantId
       },
       include: administrativeRequestInclude,
@@ -404,9 +424,11 @@ export class OfficeAutomationRepository {
     });
   }
 
-  listAdministrativeRequests(where: Prisma.AdministrativeRequestWhereInput) {
+  listAdministrativeRequests(tenantId: string, where: Prisma.AdministrativeRequestWhereInput) {
     return this.prisma.administrativeRequest.findMany({
-      where,
+      where: {
+        AND: [{ tenantId }, where]
+      },
       include: administrativeRequestInclude,
       orderBy: [
         {
@@ -416,43 +438,48 @@ export class OfficeAutomationRepository {
     });
   }
 
-  countPendingApprovals(approverId: string) {
+  countPendingApprovals(approverId: string, tenantId: string) {
     return this.prisma.leaveRequest.count({
       where: {
+        tenantId,
         approverId,
         status: LeaveRequestStatus.PENDING
       }
     });
   }
 
-  countPendingAdministrativeApprovals(approverId: string) {
+  countPendingAdministrativeApprovals(approverId: string, tenantId: string) {
     return this.prisma.administrativeRequest.count({
       where: {
+        tenantId,
         approverId,
         status: AdministrativeRequestStatus.PENDING
       }
     });
   }
 
-  countMyLeaveRequests(applicantId: string) {
+  countMyLeaveRequests(applicantId: string, tenantId: string) {
     return this.prisma.leaveRequest.count({
       where: {
+        tenantId,
         applicantId
       }
     });
   }
 
-  countMyAdministrativeRequests(applicantId: string) {
+  countMyAdministrativeRequests(applicantId: string, tenantId: string) {
     return this.prisma.administrativeRequest.count({
       where: {
+        tenantId,
         applicantId
       }
     });
   }
 
-  listRecentAnnouncements(limit: number) {
+  listRecentAnnouncements(tenantId: string, limit: number) {
     return this.prisma.announcement.findMany({
       where: {
+        tenantId,
         status: RecordStatus.ACTIVE
       },
       include: announcementInclude,
@@ -465,9 +492,10 @@ export class OfficeAutomationRepository {
     });
   }
 
-  listAnnouncements() {
+  listAnnouncements(tenantId: string) {
     return this.prisma.announcement.findMany({
       where: {
+        tenantId,
         status: RecordStatus.ACTIVE
       },
       include: announcementInclude,
@@ -479,27 +507,30 @@ export class OfficeAutomationRepository {
     });
   }
 
-  findAnnouncementById(id: string) {
+  findAnnouncementById(id: string, tenantId: string) {
     return this.prisma.announcement.findFirstOrThrow({
       where: {
         id,
+        tenantId,
         status: RecordStatus.ACTIVE
       },
       include: announcementInclude
     });
   }
 
-  countActiveAnnouncements() {
+  countActiveAnnouncements(tenantId: string) {
     return this.prisma.announcement.count({
       where: {
+        tenantId,
         status: RecordStatus.ACTIVE
       }
     });
   }
 
-  listActiveDepartments() {
+  listActiveDepartments(tenantId: string) {
     return this.prisma.department.findMany({
       where: {
+        tenantId,
         status: RecordStatus.ACTIVE
       },
       select: directoryDepartmentSelect,
@@ -511,17 +542,19 @@ export class OfficeAutomationRepository {
     });
   }
 
-  countActiveDepartments() {
+  countActiveDepartments(tenantId: string) {
     return this.prisma.department.count({
       where: {
+        tenantId,
         status: RecordStatus.ACTIVE
       }
     });
   }
 
-  listDirectoryMembers(departmentId?: string) {
+  listDirectoryMembers(tenantId: string, departmentId?: string) {
     return this.prisma.user.findMany({
       where: {
+        tenantId,
         status: UserStatus.ACTIVE,
         departmentId
       },

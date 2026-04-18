@@ -27,8 +27,8 @@ export class DictionariesController {
     type: DictionaryEntryVo,
     isArray: true
   })
-  list(@Query() query: ListDictionariesDto) {
-    return this.dictionariesService.list(query);
+  list(@Query() query: ListDictionariesDto, @CurrentUser() user: AuthUser) {
+    return this.dictionariesService.list(query, user);
   }
 
   @Post()

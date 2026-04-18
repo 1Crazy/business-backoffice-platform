@@ -201,9 +201,12 @@ type PaymentPlanContextRecord = Prisma.PaymentPlanGetPayload<{
 export class RevenueOperationsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  findOpportunityContextById(id: string): Promise<OpportunityContextRecord> {
-    return this.prisma.opportunity.findUniqueOrThrow({
-      where: { id },
+  findOpportunityContextById(id: string, tenantId: string): Promise<OpportunityContextRecord> {
+    return this.prisma.opportunity.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      },
       select: {
         id: true,
         customerId: true,
@@ -213,9 +216,12 @@ export class RevenueOperationsRepository {
     });
   }
 
-  findCustomerContextById(id: string): Promise<CustomerContextRecord> {
-    return this.prisma.customer.findUniqueOrThrow({
-      where: { id },
+  findCustomerContextById(id: string, tenantId: string): Promise<CustomerContextRecord> {
+    return this.prisma.customer.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      },
       select: {
         id: true,
         ownerId: true
@@ -223,9 +229,12 @@ export class RevenueOperationsRepository {
     });
   }
 
-  findContractContextById(id: string): Promise<ContractContextRecord> {
-    return this.prisma.contract.findUniqueOrThrow({
-      where: { id },
+  findContractContextById(id: string, tenantId: string): Promise<ContractContextRecord> {
+    return this.prisma.contract.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      },
       select: {
         id: true,
         customerId: true,
@@ -235,9 +244,12 @@ export class RevenueOperationsRepository {
     });
   }
 
-  findPaymentPlanContextById(id: string): Promise<PaymentPlanContextRecord> {
-    return this.prisma.paymentPlan.findUniqueOrThrow({
-      where: { id },
+  findPaymentPlanContextById(id: string, tenantId: string): Promise<PaymentPlanContextRecord> {
+    return this.prisma.paymentPlan.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      },
       select: {
         id: true,
         customerId: true,
@@ -250,21 +262,28 @@ export class RevenueOperationsRepository {
     });
   }
 
-  findOpportunityOverview(opportunityId: string): Promise<OpportunityRevenueOverviewRecord> {
-    return this.prisma.opportunity.findUniqueOrThrow({
-      where: { id: opportunityId },
+  findOpportunityOverview(opportunityId: string, tenantId: string): Promise<OpportunityRevenueOverviewRecord> {
+    return this.prisma.opportunity.findFirstOrThrow({
+      where: {
+        id: opportunityId,
+        tenantId
+      },
       include: opportunityOverviewInclude
     });
   }
 
-  findCustomerOverview(customerId: string): Promise<CustomerRevenueOverviewRecord> {
-    return this.prisma.customer.findUniqueOrThrow({
-      where: { id: customerId },
+  findCustomerOverview(customerId: string, tenantId: string): Promise<CustomerRevenueOverviewRecord> {
+    return this.prisma.customer.findFirstOrThrow({
+      where: {
+        id: customerId,
+        tenantId
+      },
       include: customerOverviewInclude
     });
   }
 
   async createQuote(input: {
+    tenantId: string;
     quoteNo: string;
     title: string;
     amount: Prisma.Decimal;
@@ -277,6 +296,7 @@ export class RevenueOperationsRepository {
   }) {
     const record = await this.prisma.quote.create({
       data: {
+        tenantId: input.tenantId,
         quoteNo: input.quoteNo,
         title: input.title,
         amount: input.amount,
@@ -294,6 +314,7 @@ export class RevenueOperationsRepository {
   }
 
   async createContract(input: {
+    tenantId: string;
     contractNo: string;
     title: string;
     amount: Prisma.Decimal;
@@ -307,6 +328,7 @@ export class RevenueOperationsRepository {
   }) {
     return this.prisma.contract.create({
       data: {
+        tenantId: input.tenantId,
         contractNo: input.contractNo,
         title: input.title,
         amount: input.amount,
@@ -323,6 +345,7 @@ export class RevenueOperationsRepository {
   }
 
   async createPaymentPlan(input: {
+    tenantId: string;
     title: string;
     plannedAmount: Prisma.Decimal;
     plannedDate: Date;
@@ -334,6 +357,7 @@ export class RevenueOperationsRepository {
   }) {
     return this.prisma.paymentPlan.create({
       data: {
+        tenantId: input.tenantId,
         title: input.title,
         plannedAmount: input.plannedAmount,
         plannedDate: input.plannedDate,
@@ -348,6 +372,7 @@ export class RevenueOperationsRepository {
   }
 
   async createPaymentRecord(input: {
+    tenantId: string;
     amount: Prisma.Decimal;
     receivedAt: Date;
     note?: string;
@@ -362,6 +387,7 @@ export class RevenueOperationsRepository {
     const { record, updatedPlan } = await this.prisma.$transaction(async (tx) => {
       const createdRecord = await tx.paymentRecord.create({
         data: {
+          tenantId: input.tenantId,
           amount: input.amount,
           receivedAt: input.receivedAt,
           note: input.note,
@@ -398,6 +424,7 @@ export class RevenueOperationsRepository {
   }
 
   async createRenewalReminder(input: {
+    tenantId: string;
     title: string;
     remindAt: Date;
     note?: string;
@@ -408,6 +435,7 @@ export class RevenueOperationsRepository {
   }) {
     return this.prisma.renewalReminder.create({
       data: {
+        tenantId: input.tenantId,
         title: input.title,
         remindAt: input.remindAt,
         note: input.note,

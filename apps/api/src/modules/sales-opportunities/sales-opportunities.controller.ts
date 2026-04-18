@@ -3,6 +3,7 @@ import { Body, Controller, Get, Param, Patch, Post, Query } from "@nestjs/common
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { ActionPermission } from "@/common/decorators/action-permission.decorator";
 import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { Permissions } from "@/common/decorators/permissions.decorator";
 import { CreateSalesOpportunityDto } from "./dto/create-sales-opportunity.dto";
@@ -82,6 +83,7 @@ export class SalesOpportunitiesController {
 
   @Patch(":id/owner")
   @Permissions("opportunity:assign")
+  @ActionPermission("opportunity", "assign")
   @ApiOperation({
     summary: "重新分配商机负责人",
     description: "重新分配商机负责人。"
@@ -116,6 +118,7 @@ export class SalesOpportunitiesController {
 
   @Patch(":id/mark-won")
   @Permissions("opportunity:write")
+  @ActionPermission("opportunity", "close-won")
   @ApiOperation({
     summary: "赢单收口",
     description: "赢单收口。"
@@ -129,6 +132,7 @@ export class SalesOpportunitiesController {
 
   @Patch(":id/mark-lost")
   @Permissions("opportunity:write")
+  @ActionPermission("opportunity", "close-lost")
   @ApiOperation({
     summary: "输单收口",
     description: "输单收口。"

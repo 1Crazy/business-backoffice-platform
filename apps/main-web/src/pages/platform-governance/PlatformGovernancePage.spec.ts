@@ -113,4 +113,149 @@ describe("PlatformGovernancePage", () => {
 
     expect((wrapper.vm as any).currentTab).toBe("departments");
   });
+
+  it("includes data scope when creating a role policy", async () => {
+    const wrapper = shallowMount(PlatformGovernancePage, {
+      global: {
+        stubs: globalStubs
+      }
+    });
+    await flushPromises();
+
+    (wrapper.vm as any).roleFormRef = {
+      validate: vi.fn().mockResolvedValue(true),
+      clearValidate: vi.fn()
+    };
+    (wrapper.vm as any).roleForm.name = " 区域审批主管 ";
+    (wrapper.vm as any).roleForm.code = " area-approval-manager ";
+    (wrapper.vm as any).roleForm.description = " 负责区域审批 ";
+    (wrapper.vm as any).roleForm.dataScope = "DEPARTMENT_AND_SUBTREE";
+    (wrapper.vm as any).roleForm.permissionIds = ["perm-1", "perm-2"];
+    (wrapper.vm as any).roleForm.extendedDataScopes = [
+      {
+        dimension: "REGION",
+        values: [" 华东一区 ", "华南二区"],
+        note: " 区域负责人 "
+      }
+    ];
+    (wrapper.vm as any).roleForm.fieldPermissionRules = [
+      {
+        resource: " customer ",
+        field: " mobile ",
+        visibility: "MASKED"
+      }
+    ];
+    (wrapper.vm as any).roleForm.actionPermissionRules = [
+      {
+        resource: " approval ",
+        action: " export ",
+        allowed: false
+      }
+    ];
+
+    await (wrapper.vm as any).submitRole();
+
+    expect(postMock).toHaveBeenCalledWith("/roles", {
+      name: "区域审批主管",
+      code: "area-approval-manager",
+      description: "负责区域审批",
+      dataScope: "DEPARTMENT_AND_SUBTREE",
+      permissionIds: ["perm-1", "perm-2"],
+      policyBundle: {
+        extendedDataScopes: [
+          {
+            dimension: "REGION",
+            values: ["华东一区", "华南二区"],
+            note: "区域负责人"
+          }
+        ],
+        fieldPermissionRules: [
+          {
+            resource: "customer",
+            field: "mobile",
+            visibility: "MASKED"
+          }
+        ],
+        actionPermissionRules: [
+          {
+            resource: "approval",
+            action: "export",
+            allowed: false
+          }
+        ]
+      }
+    });
+  });
+
+  it("hydrates granular rules when editing an existing role", async () => {
+    const wrapper = shallowMount(PlatformGovernancePage, {
+      global: {
+        stubs: globalStubs
+      }
+    });
+    await flushPromises();
+
+    await (wrapper.vm as any).openRoleDialog({
+      id: "role-1",
+      name: "销售经理",
+      code: "sales-manager",
+      description: "销售角色",
+      status: "ACTIVE",
+      dataScope: "DEPARTMENT",
+      extendedDataScopes: [
+        {
+          dimension: "TEAM",
+          values: ["A 组"],
+          note: "核心团队"
+        }
+      ],
+      fieldPermissionRules: [
+        {
+          resource: "customer",
+          field: "mobile",
+          visibility: "READONLY"
+        }
+      ],
+      actionPermissionRules: [
+        {
+          resource: "revenue",
+          action: "confirm-payment",
+          allowed: true
+        }
+      ],
+      permissions: [
+        {
+          permission: {
+            id: "perm-1",
+            appCode: "scrm",
+            name: "查看客户",
+            code: "customer:read",
+            group: "customer"
+          }
+        }
+      ]
+    });
+
+    expect((wrapper.vm as any).roleForm.extendedDataScopes).toEqual([
+      {
+        dimension: "TEAM",
+        values: ["A 组"],
+        note: "核心团队"
+      }
+    ]);
+    expect((wrapper.vm as any).roleForm.fieldPermissionRules).toEqual([
+      {
+        resource: "customer",
+        field: "mobile",
+        visibility: "READONLY"
+      }
+    ]);
+    expect((wrapper.vm as any).roleForm.actionPermissionRules).toEqual([
+      {
+        resource: "revenue",
+        action: "confirm-payment",
+        allowed: true
+      }
+    ]);
+  });
 });

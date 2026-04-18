@@ -27,6 +27,10 @@ export type WorkfeedNotificationType = (typeof NOTIFICATION_TYPES)[number];
 
 export const WORKFEED_PRIORITIES = ["HIGH", "MEDIUM", "LOW"] as const;
 export type WorkfeedPriority = (typeof WORKFEED_PRIORITIES)[number];
+export const WORKFEED_CHANNELS = ["IN_APP", "EMAIL", "ENTERPRISE_IM"] as const;
+export type WorkfeedChannel = (typeof WORKFEED_CHANNELS)[number];
+export const WORKFEED_DIGEST_MODES = ["IMMEDIATE", "HOURLY", "DAILY", "WEEKLY"] as const;
+export type WorkfeedDigestMode = (typeof WORKFEED_DIGEST_MODES)[number];
 
 export interface WorkfeedTodo {
   id: string;
@@ -68,4 +72,41 @@ export interface ListWorkfeedNotificationsParams {
   domain?: WorkfeedDomain;
   type?: WorkfeedNotificationType;
   unreadOnly?: boolean;
+}
+
+export interface WorkfeedPreferenceState {
+  channels: Record<WorkfeedChannel, boolean>;
+  subscriptions: Record<WorkfeedNotificationType, boolean>;
+  digestMode: WorkfeedDigestMode;
+  escalationHours: number;
+}
+
+export interface NotificationPreferenceRecord {
+  id: string;
+  domain: "OA" | "SCRM" | "PLATFORM";
+  eventType: string;
+  subscribed: boolean;
+  inAppEnabled: boolean;
+  emailEnabled: boolean;
+  enterpriseImEnabled: boolean;
+  digestMode: WorkfeedDigestMode;
+  reminderFrequencyMinutes?: number | null;
+  nudgeThresholdMinutes?: number | null;
+  quietHours?: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface UpsertNotificationPreferencesPayload {
+  preferences: Array<{
+    domain: NotificationPreferenceRecord["domain"];
+    eventType: string;
+    subscribed: boolean;
+    emailEnabled: boolean;
+    enterpriseImEnabled: boolean;
+    digestMode: WorkfeedDigestMode;
+    reminderFrequencyMinutes?: number | null;
+    nudgeThresholdMinutes?: number | null;
+    quietHours?: Record<string, unknown> | null;
+  }>;
 }

@@ -6,16 +6,43 @@ import { AuthService } from "../src/modules/auth/auth.service";
 function buildAuthUserRecord(overrides: Record<string, unknown> = {}) {
   return {
     id: "user-1",
+    tenantId: "tenant-default",
     username: "admin",
     displayName: "系统管理员",
     departmentId: "dept-1",
     status: "ACTIVE",
     passwordHash: "hashed-password",
+    tenant: {
+      code: "default",
+      status: "ACTIVE",
+      archivedAt: null
+    },
     roles: [
       {
         role: {
           code: "super-admin",
           dataScope: "ALL",
+          extendedDataScopes: [
+            {
+              dimension: "REGION",
+              values: ["华东一区"],
+              note: "区域覆盖"
+            }
+          ],
+          fieldPermissionRules: [
+            {
+              resource: "customer",
+              field: "phone",
+              visibility: "MASKED"
+            }
+          ],
+          actionPermissionRules: [
+            {
+              resource: "revenue",
+              action: "confirm-payment",
+              allowed: false
+            }
+          ],
           permissions: [
             { permission: { code: "dashboard:view" } },
             { permission: { code: "customer:read" } }
@@ -52,6 +79,7 @@ describe("AuthService", () => {
     expect(authRepository.findUserByUsername).toHaveBeenCalledWith("admin");
     expect(authRepository.createUserSession).toHaveBeenCalledWith(
       "user-1",
+      "tenant-default",
       expect.any(String),
       expect.any(Date)
     );
@@ -59,6 +87,27 @@ describe("AuthService", () => {
     expect(result.refreshToken).toBeTruthy();
     expect(result.user.permissions).toEqual(["dashboard:view", "customer:read"]);
     expect(result.user.dataScopes).toEqual(["ALL"]);
+    expect(result.user.extendedDataScopes).toEqual([
+      {
+        dimension: "REGION",
+        values: ["华东一区"],
+        note: "区域覆盖"
+      }
+    ]);
+    expect(result.user.fieldPermissionRules).toEqual([
+      {
+        resource: "customer",
+        field: "phone",
+        visibility: "MASKED"
+      }
+    ]);
+    expect(result.user.actionPermissionRules).toEqual([
+      {
+        resource: "revenue",
+        action: "confirm-payment",
+        allowed: false
+      }
+    ]);
     expect(auditLogsService.create).toHaveBeenCalledTimes(1);
   });
 
@@ -66,6 +115,7 @@ describe("AuthService", () => {
     const authRepository = {
       findSessionByRefreshTokenHash: jest.fn().mockResolvedValue({
         id: "session-1",
+        tenantId: "tenant-default",
         userId: "user-1",
         expiresAt: new Date(Date.now() + 60_000),
         revokedAt: null,
@@ -99,6 +149,7 @@ describe("AuthService", () => {
       findUserByUsername: jest.fn().mockResolvedValue(buildAuthUserRecord()),
       findSessionById: jest.fn().mockResolvedValue({
         id: "session-1",
+        tenantId: "tenant-default",
         userId: "user-1",
         expiresAt: new Date(Date.now() + 60_000),
         revokedAt: new Date()
@@ -118,6 +169,8 @@ describe("AuthService", () => {
     await expect(
       service.validateSessionPayload({
         id: "user-1",
+        tenantId: "tenant-default",
+        tenantCode: "default",
         username: "admin",
         displayName: "系统管理员",
         departmentId: "dept-1",
@@ -146,6 +199,8 @@ describe("AuthService", () => {
     );
     const result = await service.logout({
       id: "user-1",
+      tenantId: "tenant-default",
+      tenantCode: "default",
       username: "admin",
       displayName: "系统管理员",
       departmentId: "dept-1",
@@ -155,7 +210,7 @@ describe("AuthService", () => {
       sessionId: "session-1"
     });
 
-    expect(authRepository.revokeSession).toHaveBeenCalledWith("session-1", "user-1");
+    expect(authRepository.revokeSession).toHaveBeenCalledWith("session-1", "user-1", "tenant-default");
     expect(auditLogsService.create).toHaveBeenCalled();
     expect(result).toEqual({ success: true });
   });
@@ -165,6 +220,7 @@ describe("AuthService", () => {
       findUserByUsername: jest.fn().mockResolvedValue(buildAuthUserRecord({ status: "DISABLED", roles: [] })),
       findSessionById: jest.fn().mockResolvedValue({
         id: "session-1",
+        tenantId: "tenant-default",
         userId: "user-1",
         expiresAt: new Date(Date.now() + 60_000),
         revokedAt: null
@@ -184,6 +240,8 @@ describe("AuthService", () => {
     await expect(
       service.validateSessionPayload({
         id: "user-1",
+        tenantId: "tenant-default",
+        tenantCode: "default",
         username: "admin",
         displayName: "系统管理员",
         departmentId: "dept-1",
@@ -193,5 +251,47 @@ describe("AuthService", () => {
         sessionId: "session-1"
       })
     ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it("rejects login when the tenant has been disabled", async () => {
+    const passwordHash = await bcrypt.hash("Admin123456!", 10);
+    const authRepository = {
+      findUserByUsername: jest.fn().mockResolvedValue(
+        buildAuthUserRecord({
+          passwordHash,
+          tenant: {
+            code: "default",
+            status: "DISABLED",
+            archivedAt: null
+          }
+        })
+      )
+    } as any;
+    const auditLogsService = {
+      create: jest.fn().mockResolvedValue(undefined)
+    } as any;
+    const service = new AuthService(
+      authRepository,
+      {
+        signAsync: jest.fn()
+      } as any,
+      auditLogsService
+    );
+
+    await expect(
+      service.login({
+        username: "admin",
+        password: "Admin123456!"
+      })
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(auditLogsService.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionType: "SIGN_IN_FAILED",
+        detail: expect.objectContaining({
+          reason: "inactive_tenant"
+        })
+      })
+    );
   });
 });

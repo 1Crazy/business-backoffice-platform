@@ -45,22 +45,32 @@ describe("CustomersService", () => {
       })
     } as any;
     const dataScopeService = {
-      buildScopedOwnerFilter: jest.fn().mockResolvedValue({
+      buildScopedCustomerFilter: jest.fn().mockResolvedValue({
         ownerId: {
           in: ["user-1", "user-2"]
         }
       }),
       assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
     } as any;
+    const accessPolicyService = {
+      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: jest.fn()
+    } as any;
+    const notificationCenterService = {
+      publishEvent: jest.fn().mockResolvedValue(undefined)
+    } as any;
     const service = new CustomersService(
       customersRepository,
       {
         create: jest.fn().mockResolvedValue(undefined)
       } as any,
-      dataScopeService
+      dataScopeService,
+      accessPolicyService,
+      notificationCenterService
     );
     const actor = {
       id: "manager-1",
+      tenantId: "tenant-default",
       username: "manager",
       displayName: "销售主管",
       roleCodes: ["sales-manager"],
@@ -78,8 +88,9 @@ describe("CustomersService", () => {
       actor
     );
 
-    expect(dataScopeService.buildScopedOwnerFilter).toHaveBeenCalledWith(actor, undefined);
+    expect(dataScopeService.buildScopedCustomerFilter).toHaveBeenCalledWith(actor, undefined);
     expect(customersRepository.list).toHaveBeenCalledWith(
+      "tenant-default",
       expect.objectContaining({
         ownerId: {
           in: ["user-1", "user-2"]
@@ -137,11 +148,26 @@ describe("CustomersService", () => {
       create: jest.fn().mockResolvedValue(undefined)
     } as any;
     const dataScopeService = {
+      buildScopedCustomerFilter: jest.fn(),
+      assertCustomerAccessible: jest.fn().mockResolvedValue(undefined),
       assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
     } as any;
-    const service = new CustomersService(customersRepository, auditLogsService, dataScopeService);
+    const accessPolicyService = {
+      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: jest.fn()
+    } as any;
+    const service = new CustomersService(
+      customersRepository,
+      auditLogsService,
+      dataScopeService,
+      accessPolicyService,
+      {
+        publishEvent: jest.fn().mockResolvedValue(undefined)
+      } as any
+    );
     const actor = {
       id: "manager-1",
+      tenantId: "tenant-default",
       username: "manager",
       displayName: "销售主管",
       roleCodes: ["sales-manager"],
@@ -150,19 +176,20 @@ describe("CustomersService", () => {
 
     const result = await service.reassignOwner("customer-1", { ownerId: "owner-2" }, actor);
 
-    expect(dataScopeService.assertOwnerAccessible).toHaveBeenNthCalledWith(
+    expect(dataScopeService.assertCustomerAccessible).toHaveBeenNthCalledWith(
       1,
       actor,
-      "owner-1",
+      "customer-1",
       "You do not have access to this customer."
     );
     expect(dataScopeService.assertOwnerAccessible).toHaveBeenNthCalledWith(
-      2,
+      1,
       actor,
       "owner-2",
       "You cannot assign customers outside your data scope."
     );
-    expect(customersRepository.updateOwner).toHaveBeenCalledWith("customer-1", "owner-2");
+    expect(customersRepository.findOwnerById).toHaveBeenCalledWith("customer-1", "tenant-default");
+    expect(customersRepository.updateOwner).toHaveBeenCalledWith("customer-1", "tenant-default", "owner-2");
     expect(result).toMatchObject({
       ownerId: "owner-2",
       owner: {

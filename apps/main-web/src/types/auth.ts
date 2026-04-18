@@ -1,6 +1,8 @@
 /** 领域类型定义：维护主应用统一登录态与当前用户资料契约。 */
 export interface CurrentUser {
   id: string;
+  tenantId: string;
+  tenantCode: string;
   username: string;
   displayName: string;
   departmentId?: string | null;

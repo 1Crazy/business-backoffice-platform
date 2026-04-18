@@ -12,10 +12,16 @@ import { AttachmentBusinessType, AuditActionType } from "@prisma/client";
 import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { DataScopeService } from "@/common/data-scope/data-scope.service";
 import { mapAttachment } from "@/common/mappers/entity.mapper";
+import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { SystemGovernanceService } from "../system-governance/system-governance.service";
 import { ListUploadsDto } from "./dto/list-uploads.dto";
 import { UploadsRepository } from "./repositories/uploads.repository";
-import { ALLOWED_ATTACHMENT_MIME_TYPES, MAX_ATTACHMENT_SIZE_BYTES } from "./uploads.constants";
+import {
+  ALLOWED_ATTACHMENT_MIME_TYPES,
+  MAX_ATTACHMENT_SIZE_BYTES,
+  PREVIEWABLE_ATTACHMENT_MIME_TYPES
+} from "./uploads.constants";
 import {
   ATTACHMENT_STORAGE_DRIVER,
   type AttachmentStorageDriver
@@ -33,6 +39,7 @@ export class UploadsService {
     private readonly uploadsRepository: UploadsRepository,
     private readonly auditLogsService: AuditLogsService,
     private readonly dataScopeService: DataScopeService,
+    private readonly systemGovernanceService: SystemGovernanceService,
     @Inject(ATTACHMENT_STORAGE_DRIVER)
     private readonly storageDriver: AttachmentStorageDriver
   ) {}
@@ -40,7 +47,11 @@ export class UploadsService {
   async list(query: ListUploadsDto, actor: AuthUser) {
     await this.assertBusinessAccessible(query.businessType, query.businessId, actor);
 
-    const attachments = await this.uploadsRepository.listByBusiness(query.businessType, query.businessId);
+    const attachments = await this.uploadsRepository.listByBusiness(
+      requireTenantId(actor),
+      query.businessType,
+      query.businessId
+    );
 
     return attachments.map((attachment) => mapAttachment(attachment));
   }
@@ -52,6 +63,7 @@ export class UploadsService {
 
     try {
       const attachment = await this.uploadsRepository.createAttachment({
+        tenantId: requireTenantId(actor),
         businessType: input.businessType,
         businessId: input.businessId,
         fileName: storedFile.fileName,
@@ -80,11 +92,51 @@ export class UploadsService {
   }
 
   async download(id: string, actor: AuthUser) {
-    const attachment = await this.uploadsRepository.findAttachmentById(id);
+    const attachment = await this.uploadsRepository.findAttachmentById(id, requireTenantId(actor));
 
     await this.assertBusinessAccessible(attachment.businessType, attachment.businessId, actor);
-
     const file = await this.storageDriver.openReadStream(attachment.storageKey);
+    await this.auditLogsService.create({
+      actorId: actor.id,
+      actorName: actor.displayName,
+      actionType: AuditActionType.DOWNLOAD,
+      targetType: "attachment",
+      targetId: attachment.id,
+      detail: {
+        businessType: attachment.businessType,
+        businessId: attachment.businessId,
+        storageProvider: attachment.storageProvider,
+        mimeType: attachment.mimeType
+      }
+    });
+
+    return {
+      attachment,
+      ...file
+    };
+  }
+
+  async preview(id: string, actor: AuthUser) {
+    const attachment = await this.uploadsRepository.findAttachmentById(id, requireTenantId(actor));
+
+    await this.assertBusinessAccessible(attachment.businessType, attachment.businessId, actor);
+    this.assertPreviewSupported(attachment.mimeType);
+    await this.systemGovernanceService.assertStoragePreviewAllowed(attachment.storageProvider);
+    const file = await this.storageDriver.openReadStream(attachment.storageKey);
+
+    await this.auditLogsService.create({
+      actorId: actor.id,
+      actorName: actor.displayName,
+      actionType: AuditActionType.PREVIEW,
+      targetType: "attachment",
+      targetId: attachment.id,
+      detail: {
+        businessType: attachment.businessType,
+        businessId: attachment.businessId,
+        storageProvider: attachment.storageProvider,
+        mimeType: attachment.mimeType
+      }
+    });
 
     return {
       attachment,
@@ -100,14 +152,14 @@ export class UploadsService {
     this.assertBusinessPermission(actor, businessType);
 
     if (businessType === AttachmentBusinessType.CUSTOMER) {
-      const customer = await this.uploadsRepository.findCustomerOwnerById(businessId);
+      const customer = await this.uploadsRepository.findCustomerOwnerById(businessId, requireTenantId(actor));
 
       await this.dataScopeService.assertOwnerAccessible(actor, customer.ownerId, "You do not have access to this attachment.");
       return;
     }
 
     if (businessType === AttachmentBusinessType.LEAD) {
-      const lead = await this.uploadsRepository.findLeadOwnerById(businessId);
+      const lead = await this.uploadsRepository.findLeadOwnerById(businessId, requireTenantId(actor));
 
       await this.dataScopeService.assertOwnerAccessible(actor, lead.ownerId, "You do not have access to this attachment.");
       return;
@@ -142,6 +194,16 @@ export class UploadsService {
     // MIME 校验放在 service 层是为了保证无论从控制器还是未来其他入口上传，都共享同一条安全边界。
     if (!ALLOWED_ATTACHMENT_MIME_TYPES.includes(file.mimetype as (typeof ALLOWED_ATTACHMENT_MIME_TYPES)[number])) {
       throw new UnsupportedMediaTypeException("Attachment type is not supported.");
+    }
+  }
+
+  private assertPreviewSupported(mimeType: string): void {
+    if (
+      !PREVIEWABLE_ATTACHMENT_MIME_TYPES.includes(
+        mimeType as (typeof PREVIEWABLE_ATTACHMENT_MIME_TYPES)[number]
+      )
+    ) {
+      throw new BadRequestException("Attachment preview is not supported for this file type.");
     }
   }
 }

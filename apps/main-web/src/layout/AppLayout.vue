@@ -1,5 +1,5 @@
 <template>
-  <div class="host-shell">
+  <div class="host-shell" :style="productConfigStore.themeVars">
     <LayoutSidebarNav
       :active-domain="currentDomain"
       :active-path="route.path"
@@ -18,7 +18,7 @@
         <div class="host-topbar-actions">
           <div class="host-user-summary">
             <span class="host-user-name">{{ authStore.currentUser?.displayName ?? "当前用户" }}</span>
-            <span class="host-user-caption">当前账号</span>
+            <span class="host-user-caption">{{ productConfigStore.runtimeConfig?.brandName ?? "当前账号" }}</span>
           </div>
           <el-button text class="host-logout-button" @click="handleLogout">退出</el-button>
         </div>
@@ -34,22 +34,40 @@
 </template>
 
 <script setup lang="ts">
+import { watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 import { useHostNavigation } from "@/composables/useHostNavigation";
 import LayoutMobileNav from "@/layout/components/LayoutMobileNav.vue";
 import LayoutSidebarNav from "@/layout/components/LayoutSidebarNav.vue";
 import { useAuthStore } from "@/stores/auth";
+import { useProductConfigStore } from "@/stores/product-config";
 
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const productConfigStore = useProductConfigStore();
 const {
   visibleGroups,
   currentDomain,
   currentDomainTitle,
   currentTitle
 } = useHostNavigation();
+
+watch(
+  () => authStore.currentUser?.tenantId,
+  (tenantId) => {
+    if (!tenantId) {
+      productConfigStore.reset();
+      return;
+    }
+
+    void productConfigStore.loadRuntimeConfig();
+  },
+  {
+    immediate: true
+  }
+);
 
 function handleNavigate(path: string): void {
   if (path !== route.path) {
@@ -71,8 +89,8 @@ async function handleLogout(): Promise<void> {
   --host-summary-border: rgba(15, 23, 42, 0.08);
   --host-summary-background: rgba(255, 255, 255, 0.9);
   --host-kicker-color: #64748b;
-  --host-chip-background: rgba(37, 99, 235, 0.1);
-  --host-chip-color: #1e40af;
+  --host-chip-background: color-mix(in srgb, var(--tenant-primary, #2563eb) 12%, white);
+  --host-chip-color: var(--tenant-primary, #2563eb);
   --host-text-primary: var(--app-text-primary);
   --host-text-secondary: var(--app-text-secondary);
   --host-text-tertiary: var(--app-text-tertiary);
@@ -85,6 +103,9 @@ async function handleLogout(): Promise<void> {
   padding: 0;
   align-items: stretch;
   overflow: hidden;
+  background:
+    radial-gradient(circle at top right, color-mix(in srgb, var(--tenant-surface, #eff6ff) 78%, white) 0%, rgba(255, 255, 255, 0) 36%),
+    linear-gradient(180deg, color-mix(in srgb, var(--tenant-surface, #eff6ff) 32%, white) 0%, #ffffff 100%);
 }
 
 .host-main {
@@ -168,7 +189,9 @@ async function handleLogout(): Promise<void> {
 }
 
 .host-user-caption {
-  display: none;
+  display: block;
+  font-size: 11px;
+  color: var(--host-text-secondary);
 }
 
 .host-logout-button {
@@ -180,7 +203,7 @@ async function handleLogout(): Promise<void> {
 }
 
 .host-logout-button.el-button.is-text:hover {
-  color: var(--host-chip-color);
+  color: var(--tenant-accent, var(--host-chip-color));
   background: var(--host-chip-background);
 }
 
@@ -196,11 +219,6 @@ async function handleLogout(): Promise<void> {
 .host-content::-webkit-scrollbar {
   width: 0;
   height: 0;
-}
-
-.host-content::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgba(118, 135, 154, 0.28);
 }
 
 @media (max-width: 1180px) {
@@ -224,7 +242,6 @@ async function handleLogout(): Promise<void> {
 
   .host-topbar {
     grid-template-columns: 1fr;
-    margin-right: 0;
     margin: 0 0 8px;
   }
 
@@ -247,7 +264,6 @@ async function handleLogout(): Promise<void> {
   .host-topbar {
     padding: 5px 9px;
     margin-bottom: 8px;
-    margin-right: 0;
   }
 }
 </style>

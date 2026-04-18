@@ -10,18 +10,25 @@ import { PermissionsGuard } from "./common/guards/permissions.guard";
 import { PrismaModule } from "./common/prisma/prisma.module";
 import { AuditLogsModule } from "./modules/audit-logs/audit-logs.module";
 import { AuthModule } from "./modules/auth/auth.module";
+import { BatchTasksModule } from "./modules/batch-tasks/batch-tasks.module";
 import { CustomersModule } from "./modules/customers/customers.module";
 import { DashboardModule } from "./modules/dashboard/dashboard.module";
 import { DepartmentsModule } from "./modules/departments/departments.module";
 import { DictionariesModule } from "./modules/dictionaries/dictionaries.module";
 import { LeadsModule } from "./modules/leads/leads.module";
+import { NotificationCenterModule } from "./modules/notification-center/notification-center.module";
 import { OfficeAutomationModule } from "./modules/office-automation/office-automation.module";
+import { OpenIntegrationModule } from "./modules/open-integration/open-integration.module";
 import { RolesModule } from "./modules/roles/roles.module";
+import { ProductConfigurationModule } from "./modules/product-configuration/product-configuration.module";
 import { RevenueOperationsModule } from "./modules/revenue-operations/revenue-operations.module";
 import { SalesOpportunitiesModule } from "./modules/sales-opportunities/sales-opportunities.module";
+import { SystemGovernanceModule } from "./modules/system-governance/system-governance.module";
+import { TenantOperationsModule } from "./modules/tenant-operations/tenant-operations.module";
 import { UnifiedWorkfeedModule } from "./modules/unified-workfeed/unified-workfeed.module";
 import { UploadsModule } from "./modules/uploads/uploads.module";
 import { UsersModule } from "./modules/users/users.module";
+import { WorkflowModule } from "./modules/workflow/workflow.module";
 
 @Module({
   imports: [
@@ -33,18 +40,25 @@ import { UsersModule } from "./modules/users/users.module";
     DataScopeModule,
     AuditLogsModule,
     AuthModule,
+    BatchTasksModule,
     DepartmentsModule,
     UsersModule,
     RolesModule,
+    ProductConfigurationModule,
     CustomersModule,
     LeadsModule,
     SalesOpportunitiesModule,
     RevenueOperationsModule,
     UnifiedWorkfeedModule,
+    SystemGovernanceModule,
+    TenantOperationsModule,
     DashboardModule,
     DictionariesModule,
     OfficeAutomationModule,
-    UploadsModule
+    NotificationCenterModule,
+    OpenIntegrationModule,
+    UploadsModule,
+    WorkflowModule
   ],
   controllers: [AppController],
   providers: [

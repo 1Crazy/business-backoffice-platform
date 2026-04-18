@@ -119,7 +119,8 @@ export function useAdministrativeRequestCollectionPage(mode: AdministrativeReque
 
     try {
       processingId.value = currentRequest.value.id;
-      await decideAdministrativeRequest(currentRequest.value.id, {
+      const targetRequestId = currentRequest.value.workflowTaskId ?? currentRequest.value.id;
+      await decideAdministrativeRequest(targetRequestId, {
         decision: pendingDecision.value,
         comment: decisionComment.value.trim() || undefined
       });

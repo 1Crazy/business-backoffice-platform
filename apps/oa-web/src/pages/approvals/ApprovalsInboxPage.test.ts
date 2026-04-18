@@ -108,7 +108,13 @@ describe("ApprovalsInboxPage", () => {
       }
     });
 
-    await wrapper.get("button").trigger("click");
+    const approveButton = wrapper
+      .findAll("button")
+      .find((item) => item.text() === "通过");
+
+    expect(approveButton).toBeTruthy();
+
+    await approveButton!.trigger("click");
 
     expect(openDecisionDialogMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -117,9 +123,9 @@ describe("ApprovalsInboxPage", () => {
       }),
       "APPROVED"
     );
-    expect(wrapper.text()).toContain("驳回申请");
-    expect(wrapper.text()).toContain("驳回后将立即更新审批状态");
-    expect(wrapper.text()).toContain("年假申请");
+    expect(wrapper.text()).toContain("驳回流程");
+    expect(wrapper.text()).toContain("驳回后将立即更新流程状态");
+    expect(wrapper.text()).toContain("请假申请");
     expect(wrapper.text()).toContain("2026-04-12 09:00 至 2026-04-12 18:00");
     expect(wrapper.text()).toContain("确认驳回");
   });

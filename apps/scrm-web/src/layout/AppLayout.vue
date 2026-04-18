@@ -43,6 +43,7 @@ import LayoutSidebarNav from "@/layout/components/LayoutSidebarNav.vue";
 import { isMicroAppMode } from "@/micro/runtime";
 import { router } from "@/router";
 import { useAuthStore } from "@/stores/auth";
+import { navigateToLogin } from "@/utils/host-navigation";
 
 const route = useRoute();
 const routerInstance = useRouter();
@@ -82,7 +83,7 @@ function handleNavigate(path: string): void {
 
 async function handleLogout(): Promise<void> {
   await authStore.logout();
-  await routerInstance.push("/login");
+  await navigateToLogin(routerInstance);
 }
 
 </script>

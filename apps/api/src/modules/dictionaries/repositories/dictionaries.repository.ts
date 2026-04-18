@@ -10,9 +10,10 @@ export type DictionaryEntryRecord = Prisma.DictionaryEntryGetPayload<Record<stri
 export class DictionariesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  list(type?: string, enabled?: boolean) {
+  list(tenantId: string, type?: string, enabled?: boolean) {
     return this.prisma.dictionaryEntry.findMany({
       where: {
+        tenantId,
         type,
         enabled
       },
@@ -21,6 +22,7 @@ export class DictionariesRepository {
   }
 
   createEntry(input: {
+    tenantId: string;
     type: string;
     label: string;
     value: string;
@@ -29,6 +31,7 @@ export class DictionariesRepository {
   }) {
     return this.prisma.dictionaryEntry.create({
       data: {
+        tenantId: input.tenantId,
         type: input.type,
         label: input.label,
         value: input.value,
@@ -40,6 +43,7 @@ export class DictionariesRepository {
 
   updateEntry(
     id: string,
+    tenantId: string,
     input: {
       type?: string;
       label?: string;
@@ -48,8 +52,11 @@ export class DictionariesRepository {
       enabled?: boolean;
     }
   ) {
-    return this.prisma.dictionaryEntry.update({
-      where: { id },
+    return this.prisma.dictionaryEntry.updateMany({
+      where: {
+        id,
+        tenantId
+      },
       data: {
         type: input.type,
         label: input.label,
@@ -57,6 +64,13 @@ export class DictionariesRepository {
         sort: input.sort,
         enabled: input.enabled
       }
-    });
+    }).then(() =>
+      this.prisma.dictionaryEntry.findFirstOrThrow({
+        where: {
+          id,
+          tenantId
+        }
+      })
+    );
   }
 }

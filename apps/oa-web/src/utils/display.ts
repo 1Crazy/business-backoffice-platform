@@ -3,7 +3,9 @@ import type {
   AdministrativeRequestActionType,
   AdministrativeRequestStatus,
   AdministrativeRequestType,
-  LeaveRequestStatus
+  LeaveRequestStatus,
+  PendingApprovalCategory,
+  WorkflowTemplateKey
 } from "@/types/office-automation";
 
 const LEAVE_TYPE_LABELS: Record<string, string> = {
@@ -39,6 +41,19 @@ const ADMINISTRATIVE_REQUEST_ACTION_LABELS: Record<AdministrativeRequestActionTy
   APPROVED: "审批通过",
   REJECTED: "审批驳回",
   CANCELLED: "已撤回"
+};
+
+const APPROVAL_CATEGORY_LABELS: Record<PendingApprovalCategory, string> = {
+  LEAVE: "请假流程",
+  ADMINISTRATIVE: "行政流程"
+};
+
+const WORKFLOW_TEMPLATE_LABELS: Record<WorkflowTemplateKey, string> = {
+  LEAVE: "请假申请",
+  REIMBURSEMENT: "报销申请",
+  TRAVEL: "出差申请",
+  PURCHASE: "采购申请",
+  SEAL: "用印申请"
 };
 
 function padDateTimePart(value: number): string {
@@ -111,6 +126,22 @@ export function formatAdministrativeRequestActionType(
   }
 
   return ADMINISTRATIVE_REQUEST_ACTION_LABELS[value as AdministrativeRequestActionType] ?? value;
+}
+
+export function formatApprovalCategory(value?: PendingApprovalCategory | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return APPROVAL_CATEGORY_LABELS[value as PendingApprovalCategory] ?? value;
+}
+
+export function formatWorkflowTemplate(value?: WorkflowTemplateKey | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return WORKFLOW_TEMPLATE_LABELS[value as WorkflowTemplateKey] ?? value;
 }
 
 export function formatDateTime(value?: string | null): string {

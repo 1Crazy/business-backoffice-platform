@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { mapUser } from "@/common/mappers/access-control.mapper";
+import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { UsersRepository } from "./repositories/users.repository";
 import { CreateUserDto } from "./dto/create-user.dto";
@@ -17,15 +18,17 @@ export class UsersService {
     private readonly auditLogsService: AuditLogsService
   ) {}
 
-  async list() {
-    const users = await this.usersRepository.list();
+  async list(actor: AuthUser) {
+    const users = await this.usersRepository.list(requireTenantId(actor));
 
     return users.map((user) => mapUser(user));
   }
 
   async create(dto: CreateUserDto, actor: AuthUser) {
     const passwordHash = await bcrypt.hash(dto.password, 10);
+    const tenantId = requireTenantId(actor);
     const user = await this.usersRepository.createUser({
+      tenantId,
       username: dto.username,
       displayName: dto.displayName,
       passwordHash,
@@ -47,7 +50,8 @@ export class UsersService {
   }
 
   async update(id: string, dto: UpdateUserDto, actor: AuthUser) {
-    const user = await this.usersRepository.updateUser(id, {
+    const tenantId = requireTenantId(actor);
+    const user = await this.usersRepository.updateUser(id, tenantId, {
       displayName: dto.displayName,
       email: dto.email === undefined ? undefined : dto.email,
       phone: dto.phone === undefined ? undefined : dto.phone,
@@ -68,7 +72,7 @@ export class UsersService {
   }
 
   async toggle(id: string, status: UserStatus, actor: AuthUser) {
-    const user = await this.usersRepository.updateStatus(id, status);
+    const user = await this.usersRepository.updateStatus(id, requireTenantId(actor), status);
 
     await this.auditLogsService.create({
       actorId: actor.id,

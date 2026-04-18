@@ -2,7 +2,7 @@
 <template>
   <div class="no-access-shell">
     <section class="page-card no-access-card">
-      <div class="eyebrow">Account Active</div>
+      <div class="eyebrow">已登录账号</div>
       <h1>账号已登录，但还没有可访问的后台页面</h1>
       <p class="description">
         当前账号已经通过身份验证，不过角色没有绑定任何页面权限，所以系统暂时无法为你打开功能页。
@@ -41,6 +41,7 @@ import { computed } from "vue";
 import { useRouter } from "vue-router";
 
 import { useAuthStore } from "@/stores/auth";
+import { navigateToLogin } from "@/utils/host-navigation";
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -48,12 +49,12 @@ const router = useRouter();
 const roleSummary = computed(() => authStore.currentUser?.roleCodes.join(", ") || "未分配角色");
 
 async function goToLogin(): Promise<void> {
-  await router.push("/login");
+  await navigateToLogin(router);
 }
 
 async function handleLogout(): Promise<void> {
   await authStore.logout();
-  await router.push("/login");
+  await navigateToLogin(router);
 }
 </script>
 

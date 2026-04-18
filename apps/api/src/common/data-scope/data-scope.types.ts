@@ -7,4 +7,5 @@ export interface ResolvedDataScope {
   isGlobal: boolean;
   departmentIds: string[];
   ownerIds?: string[];
+  customerPoolTagIds: string[];
 }

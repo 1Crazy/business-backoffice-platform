@@ -20,7 +20,7 @@
         <el-input v-model="form.name" placeholder="请输入部门名称" maxlength="24" />
       </el-form-item>
       <el-form-item label="编码" prop="code" required>
-        <el-input v-model="form.code" placeholder="请输入唯一编码，例如 SALES-NORTH" maxlength="32" />
+        <el-input v-model="form.code" placeholder="请输入唯一编码，例如 华东销售部（SALES-NORTH）" maxlength="32" />
       </el-form-item>
       <el-form-item label="上级部门" prop="parentId">
         <el-select v-model="form.parentId" clearable class="full-width" placeholder="不选则创建一级部门">

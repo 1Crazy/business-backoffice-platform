@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { PrismaService } from "@/common/prisma/prisma.service";
 
 const authUserInclude = Prisma.validator<Prisma.UserInclude>()({
+  tenant: true,
   roles: {
     include: {
       role: {
@@ -39,21 +40,26 @@ export class AuthRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   findUserByUsername(username: string) {
-    return this.prisma.user.findUnique({
-      where: { username },
+    return this.prisma.user.findFirst({
+      where: {
+        username
+      },
       include: authUserInclude
     });
   }
 
-  findUserById(userId: string) {
-    return this.prisma.user.findUniqueOrThrow({
-      where: { id: userId },
+  findUserById(userId: string, tenantId?: string) {
+    return this.prisma.user.findFirstOrThrow({
+      where: {
+        id: userId,
+        tenantId
+      },
       include: authUserInclude
     });
   }
 
   findSessionByRefreshTokenHash(refreshTokenHash: string) {
-    return this.prisma.userSession.findUnique({
+    return this.prisma.userSession.findFirst({
       where: {
         refreshTokenHash
       },
@@ -70,11 +76,12 @@ export class AuthRepository {
     });
   }
 
-  revokeSession(sessionId: string, userId: string) {
+  revokeSession(sessionId: string, userId: string, tenantId: string) {
     return this.prisma.userSession.updateMany({
       where: {
         id: sessionId,
         userId,
+        tenantId,
         revokedAt: null
       },
       data: {
@@ -83,18 +90,20 @@ export class AuthRepository {
     });
   }
 
-  findSessionById(sessionId: string) {
-    return this.prisma.userSession.findUnique({
+  findSessionById(sessionId: string, tenantId?: string) {
+    return this.prisma.userSession.findFirst({
       where: {
-        id: sessionId
+        id: sessionId,
+        tenantId
       }
     });
   }
 
-  createUserSession(userId: string, refreshTokenHash: string, expiresAt: Date) {
+  createUserSession(userId: string, tenantId: string, refreshTokenHash: string, expiresAt: Date) {
     return this.prisma.userSession.create({
       data: {
         userId,
+        tenantId,
         refreshTokenHash,
         expiresAt,
         lastSeenAt: new Date()

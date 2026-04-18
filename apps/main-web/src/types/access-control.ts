@@ -16,6 +16,28 @@ export interface PermissionItem {
   group: string;
 }
 
+export type DataScope = "SELF" | "DEPARTMENT" | "DEPARTMENT_AND_SUBTREE" | "ALL";
+export type PolicyDimension = "TEAM" | "REGION" | "CUSTOMER_POOL" | "CUSTOM";
+export type FieldVisibility = "READ_WRITE" | "READONLY" | "MASKED" | "HIDDEN";
+
+export interface ExtendedDataScopeRule {
+  dimension: PolicyDimension;
+  values: string[];
+  note?: string | null;
+}
+
+export interface FieldPermissionRule {
+  resource: string;
+  field: string;
+  visibility: FieldVisibility;
+}
+
+export interface ActionPermissionRule {
+  resource: string;
+  action: string;
+  allowed: boolean;
+}
+
 export interface Role {
   id: string;
   name: string;
@@ -23,7 +45,10 @@ export interface Role {
   description?: string | null;
   isSystem?: boolean;
   status: "ACTIVE" | "DISABLED";
-  dataScope?: "SELF" | "DEPARTMENT" | "DEPARTMENT_AND_SUBTREE" | "ALL";
+  dataScope?: DataScope;
+  extendedDataScopes: ExtendedDataScopeRule[];
+  fieldPermissionRules: FieldPermissionRule[];
+  actionPermissionRules: ActionPermissionRule[];
   permissions: Array<{
     permission: PermissionItem;
   }>;
@@ -66,7 +91,11 @@ export interface RoleFormModel {
   name: string;
   code: string;
   description: string;
+  dataScope: DataScope;
   permissionIds: string[];
+  extendedDataScopes: ExtendedDataScopeRule[];
+  fieldPermissionRules: FieldPermissionRule[];
+  actionPermissionRules: ActionPermissionRule[];
 }
 
 export interface SaveDepartmentPayload {
@@ -98,11 +127,23 @@ export interface CreateRolePayload {
   name: string;
   code: string;
   description?: string;
+  dataScope: DataScope;
   permissionIds: string[];
+  policyBundle: {
+    extendedDataScopes: ExtendedDataScopeRule[];
+    fieldPermissionRules: FieldPermissionRule[];
+    actionPermissionRules: ActionPermissionRule[];
+  };
 }
 
 export interface UpdateRolePayload {
   name: string;
   description?: string | null;
+  dataScope: DataScope;
   permissionIds: string[];
+  policyBundle: {
+    extendedDataScopes: ExtendedDataScopeRule[];
+    fieldPermissionRules: FieldPermissionRule[];
+    actionPermissionRules: ActionPermissionRule[];
+  };
 }

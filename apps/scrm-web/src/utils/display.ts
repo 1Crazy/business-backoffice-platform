@@ -9,6 +9,17 @@ import type {
   QuoteStatus,
   RenewalReminderStatus
 } from "@/types/opportunities";
+import type {
+  BatchTaskCategory,
+  BatchTaskStatus,
+  GovernanceHealthStatus,
+  IdentityConnectorMatchField,
+  IdentityConnectorType,
+  OpenApiCredentialStatus,
+  StorageProvider,
+  SchedulerJobStatus
+} from "@/types/system-administration";
+import type { WebhookDeliveryStatus, WebhookSubscriptionStatus } from "@/types/system-administration";
 
 const ACCESS_STATUS_LABELS: Record<"ACTIVE" | "DISABLED", string> = {
   ACTIVE: "启用",
@@ -26,6 +37,8 @@ const LEAD_STATUS_LABELS: Record<Lead["status"], string> = {
 const AUDIT_ACTION_LABELS: Record<string, string> = {
   SIGN_IN: "登录",
   SIGN_IN_FAILED: "登录失败",
+  ACCESS: "访问",
+  ACCESS_DENIED: "访问拒绝",
   CREATE: "新增",
   UPDATE: "更新",
   DELETE: "删除",
@@ -34,6 +47,8 @@ const AUDIT_ACTION_LABELS: Record<string, string> = {
   ASSIGN: "分配",
   CONVERT: "转化",
   UPLOAD: "上传",
+  WEBHOOK_DELIVERY: "回调投递",
+  WEBHOOK_DELIVERY_FAILED: "回调投递失败",
   SESSION_REVOKE: "会话撤销"
 };
 
@@ -48,12 +63,101 @@ const AUDIT_TARGET_TYPE_LABELS: Record<string, string> = {
   "lead-followup": "线索跟进",
   "sales-opportunity": "商机",
   "sales-opportunity-stage": "商机阶段",
-  attachment: "附件"
+  attachment: "附件",
+  "open-api-credential": "开放接口凭证",
+  "webhook-subscription": "回调订阅",
+  "webhook-delivery": "回调投递",
+  "identity-connector": "身份连接器"
 };
 
 const DICTIONARY_TYPE_LABELS: Record<string, string> = {
   "customer-source": "客户来源",
   "customer-status": "客户状态"
+};
+
+const GOVERNANCE_HEALTH_STATUS_LABELS: Record<GovernanceHealthStatus, string> = {
+  HEALTHY: "正常",
+  WARNING: "关注",
+  ERROR: "异常"
+};
+
+const BATCH_TASK_CATEGORY_LABELS: Record<BatchTaskCategory, string> = {
+  IMPORT: "导入",
+  EXPORT: "导出"
+};
+
+const BATCH_TASK_STATUS_LABELS: Record<BatchTaskStatus, string> = {
+  PENDING: "排队中",
+  RUNNING: "处理中",
+  SUCCEEDED: "已完成",
+  FAILED: "失败"
+};
+
+const SCHEDULER_JOB_STATUS_LABELS: Record<SchedulerJobStatus, string> = {
+  RUNNING: "运行中",
+  PAUSED: "已暂停"
+};
+
+const OPEN_API_CREDENTIAL_STATUS_LABELS: Record<OpenApiCredentialStatus, string> = {
+  ACTIVE: "启用中",
+  REVOKED: "已撤销"
+};
+
+const WEBHOOK_SUBSCRIPTION_STATUS_LABELS: Record<WebhookSubscriptionStatus, string> = {
+  ACTIVE: "启用中",
+  DISABLED: "已停用"
+};
+
+const WEBHOOK_DELIVERY_STATUS_LABELS: Record<WebhookDeliveryStatus, string> = {
+  PENDING: "待投递",
+  SUCCEEDED: "已成功",
+  FAILED: "失败"
+};
+
+const IDENTITY_CONNECTOR_TYPE_LABELS: Record<IdentityConnectorType, string> = {
+  SSO: "统一单点登录（SSO）",
+  LDAP: "目录服务（LDAP）",
+  OAUTH: "授权登录（OAuth）"
+};
+
+const IDENTITY_CONNECTOR_MATCH_FIELD_LABELS: Record<IdentityConnectorMatchField, string> = {
+  EMAIL: "邮箱（Email）映射",
+  USERNAME: "用户名（Username）映射"
+};
+
+const STORAGE_PROVIDER_LABELS: Record<StorageProvider, string> = {
+  LOCAL: "本地存储",
+  OSS: "阿里云对象存储（OSS）",
+  S3: "对象存储（S3）"
+};
+
+const OPEN_API_SCOPE_LABELS: Record<string, string> = {
+  "customer:read": "客户只读"
+};
+
+const WEBHOOK_EVENT_TYPE_LABELS: Record<string, string> = {
+  APPROVAL_COMPLETED: "审批完成",
+  REVENUE_PAYMENT_RECEIVED: "回款到账",
+  WORKFLOW_INSTANCE_COMPLETED: "流程实例完成",
+  GOVERNANCE_ALERT: "治理告警"
+};
+
+const NOTIFICATION_CHANNEL_LABELS: Record<string, string> = {
+  IN_APP: "站内消息",
+  EMAIL: "邮件",
+  ENTERPRISE_IM: "企业即时通讯（IM）",
+  "站内消息": "站内消息",
+  "企业 IM": "企业即时通讯（IM）"
+};
+
+const NOTIFICATION_PROVIDER_LABELS: Record<string, string> = {
+  smtp: "邮件网关（SMTP）",
+  SMTP: "邮件网关（SMTP）",
+  im: "即时通讯（IM）",
+  "enterprise-im": "企业即时通讯（IM）",
+  feishu: "飞书",
+  dingtalk: "钉钉",
+  "wechat-work": "企业微信"
 };
 
 const OPPORTUNITY_STAGE_LABELS: Record<OpportunityStage, string> = {
@@ -180,6 +284,138 @@ export function formatDictionaryType(value?: string | null): string {
   }
 
   return DICTIONARY_TYPE_LABELS[value] ?? value;
+}
+
+export function formatGovernanceHealthStatus(value?: GovernanceHealthStatus | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return GOVERNANCE_HEALTH_STATUS_LABELS[value as GovernanceHealthStatus] ?? value;
+}
+
+export function formatBatchTaskCategory(value?: BatchTaskCategory | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return BATCH_TASK_CATEGORY_LABELS[value as BatchTaskCategory] ?? value;
+}
+
+export function formatBatchTaskStatus(value?: BatchTaskStatus | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return BATCH_TASK_STATUS_LABELS[value as BatchTaskStatus] ?? value;
+}
+
+export function formatSchedulerJobStatus(value?: SchedulerJobStatus | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return SCHEDULER_JOB_STATUS_LABELS[value as SchedulerJobStatus] ?? value;
+}
+
+export function formatOpenApiCredentialStatus(value?: OpenApiCredentialStatus | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return OPEN_API_CREDENTIAL_STATUS_LABELS[value as OpenApiCredentialStatus] ?? value;
+}
+
+export function formatWebhookSubscriptionStatus(value?: WebhookSubscriptionStatus | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return WEBHOOK_SUBSCRIPTION_STATUS_LABELS[value as WebhookSubscriptionStatus] ?? value;
+}
+
+export function formatWebhookDeliveryStatus(value?: WebhookDeliveryStatus | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return WEBHOOK_DELIVERY_STATUS_LABELS[value as WebhookDeliveryStatus] ?? value;
+}
+
+export function formatIdentityConnectorType(value?: IdentityConnectorType | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return IDENTITY_CONNECTOR_TYPE_LABELS[value as IdentityConnectorType] ?? value;
+}
+
+export function formatIdentityConnectorMatchField(value?: IdentityConnectorMatchField | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return IDENTITY_CONNECTOR_MATCH_FIELD_LABELS[value as IdentityConnectorMatchField] ?? value;
+}
+
+export function formatStorageProvider(value?: StorageProvider | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return STORAGE_PROVIDER_LABELS[value as StorageProvider] ?? value;
+}
+
+export function formatOpenApiScope(value?: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return OPEN_API_SCOPE_LABELS[value] ?? value;
+}
+
+export function formatWebhookEventType(value?: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return WEBHOOK_EVENT_TYPE_LABELS[value] ?? value;
+}
+
+export function formatNotificationChannel(value?: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return NOTIFICATION_CHANNEL_LABELS[value] ?? value;
+}
+
+export function formatNotificationProvider(value?: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return NOTIFICATION_PROVIDER_LABELS[value] ?? value;
+}
+
+export function formatNotificationRouteScope(value?: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return value
+    .split("/")
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .join(" / ");
+}
+
+export function formatCronExpression(value?: string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return `Cron 表达式（Cron）：${value}`;
 }
 
 export function formatOpportunityStage(value?: OpportunityStage | string | null): string {

@@ -12,6 +12,7 @@ describe("DataScopeService", () => {
     const service = new DataScopeService(prisma);
     const result = await service.resolveDataScope({
       id: "manager-1",
+      tenantId: "tenant-default",
       username: "manager",
       displayName: "销售主管",
       departmentId: "dept-1",
@@ -35,6 +36,7 @@ describe("DataScopeService", () => {
     const service = new DataScopeService(prisma);
     const result = await service.resolveDataScope({
       id: "user-1",
+      tenantId: "tenant-default",
       username: "member",
       displayName: "销售成员",
       departmentId: null,
@@ -45,5 +47,41 @@ describe("DataScopeService", () => {
 
     expect(result.primaryScope).toBe("SELF");
     expect(result.ownerIds).toEqual(["user-1"]);
+  });
+
+  it("expands scoped access with matched customer pool tags", async () => {
+    const prisma = {
+      customerTag: {
+        findMany: jest.fn().mockResolvedValue([{ id: "tag-1" }])
+      },
+      customer: {
+        findMany: jest.fn().mockResolvedValue([{ ownerId: "owner-9" }])
+      },
+      userRole: {
+        findMany: jest.fn().mockResolvedValue([])
+      }
+    } as any;
+
+    const service = new DataScopeService(prisma);
+    const result = await service.resolveDataScope({
+      id: "user-1",
+      tenantId: "tenant-default",
+      username: "member",
+      displayName: "销售成员",
+      departmentId: null,
+      roleCodes: ["sales-member"],
+      permissions: ["customer:read"],
+      dataScopes: [],
+      extendedDataScopes: [
+        {
+          dimension: "CUSTOMER_POOL",
+          values: ["VIP 客户池"]
+        }
+      ]
+    });
+
+    expect(result.primaryScope).toBe("SELF");
+    expect(result.ownerIds).toEqual(["user-1", "owner-9"]);
+    expect(result.customerPoolTagIds).toEqual(["tag-1"]);
   });
 });

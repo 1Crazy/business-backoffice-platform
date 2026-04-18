@@ -9,7 +9,7 @@ import type {
   PaymentRecordRecord,
   QuoteRecord,
   RenewalReminderRecord
-} from "./revenue-operations.repository";
+} from "./repositories/revenue-operations.repository";
 
 function decimalToNumber(value: Prisma.Decimal): number {
   return Number(value.toString());

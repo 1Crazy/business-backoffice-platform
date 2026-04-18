@@ -13,10 +13,16 @@ import {
   RecordStatus,
   RenewalReminderStatus,
   UserStatus
+  ,
+  WorkflowAssignmentType,
+  WorkflowNodeType,
+  WorkflowTemplateStatus
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
+const DEFAULT_TENANT_CODE = "default";
+const DEFAULT_TENANT_NAME = "默认租户";
 
 const permissionSeeds = [
   ["scrm", "dashboard:view", "查看看板", "dashboard"],
@@ -26,6 +32,12 @@ const permissionSeeds = [
   ["platform", "user:write", "编辑员工", "access"],
   ["platform", "role:read", "查看角色", "access"],
   ["platform", "role:write", "编辑角色", "access"],
+  ["platform", "tenant:read", "查看租户运营", "tenant"],
+  ["platform", "tenant:write", "编辑租户运营", "tenant"],
+  ["platform", "product-config:read", "查看产品配置", "configuration"],
+  ["platform", "product-config:write", "编辑产品配置", "configuration"],
+  ["platform", "system-governance:read", "查看系统治理", "governance"],
+  ["platform", "system-governance:write", "编辑系统治理", "governance"],
   ["scrm", "customer:read", "查看客户", "customer"],
   ["scrm", "customer:write", "编辑客户", "customer"],
   ["scrm", "customer:assign", "转交客户", "customer"],
@@ -44,6 +56,11 @@ const permissionSeeds = [
   ["oa", "oa:workspace:view", "查看 OA 工作台", "workspace"],
   ["oa", "oa:approval:read", "查看审批中心", "approval"],
   ["oa", "oa:approval:write", "处理审批", "approval"],
+  ["oa", "oa:workflow-template:read", "查看流程模板", "workflow"],
+  ["oa", "oa:workflow-template:write", "配置流程模板", "workflow"],
+  ["oa", "oa:workflow:read", "查看流程实例", "workflow"],
+  ["oa", "oa:workflow:apply", "发起流程实例", "workflow"],
+  ["oa", "oa:workflow:write", "处理流程实例", "workflow"],
   ["oa", "oa:request:apply", "提交行政申请", "request"],
   ["oa", "oa:request:approve", "审批行政申请", "request"],
   ["oa", "oa:request:read", "检索行政申请", "request"],
@@ -52,13 +69,161 @@ const permissionSeeds = [
   ["oa", "oa:directory:read", "查看组织通讯录", "directory"]
 ] as const;
 
+const workflowTemplateSeeds = [
+  {
+    key: "LEAVE",
+    name: "请假申请",
+    businessType: "LEAVE",
+    formSchema: {
+      fields: ["leaveType", "startAt", "endAt", "reason"]
+    },
+    nodes: [
+      {
+        nodeKey: "leave-approval",
+        name: "请假审批",
+        nodeType: WorkflowNodeType.APPROVAL,
+        position: 1,
+        assignmentType: WorkflowAssignmentType.PERMISSION,
+        assignmentConfig: {
+          permissionCode: "oa:approval:write"
+        },
+        allowAddSign: true,
+        allowTransfer: true
+      }
+    ]
+  },
+  {
+    key: "REIMBURSEMENT",
+    name: "报销申请",
+    businessType: "REIMBURSEMENT",
+    formSchema: {
+      fields: ["title", "reason", "expenseDate", "expenseCategory", "amount", "payeeName", "attachmentNames"]
+    },
+    nodes: [
+      {
+        nodeKey: "reimbursement-approval",
+        name: "报销审批",
+        nodeType: WorkflowNodeType.APPROVAL,
+        position: 1,
+        assignmentType: WorkflowAssignmentType.PERMISSION,
+        assignmentConfig: {
+          permissionCode: "oa:request:approve"
+        },
+        allowAddSign: true,
+        allowTransfer: true
+      }
+    ]
+  },
+  {
+    key: "TRAVEL",
+    name: "出差申请",
+    businessType: "TRAVEL",
+    formSchema: {
+      fields: ["title", "reason", "startAt", "endAt", "destination", "transportation", "estimatedAmount", "attachmentNames"]
+    },
+    nodes: [
+      {
+        nodeKey: "travel-approval",
+        name: "出差审批",
+        nodeType: WorkflowNodeType.APPROVAL,
+        position: 1,
+        assignmentType: WorkflowAssignmentType.PERMISSION,
+        assignmentConfig: {
+          permissionCode: "oa:request:approve"
+        },
+        allowAddSign: true,
+        allowTransfer: true
+      }
+    ]
+  },
+  {
+    key: "PURCHASE",
+    name: "采购申请",
+    businessType: "PURCHASE",
+    formSchema: {
+      fields: ["title", "reason", "itemName", "quantity", "budgetAmount", "neededBy", "attachmentNames"]
+    },
+    nodes: [
+      {
+        nodeKey: "purchase-approval",
+        name: "采购审批",
+        nodeType: WorkflowNodeType.APPROVAL,
+        position: 1,
+        assignmentType: WorkflowAssignmentType.PERMISSION,
+        assignmentConfig: {
+          permissionCode: "oa:request:approve"
+        },
+        allowAddSign: true,
+        allowTransfer: true
+      }
+    ]
+  },
+  {
+    key: "SEAL",
+    name: "用印申请",
+    businessType: "SEAL",
+    formSchema: {
+      fields: ["title", "reason", "documentName", "sealType", "useDate", "copyCount", "attachmentNames"]
+    },
+    nodes: [
+      {
+        nodeKey: "seal-approval",
+        name: "用印审批",
+        nodeType: WorkflowNodeType.APPROVAL,
+        position: 1,
+        assignmentType: WorkflowAssignmentType.PERMISSION,
+        assignmentConfig: {
+          permissionCode: "oa:request:approve"
+        },
+        allowAddSign: true,
+        allowTransfer: true
+      }
+    ]
+  }
+] as const;
+
 async function main(): Promise<void> {
   const passwordHash = await bcrypt.hash("Admin123456!", 10);
+  const defaultTenant = await prisma.tenant.upsert({
+    where: {
+      code: DEFAULT_TENANT_CODE
+    },
+    update: {
+      name: DEFAULT_TENANT_NAME,
+      status: RecordStatus.ACTIVE,
+      isDefault: true,
+      planName: "平台默认版",
+      ownerName: "平台运营",
+      ownerEmail: "platform@example.com",
+      initializedAt: new Date(),
+      disabledAt: null,
+      archivedAt: null,
+      userQuota: 500,
+      storageQuotaMb: 20480,
+      monthlyTaskQuota: 50000
+    },
+    create: {
+      code: DEFAULT_TENANT_CODE,
+      name: DEFAULT_TENANT_NAME,
+      status: RecordStatus.ACTIVE,
+      isDefault: true,
+      planName: "平台默认版",
+      ownerName: "平台运营",
+      ownerEmail: "platform@example.com",
+      initializedAt: new Date(),
+      userQuota: 500,
+      storageQuotaMb: 20480,
+      monthlyTaskQuota: 50000
+    }
+  });
 
   const defaultDepartment = await prisma.department.upsert({
     where: { code: "HQ" },
-    update: {},
+    update: {
+      tenantId: defaultTenant.id
+    },
     create: {
+      tenantId: defaultTenant.id,
       name: "总部",
       code: "HQ"
     }
@@ -67,10 +232,12 @@ async function main(): Promise<void> {
   const operationsDepartment = await prisma.department.upsert({
     where: { code: "OPS" },
     update: {
+      tenantId: defaultTenant.id,
       name: "运营中心",
       status: RecordStatus.ACTIVE
     },
     create: {
+      tenantId: defaultTenant.id,
       name: "运营中心",
       code: "OPS"
     }
@@ -91,12 +258,14 @@ async function main(): Promise<void> {
   const superAdminRole = await prisma.role.upsert({
     where: { code: "super-admin" },
     update: {
+      tenantId: defaultTenant.id,
       name: "超级管理员",
       status: RecordStatus.ACTIVE,
       isSystem: true,
       dataScope: DataScope.ALL
     },
     create: {
+      tenantId: defaultTenant.id,
       name: "超级管理员",
       code: "super-admin",
       isSystem: true,
@@ -107,12 +276,14 @@ async function main(): Promise<void> {
   const salesManagerRole = await prisma.role.upsert({
     where: { code: "sales-manager" },
     update: {
+      tenantId: defaultTenant.id,
       name: "销售主管",
       status: RecordStatus.ACTIVE,
       isSystem: true,
       dataScope: DataScope.DEPARTMENT
     },
     create: {
+      tenantId: defaultTenant.id,
       name: "销售主管",
       code: "sales-manager",
       isSystem: true,
@@ -123,12 +294,14 @@ async function main(): Promise<void> {
   const salesMemberRole = await prisma.role.upsert({
     where: { code: "sales-member" },
     update: {
+      tenantId: defaultTenant.id,
       name: "销售成员",
       status: RecordStatus.ACTIVE,
       isSystem: true,
       dataScope: DataScope.SELF
     },
     create: {
+      tenantId: defaultTenant.id,
       name: "销售成员",
       code: "sales-member",
       isSystem: true,
@@ -139,12 +312,14 @@ async function main(): Promise<void> {
   const oaMemberRole = await prisma.role.upsert({
     where: { code: "oa-member" },
     update: {
+      tenantId: defaultTenant.id,
       name: "OA 普通员工",
       status: RecordStatus.ACTIVE,
       isSystem: true,
       dataScope: DataScope.SELF
     },
     create: {
+      tenantId: defaultTenant.id,
       name: "OA 普通员工",
       code: "oa-member",
       isSystem: true,
@@ -229,6 +404,8 @@ async function main(): Promise<void> {
       [
         "oa:workspace:view",
         "oa:approval:read",
+        "oa:workflow:read",
+        "oa:workflow:apply",
         "oa:request:apply",
         "oa:leave:apply",
         "oa:announcement:read",
@@ -248,12 +425,14 @@ async function main(): Promise<void> {
   const adminUser = await prisma.user.upsert({
     where: { username: "admin" },
     update: {
+      tenantId: defaultTenant.id,
       displayName: "系统管理员",
       passwordHash,
       departmentId: defaultDepartment.id,
       status: UserStatus.ACTIVE
     },
     create: {
+      tenantId: defaultTenant.id,
       username: "admin",
       displayName: "系统管理员",
       passwordHash,
@@ -264,6 +443,7 @@ async function main(): Promise<void> {
   const staffUser = await prisma.user.upsert({
     where: { username: "kyle" },
     update: {
+      tenantId: defaultTenant.id,
       displayName: "kyle",
       passwordHash,
       departmentId: operationsDepartment.id,
@@ -272,6 +452,7 @@ async function main(): Promise<void> {
       status: UserStatus.ACTIVE
     },
     create: {
+      tenantId: defaultTenant.id,
       username: "kyle",
       displayName: "kyle",
       passwordHash,
@@ -309,9 +490,59 @@ async function main(): Promise<void> {
     }
   });
 
+  for (const templateSeed of workflowTemplateSeeds) {
+    const template = await prisma.workflowTemplate.upsert({
+      where: {
+        key: templateSeed.key
+      },
+      update: {
+        tenantId: defaultTenant.id,
+        name: templateSeed.name,
+        businessType: templateSeed.businessType,
+        status: WorkflowTemplateStatus.ACTIVE,
+        formSchema: templateSeed.formSchema,
+        defaultCcUserIds: [],
+        updatedById: adminUser.id
+      },
+      create: {
+        tenantId: defaultTenant.id,
+        key: templateSeed.key,
+        name: templateSeed.name,
+        businessType: templateSeed.businessType,
+        status: WorkflowTemplateStatus.ACTIVE,
+        formSchema: templateSeed.formSchema,
+        defaultCcUserIds: [],
+        createdById: adminUser.id,
+        updatedById: adminUser.id
+      }
+    });
+
+    await prisma.workflowTemplateNode.deleteMany({
+      where: {
+        templateId: template.id
+      }
+    });
+
+    await prisma.workflowTemplateNode.createMany({
+      data: templateSeed.nodes.map((node) => ({
+        tenantId: defaultTenant.id,
+        templateId: template.id,
+        nodeKey: node.nodeKey,
+        name: node.name,
+        nodeType: node.nodeType,
+        position: node.position,
+        assignmentType: node.assignmentType,
+        assignmentConfig: node.assignmentConfig,
+        allowAddSign: node.allowAddSign,
+        allowTransfer: node.allowTransfer
+      }))
+    });
+  }
+
   await prisma.customer.upsert({
     where: { id: "scrm-customer-acme" },
     update: {
+      tenantId: defaultTenant.id,
       name: "Acme 科技",
       contactName: "王经理",
       phone: "13900000001",
@@ -323,6 +554,7 @@ async function main(): Promise<void> {
     },
     create: {
       id: "scrm-customer-acme",
+      tenantId: defaultTenant.id,
       name: "Acme 科技",
       contactName: "王经理",
       phone: "13900000001",
@@ -337,6 +569,7 @@ async function main(): Promise<void> {
   await prisma.lead.upsert({
     where: { id: "scrm-lead-acme-referral" },
     update: {
+      tenantId: defaultTenant.id,
       name: "Acme 年度合作线索",
       contactName: "王经理",
       phone: "13900000001",
@@ -348,6 +581,7 @@ async function main(): Promise<void> {
     },
     create: {
       id: "scrm-lead-acme-referral",
+      tenantId: defaultTenant.id,
       name: "Acme 年度合作线索",
       contactName: "王经理",
       phone: "13900000001",
@@ -362,6 +596,7 @@ async function main(): Promise<void> {
   await prisma.opportunity.upsert({
     where: { id: "scrm-opportunity-acme-framework" },
     update: {
+      tenantId: defaultTenant.id,
       name: "Acme 年度框架合作",
       customerId: "scrm-customer-acme",
       sourceLeadId: "scrm-lead-acme-referral",
@@ -376,6 +611,7 @@ async function main(): Promise<void> {
     },
     create: {
       id: "scrm-opportunity-acme-framework",
+      tenantId: defaultTenant.id,
       name: "Acme 年度框架合作",
       customerId: "scrm-customer-acme",
       sourceLeadId: "scrm-lead-acme-referral",
@@ -399,6 +635,7 @@ async function main(): Promise<void> {
     data: [
       {
         id: "scrm-opportunity-stage-acme-create",
+        tenantId: defaultTenant.id,
         opportunityId: "scrm-opportunity-acme-framework",
         fromStage: null,
         toStage: OpportunityStage.DISCOVERY,
@@ -408,6 +645,7 @@ async function main(): Promise<void> {
       },
       {
         id: "scrm-opportunity-stage-acme-proposal",
+        tenantId: defaultTenant.id,
         opportunityId: "scrm-opportunity-acme-framework",
         fromStage: OpportunityStage.QUALIFICATION,
         toStage: OpportunityStage.PROPOSAL,
@@ -417,6 +655,7 @@ async function main(): Promise<void> {
       },
       {
         id: "scrm-opportunity-stage-acme-win",
+        tenantId: defaultTenant.id,
         opportunityId: "scrm-opportunity-acme-framework",
         fromStage: OpportunityStage.NEGOTIATION,
         toStage: OpportunityStage.CLOSED_WON,
@@ -431,6 +670,7 @@ async function main(): Promise<void> {
   await prisma.quote.upsert({
     where: { id: "scrm-quote-acme-annual" },
     update: {
+      tenantId: defaultTenant.id,
       quoteNo: "Q-202604-ACME-001",
       title: "Acme 年度解决方案报价",
       amount: 320000,
@@ -444,6 +684,7 @@ async function main(): Promise<void> {
     },
     create: {
       id: "scrm-quote-acme-annual",
+      tenantId: defaultTenant.id,
       quoteNo: "Q-202604-ACME-001",
       title: "Acme 年度解决方案报价",
       amount: 320000,
@@ -460,6 +701,7 @@ async function main(): Promise<void> {
   await prisma.contract.upsert({
     where: { id: "scrm-contract-acme-annual" },
     update: {
+      tenantId: defaultTenant.id,
       contractNo: "C-202604-ACME-001",
       title: "Acme 年度框架合同",
       amount: 320000,
@@ -474,6 +716,7 @@ async function main(): Promise<void> {
     },
     create: {
       id: "scrm-contract-acme-annual",
+      tenantId: defaultTenant.id,
       contractNo: "C-202604-ACME-001",
       title: "Acme 年度框架合同",
       amount: 320000,
@@ -491,6 +734,7 @@ async function main(): Promise<void> {
   await prisma.paymentPlan.upsert({
     where: { id: "scrm-payment-plan-acme-initial" },
     update: {
+      tenantId: defaultTenant.id,
       title: "首期预付款",
       plannedAmount: 160000,
       receivedAmount: 80000,
@@ -504,6 +748,7 @@ async function main(): Promise<void> {
     },
     create: {
       id: "scrm-payment-plan-acme-initial",
+      tenantId: defaultTenant.id,
       title: "首期预付款",
       plannedAmount: 160000,
       receivedAmount: 80000,
@@ -520,6 +765,7 @@ async function main(): Promise<void> {
   await prisma.paymentPlan.upsert({
     where: { id: "scrm-payment-plan-acme-final" },
     update: {
+      tenantId: defaultTenant.id,
       title: "尾款回收",
       plannedAmount: 160000,
       receivedAmount: 0,
@@ -533,6 +779,7 @@ async function main(): Promise<void> {
     },
     create: {
       id: "scrm-payment-plan-acme-final",
+      tenantId: defaultTenant.id,
       title: "尾款回收",
       plannedAmount: 160000,
       receivedAmount: 0,
@@ -549,6 +796,7 @@ async function main(): Promise<void> {
   await prisma.paymentRecord.upsert({
     where: { id: "scrm-payment-record-acme-first" },
     update: {
+      tenantId: defaultTenant.id,
       amount: 80000,
       receivedAt: new Date("2026-04-22T11:30:00+08:00"),
       note: "客户已支付首笔预付款。",
@@ -560,6 +808,7 @@ async function main(): Promise<void> {
     },
     create: {
       id: "scrm-payment-record-acme-first",
+      tenantId: defaultTenant.id,
       amount: 80000,
       receivedAt: new Date("2026-04-22T11:30:00+08:00"),
       note: "客户已支付首笔预付款。",
@@ -574,6 +823,7 @@ async function main(): Promise<void> {
   await prisma.renewalReminder.upsert({
     where: { id: "scrm-renewal-reminder-acme-annual" },
     update: {
+      tenantId: defaultTenant.id,
       title: "Acme 年度框架合同续费跟进",
       remindAt: new Date("2027-02-15T09:00:00+08:00"),
       status: RenewalReminderStatus.PENDING,
@@ -585,6 +835,7 @@ async function main(): Promise<void> {
     },
     create: {
       id: "scrm-renewal-reminder-acme-annual",
+      tenantId: defaultTenant.id,
       title: "Acme 年度框架合同续费跟进",
       remindAt: new Date("2027-02-15T09:00:00+08:00"),
       status: RenewalReminderStatus.PENDING,
@@ -598,10 +849,10 @@ async function main(): Promise<void> {
 
   await prisma.dictionaryEntry.createMany({
     data: [
-      { type: "customer-source", label: "官网表单", value: "website", sort: 1 },
-      { type: "customer-source", label: "活动获客", value: "campaign", sort: 2 },
-      { type: "customer-status", label: "新客户", value: "new", sort: 1 },
-      { type: "customer-status", label: "跟进中", value: "active", sort: 2 }
+      { tenantId: defaultTenant.id, type: "customer-source", label: "官网表单", value: "website", sort: 1 },
+      { tenantId: defaultTenant.id, type: "customer-source", label: "活动获客", value: "campaign", sort: 2 },
+      { tenantId: defaultTenant.id, type: "customer-status", label: "新客户", value: "new", sort: 1 },
+      { tenantId: defaultTenant.id, type: "customer-status", label: "跟进中", value: "active", sort: 2 }
     ],
     skipDuplicates: true
   });
@@ -609,6 +860,7 @@ async function main(): Promise<void> {
   await prisma.announcement.upsert({
     where: { id: "oa-announcement-holiday" },
     update: {
+      tenantId: defaultTenant.id,
       title: "清明节假期值班安排",
       summary: "请在 4 月 7 日前确认各组值班表与应急联系人。",
       content:
@@ -619,6 +871,7 @@ async function main(): Promise<void> {
     },
     create: {
       id: "oa-announcement-holiday",
+      tenantId: defaultTenant.id,
       title: "清明节假期值班安排",
       summary: "请在 4 月 7 日前确认各组值班表与应急联系人。",
       content:
@@ -632,6 +885,7 @@ async function main(): Promise<void> {
   await prisma.announcement.upsert({
     where: { id: "oa-announcement-upgrade" },
     update: {
+      tenantId: defaultTenant.id,
       title: "OA 试运行说明",
       summary: "首期开放工作台、请假审批、公告和通讯录四块能力。",
       content:
@@ -642,6 +896,7 @@ async function main(): Promise<void> {
     },
     create: {
       id: "oa-announcement-upgrade",
+      tenantId: defaultTenant.id,
       title: "OA 试运行说明",
       summary: "首期开放工作台、请假审批、公告和通讯录四块能力。",
       content:
@@ -669,6 +924,7 @@ async function main(): Promise<void> {
   await prisma.leaveRequest.upsert({
     where: { id: "oa-leave-request-admin-pending" },
     update: {
+      tenantId: defaultTenant.id,
       applicantId: adminUser.id,
       approverId: adminUser.id,
       leaveType: "ANNUAL",
@@ -679,6 +935,7 @@ async function main(): Promise<void> {
     },
     create: {
       id: "oa-leave-request-admin-pending",
+      tenantId: defaultTenant.id,
       applicantId: adminUser.id,
       approverId: adminUser.id,
       leaveType: "ANNUAL",

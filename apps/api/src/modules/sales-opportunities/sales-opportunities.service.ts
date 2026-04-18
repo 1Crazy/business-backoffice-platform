@@ -2,9 +2,11 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { AuditActionType, OpportunityStage, Prisma } from "@prisma/client";
 
+import { AccessPolicyService } from "@/common/access-policy/access-policy.service";
 import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { DataScopeService } from "@/common/data-scope/data-scope.service";
 import { getPaginationParams, resolveSort } from "@/common/pagination/pagination.util";
+import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { CreateSalesOpportunityDto } from "./dto/create-sales-opportunity.dto";
 import {
@@ -35,18 +37,19 @@ export class SalesOpportunitiesService {
   constructor(
     private readonly salesOpportunitiesRepository: SalesOpportunitiesRepository,
     private readonly auditLogsService: AuditLogsService,
-    private readonly dataScopeService: DataScopeService
+    private readonly dataScopeService: DataScopeService,
+    private readonly accessPolicyService: AccessPolicyService
   ) {}
 
   async list(query: ListSalesOpportunitiesDto, actor: AuthUser) {
-    const ownerFilter = await this.dataScopeService.buildScopedOwnerFilter(actor, query.ownerId);
+    const opportunityScopeFilter = await this.dataScopeService.buildScopedOpportunityFilter(actor, query.ownerId);
     const pagination = getPaginationParams(query);
     const sort = resolveSort(query, SALES_OPPORTUNITY_SORT_FIELDS, SALES_OPPORTUNITY_DEFAULT_SORT);
     const stageFilters = [buildExplicitStageFilter(query.stage), buildResultStatusFilter(query.resultStatus)].filter(
       (item) => Object.keys(item).length > 0
     );
     const where: Prisma.OpportunityWhereInput = {
-      ...ownerFilter,
+      ...opportunityScopeFilter,
       customerId: query.customerId,
       sourceLeadId: query.sourceLeadId,
       AND: stageFilters.length ? stageFilters : undefined,
@@ -90,29 +93,32 @@ export class SalesOpportunitiesService {
       { [sort.field]: sort.order } as Prisma.OpportunityOrderByWithRelationInput,
       { id: "desc" }
     ];
-    const { items, total } = await this.salesOpportunitiesRepository.list(where, orderBy, pagination);
+    const { items, total } = await this.salesOpportunitiesRepository.list(requireTenantId(actor), where, orderBy, pagination);
+    const response = mapPaginatedSalesOpportunities(items, total, pagination, sort);
 
-    return mapPaginatedSalesOpportunities(items, total, pagination, sort);
+    response.items = response.items.map((item) =>
+      this.accessPolicyService.sanitizeReadFields(actor, "opportunity", item)
+    );
+    return response;
   }
 
   async detail(id: string, actor: AuthUser) {
-    const opportunity = await this.salesOpportunitiesRepository.findDetailById(id);
+    await this.assertOpportunityAccessible(id, actor);
+    const opportunity = await this.salesOpportunitiesRepository.findDetailById(id, requireTenantId(actor));
 
-    await this.assertOpportunityAccessible(opportunity.ownerId, actor);
-    return mapSalesOpportunity(opportunity);
+    return this.accessPolicyService.sanitizeReadFields(actor, "opportunity", mapSalesOpportunity(opportunity));
   }
 
   async create(dto: CreateSalesOpportunityDto, actor: AuthUser) {
+    this.accessPolicyService.assertWritableFields(actor, "opportunity", dto as unknown as Record<string, unknown>);
     const stage = dto.stage ?? OpportunityStage.DISCOVERY;
 
     this.assertOpenStage(stage);
 
-    const customer = await this.salesOpportunitiesRepository.findCustomerScopeById(dto.customerId);
-
-    await this.assertCustomerAccessible(customer.ownerId, actor);
+    await this.dataScopeService.assertCustomerAccessible(actor, dto.customerId, "You do not have access to the linked customer.");
 
     if (dto.sourceLeadId) {
-      const sourceLead = await this.salesOpportunitiesRepository.findLeadScopeById(dto.sourceLeadId);
+      const sourceLead = await this.salesOpportunitiesRepository.findLeadScopeById(dto.sourceLeadId, requireTenantId(actor));
 
       await this.dataScopeService.assertOwnerAccessible(
         actor,
@@ -130,6 +136,7 @@ export class SalesOpportunitiesService {
     }
 
     const opportunity = await this.salesOpportunitiesRepository.createOpportunity({
+      tenantId: requireTenantId(actor),
       name: dto.name,
       customerId: dto.customerId,
       sourceLeadId: dto.sourceLeadId,
@@ -150,17 +157,15 @@ export class SalesOpportunitiesService {
       targetId: opportunity.id
     });
 
-    return mapSalesOpportunity(opportunity);
+    return this.accessPolicyService.sanitizeReadFields(actor, "opportunity", mapSalesOpportunity(opportunity));
   }
 
   async update(id: string, dto: UpdateSalesOpportunityDto, actor: AuthUser) {
-    const existing = await this.salesOpportunitiesRepository.findSnapshotById(id);
+    const existing = await this.salesOpportunitiesRepository.findSnapshotById(id, requireTenantId(actor));
 
-    await this.assertOpportunityAccessible(existing.ownerId, actor);
-
-    const customer = await this.salesOpportunitiesRepository.findCustomerScopeById(existing.customerId);
-
-    await this.assertCustomerAccessible(customer.ownerId, actor);
+    await this.assertOpportunityAccessible(id, actor);
+    await this.dataScopeService.assertCustomerAccessible(actor, existing.customerId, "You do not have access to the linked customer.");
+    this.accessPolicyService.assertWritableFields(actor, "opportunity", dto as unknown as Record<string, unknown>);
 
     if (dto.ownerId) {
       await this.dataScopeService.assertOwnerAccessible(
@@ -171,7 +176,7 @@ export class SalesOpportunitiesService {
     }
 
     if (dto.sourceLeadId) {
-      const sourceLead = await this.salesOpportunitiesRepository.findLeadScopeById(dto.sourceLeadId);
+      const sourceLead = await this.salesOpportunitiesRepository.findLeadScopeById(dto.sourceLeadId, requireTenantId(actor));
 
       await this.dataScopeService.assertOwnerAccessible(
         actor,
@@ -180,7 +185,7 @@ export class SalesOpportunitiesService {
       );
     }
 
-    const opportunity = await this.salesOpportunitiesRepository.updateOpportunity(id, {
+    const opportunity = await this.salesOpportunitiesRepository.updateOpportunity(id, requireTenantId(actor), {
       name: dto.name,
       sourceLeadId: dto.sourceLeadId,
       ownerId: dto.ownerId,
@@ -198,20 +203,20 @@ export class SalesOpportunitiesService {
       targetId: opportunity.id
     });
 
-    return mapSalesOpportunity(opportunity);
+    return this.accessPolicyService.sanitizeReadFields(actor, "opportunity", mapSalesOpportunity(opportunity));
   }
 
   async reassignOwner(id: string, dto: ReassignSalesOpportunityOwnerDto, actor: AuthUser) {
-    const existing = await this.salesOpportunitiesRepository.findSnapshotById(id);
+    const existing = await this.salesOpportunitiesRepository.findSnapshotById(id, requireTenantId(actor));
 
-    await this.assertOpportunityAccessible(existing.ownerId, actor);
+    await this.assertOpportunityAccessible(id, actor);
     await this.dataScopeService.assertOwnerAccessible(
       actor,
       dto.ownerId,
       "You cannot assign opportunities outside your data scope."
     );
 
-    const opportunity = await this.salesOpportunitiesRepository.updateOwner(id, dto.ownerId);
+    const opportunity = await this.salesOpportunitiesRepository.updateOwner(id, requireTenantId(actor), dto.ownerId);
 
     await this.auditLogsService.create({
       actorId: actor.id,
@@ -225,13 +230,13 @@ export class SalesOpportunitiesService {
       }
     });
 
-    return mapSalesOpportunity(opportunity);
+    return this.accessPolicyService.sanitizeReadFields(actor, "opportunity", mapSalesOpportunity(opportunity));
   }
 
   async updateStage(id: string, dto: UpdateSalesOpportunityStageDto, actor: AuthUser) {
-    const existing = await this.salesOpportunitiesRepository.findSnapshotById(id);
+    const existing = await this.salesOpportunitiesRepository.findSnapshotById(id, requireTenantId(actor));
 
-    await this.assertOpportunityAccessible(existing.ownerId, actor);
+    await this.assertOpportunityAccessible(id, actor);
     this.assertOpportunityStillOpen(existing.stage);
     this.assertOpenStage(dto.stage);
 
@@ -240,6 +245,7 @@ export class SalesOpportunitiesService {
     }
 
     const opportunity = await this.salesOpportunitiesRepository.changeStage({
+      tenantId: requireTenantId(actor),
       id,
       fromStage: existing.stage,
       toStage: dto.stage,
@@ -259,16 +265,17 @@ export class SalesOpportunitiesService {
       }
     });
 
-    return mapSalesOpportunity(opportunity);
+    return this.accessPolicyService.sanitizeReadFields(actor, "opportunity", mapSalesOpportunity(opportunity));
   }
 
   async markWon(id: string, dto: MarkSalesOpportunityWonDto, actor: AuthUser) {
-    const existing = await this.salesOpportunitiesRepository.findSnapshotById(id);
+    const existing = await this.salesOpportunitiesRepository.findSnapshotById(id, requireTenantId(actor));
 
-    await this.assertOpportunityAccessible(existing.ownerId, actor);
+    await this.assertOpportunityAccessible(id, actor);
     this.assertOpportunityStillOpen(existing.stage);
 
     const opportunity = await this.salesOpportunitiesRepository.changeStage({
+      tenantId: requireTenantId(actor),
       id,
       fromStage: existing.stage,
       toStage: OpportunityStage.CLOSED_WON,
@@ -290,16 +297,17 @@ export class SalesOpportunitiesService {
       }
     });
 
-    return mapSalesOpportunity(opportunity);
+    return this.accessPolicyService.sanitizeReadFields(actor, "opportunity", mapSalesOpportunity(opportunity));
   }
 
   async markLost(id: string, dto: MarkSalesOpportunityLostDto, actor: AuthUser) {
-    const existing = await this.salesOpportunitiesRepository.findSnapshotById(id);
+    const existing = await this.salesOpportunitiesRepository.findSnapshotById(id, requireTenantId(actor));
 
-    await this.assertOpportunityAccessible(existing.ownerId, actor);
+    await this.assertOpportunityAccessible(id, actor);
     this.assertOpportunityStillOpen(existing.stage);
 
     const opportunity = await this.salesOpportunitiesRepository.changeStage({
+      tenantId: requireTenantId(actor),
       id,
       fromStage: existing.stage,
       toStage: OpportunityStage.CLOSED_LOST,
@@ -322,15 +330,15 @@ export class SalesOpportunitiesService {
       }
     });
 
-    return mapSalesOpportunity(opportunity);
+    return this.accessPolicyService.sanitizeReadFields(actor, "opportunity", mapSalesOpportunity(opportunity));
   }
 
-  private async assertOpportunityAccessible(ownerId: string, actor: AuthUser) {
-    await this.dataScopeService.assertOwnerAccessible(actor, ownerId, "You do not have access to this opportunity.");
-  }
-
-  private async assertCustomerAccessible(ownerId: string, actor: AuthUser) {
-    await this.dataScopeService.assertOwnerAccessible(actor, ownerId, "You do not have access to the linked customer.");
+  private async assertOpportunityAccessible(opportunityId: string, actor: AuthUser) {
+    await this.dataScopeService.assertOpportunityAccessible(
+      actor,
+      opportunityId,
+      "You do not have access to this opportunity."
+    );
   }
 
   private assertOpportunityStillOpen(stage: OpportunityStage) {

@@ -4,6 +4,13 @@ const ACCESS_STATUS_LABELS: Record<"ACTIVE" | "DISABLED", string> = {
   DISABLED: "停用"
 };
 
+const DATA_SCOPE_LABELS: Record<"SELF" | "DEPARTMENT" | "DEPARTMENT_AND_SUBTREE" | "ALL", string> = {
+  SELF: "仅本人",
+  DEPARTMENT: "本部门",
+  DEPARTMENT_AND_SUBTREE: "部门及下级",
+  ALL: "全部数据"
+};
+
 function padDateTimePart(value: number): string {
   return String(value).padStart(2, "0");
 }
@@ -40,6 +47,14 @@ export function formatAccessStatus(value?: "ACTIVE" | "DISABLED" | string | null
   }
 
   return ACCESS_STATUS_LABELS[value as "ACTIVE" | "DISABLED"] ?? value;
+}
+
+export function formatDataScope(value?: "SELF" | "DEPARTMENT" | "DEPARTMENT_AND_SUBTREE" | "ALL" | string | null): string {
+  if (!value) {
+    return "-";
+  }
+
+  return DATA_SCOPE_LABELS[value as "SELF" | "DEPARTMENT" | "DEPARTMENT_AND_SUBTREE" | "ALL"] ?? value;
 }
 
 export function formatDateTime(value?: string | null): string {

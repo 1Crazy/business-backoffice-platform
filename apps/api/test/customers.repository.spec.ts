@@ -12,6 +12,7 @@ describe("CustomersRepository", () => {
     const repository = new CustomersRepository(prisma);
 
     const result = await repository.list(
+      "tenant-default",
       {
         status: "active"
       },
@@ -27,7 +28,7 @@ describe("CustomersRepository", () => {
     expect(prisma.customer.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {
-          status: "active"
+          AND: [{ tenantId: "tenant-default" }, { status: "active" }]
         },
         skip: 0,
         take: 10

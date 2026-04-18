@@ -43,19 +43,26 @@ export class CustomersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(
+    tenantId: string,
     where: Prisma.CustomerWhereInput,
     orderBy: Prisma.CustomerOrderByWithRelationInput[],
     pagination: PaginationParams
   ) {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.customer.findMany({
-        where,
+        where: {
+          AND: [{ tenantId }, where]
+        },
         include: customerListInclude,
         orderBy,
         skip: pagination.skip,
         take: pagination.take
       }),
-      this.prisma.customer.count({ where })
+      this.prisma.customer.count({
+        where: {
+          AND: [{ tenantId }, where]
+        }
+      })
     ]);
 
     return {
@@ -64,16 +71,22 @@ export class CustomersRepository {
     };
   }
 
-  findDetailById(id: string) {
-    return this.prisma.customer.findUniqueOrThrow({
-      where: { id },
+  findDetailById(id: string, tenantId: string) {
+    return this.prisma.customer.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      },
       include: customerDetailInclude
     });
   }
 
-  findOwnerById(id: string) {
-    return this.prisma.customer.findUniqueOrThrow({
-      where: { id },
+  findOwnerById(id: string, tenantId: string) {
+    return this.prisma.customer.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      },
       select: {
         ownerId: true
       }
@@ -81,6 +94,7 @@ export class CustomersRepository {
   }
 
   async createCustomer(input: {
+    tenantId: string;
     name: string;
     contactName?: string | null;
     phone?: string | null;
@@ -94,6 +108,7 @@ export class CustomersRepository {
     return this.prisma.$transaction(async (tx) => {
       const created = await tx.customer.create({
         data: {
+          tenantId: input.tenantId,
           name: input.name,
           contactName: input.contactName ?? undefined,
           phone: input.phone ?? undefined,
@@ -123,6 +138,7 @@ export class CustomersRepository {
 
   async updateCustomer(
     id: string,
+    tenantId: string,
     input: {
       name?: string;
       contactName?: string | null;
@@ -136,8 +152,11 @@ export class CustomersRepository {
     }
   ) {
     return this.prisma.$transaction(async (tx) => {
-      await tx.customer.update({
-        where: { id },
+      await tx.customer.updateMany({
+        where: {
+          id,
+          tenantId
+        },
         data: {
           name: input.name,
           contactName: input.contactName,
@@ -172,17 +191,32 @@ export class CustomersRepository {
     });
   }
 
-  listTags() {
+  listTags(tenantId: string) {
     return this.prisma.customerTag.findMany({
+      where: {
+        tenantId
+      },
       orderBy: {
         name: "asc"
       }
     });
   }
 
-  createTag(input: { name: string; color?: string | null }) {
+  countTagsByIds(tenantId: string, tagIds: string[]) {
+    return this.prisma.customerTag.count({
+      where: {
+        tenantId,
+        id: {
+          in: tagIds
+        }
+      }
+    });
+  }
+
+  createTag(input: { tenantId: string; name: string; color?: string | null }) {
     return this.prisma.customerTag.create({
       data: {
+        tenantId: input.tenantId,
         name: input.name,
         color: input.color ?? undefined
       }
@@ -206,21 +240,25 @@ export class CustomersRepository {
     });
   }
 
-  async updateOwner(customerId: string, ownerId: string) {
-    await this.prisma.customer.update({
-      where: { id: customerId },
+  async updateOwner(customerId: string, tenantId: string, ownerId: string) {
+    await this.prisma.customer.updateMany({
+      where: {
+        id: customerId,
+        tenantId
+      },
       data: {
         ownerId
       }
     });
 
-    return this.findDetailById(customerId);
+    return this.findDetailById(customerId, tenantId);
   }
 
-  listFollowUps(customerId: string) {
+  listFollowUps(customerId: string, tenantId: string) {
     return this.prisma.followUp.findMany({
       where: {
-        customerId
+        customerId,
+        tenantId
       },
       include: followUpInclude,
       orderBy: {
@@ -230,6 +268,7 @@ export class CustomersRepository {
   }
 
   createFollowUp(input: {
+    tenantId: string;
     customerId: string;
     ownerId: string;
     createdById: string;
@@ -240,6 +279,7 @@ export class CustomersRepository {
     return this.prisma.$transaction(async (tx) => {
       const created = await tx.followUp.create({
         data: {
+          tenantId: input.tenantId,
           entityType: input.entityType,
           customerId: input.customerId,
           createdById: input.createdById,
@@ -251,6 +291,7 @@ export class CustomersRepository {
       if (input.nextFollowUpAt) {
         await tx.reminder.create({
           data: {
+            tenantId: input.tenantId,
             entityType: input.entityType,
             customerId: input.customerId,
             followUpId: created.id,

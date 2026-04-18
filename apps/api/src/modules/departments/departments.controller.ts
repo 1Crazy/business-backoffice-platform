@@ -27,8 +27,8 @@ export class DepartmentsController {
     type: DepartmentVo,
     isArray: true
   })
-  list() {
-    return this.departmentsService.list();
+  list(@CurrentUser() user: AuthUser) {
+    return this.departmentsService.list(user);
   }
 
   @Post()

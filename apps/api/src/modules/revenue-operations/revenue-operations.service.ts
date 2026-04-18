@@ -1,9 +1,12 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { AuditActionType, OpportunityStage, PaymentPlanStatus, Prisma } from "@prisma/client";
 
+import { AccessPolicyService } from "@/common/access-policy/access-policy.service";
 import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { DataScopeService } from "@/common/data-scope/data-scope.service";
+import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { NotificationCenterService } from "../notification-center/notification-center.service";
 import { CreateContractDto } from "./dto/create-contract.dto";
 import { CreatePaymentPlanDto } from "./dto/create-payment-plan.dto";
 import { CreatePaymentRecordDto } from "./dto/create-payment-record.dto";
@@ -18,43 +21,45 @@ import {
   mapQuote,
   mapRenewalReminder
 } from "./revenue-operations.mapper";
-import { RevenueOperationsRepository } from "./revenue-operations.repository";
+import { RevenueOperationsRepository } from "./repositories/revenue-operations.repository";
 
 @Injectable()
 export class RevenueOperationsService {
   constructor(
     private readonly revenueOperationsRepository: RevenueOperationsRepository,
     private readonly dataScopeService: DataScopeService,
-    private readonly auditLogsService: AuditLogsService
+    private readonly auditLogsService: AuditLogsService,
+    private readonly accessPolicyService: AccessPolicyService,
+    private readonly notificationCenterService: NotificationCenterService
   ) {}
 
   async getOpportunityOverview(opportunityId: string, actor: AuthUser) {
-    const opportunity = await this.revenueOperationsRepository.findOpportunityOverview(opportunityId);
-
-    await this.dataScopeService.assertOwnerAccessible(
+    await this.dataScopeService.assertOpportunityAccessible(
       actor,
-      opportunity.ownerId,
+      opportunityId,
       "You cannot access revenue data outside your data scope."
     );
+    const opportunity = await this.revenueOperationsRepository.findOpportunityOverview(opportunityId, requireTenantId(actor));
 
-    return mapOpportunityRevenueOverview(opportunity);
+    return this.sanitizeOpportunityOverview(actor, mapOpportunityRevenueOverview(opportunity));
   }
 
   async getCustomerOverview(customerId: string, actor: AuthUser) {
-    const customer = await this.revenueOperationsRepository.findCustomerOverview(customerId);
-
-    await this.dataScopeService.assertOwnerAccessible(
+    await this.dataScopeService.assertCustomerAccessible(
       actor,
-      customer.ownerId,
+      customerId,
       "You cannot access revenue data outside your data scope."
     );
+    const customer = await this.revenueOperationsRepository.findCustomerOverview(customerId, requireTenantId(actor));
 
-    return mapCustomerRevenueOverview(customer);
+    return this.sanitizeCustomerOverview(actor, mapCustomerRevenueOverview(customer));
   }
 
   async createQuote(dto: CreateQuoteDto, actor: AuthUser) {
+    this.accessPolicyService.assertWritableFields(actor, "quote", dto as unknown as Record<string, unknown>);
     const opportunity = await this.assertWonOpportunityContext(dto.opportunityId, dto.customerId, actor);
     const record = await this.revenueOperationsRepository.createQuote({
+      tenantId: requireTenantId(actor),
       quoteNo: this.generateCode("Q"),
       title: dto.title.trim(),
       amount: new Prisma.Decimal(dto.amount),
@@ -71,10 +76,11 @@ export class RevenueOperationsService {
       opportunityId: dto.opportunityId
     });
 
-    return mapQuote(record);
+    return this.accessPolicyService.sanitizeReadFields(actor, "quote", mapQuote(record));
   }
 
   async createContract(dto: CreateContractDto, actor: AuthUser) {
+    this.accessPolicyService.assertWritableFields(actor, "contract", dto as unknown as Record<string, unknown>);
     const opportunity = await this.assertWonOpportunityContext(dto.opportunityId, dto.customerId, actor);
     const startDate = new Date(dto.startDate);
     const endDate = new Date(dto.endDate);
@@ -84,6 +90,7 @@ export class RevenueOperationsService {
     }
 
     const record = await this.revenueOperationsRepository.createContract({
+      tenantId: requireTenantId(actor),
       contractNo: this.generateCode("C"),
       title: dto.title.trim(),
       amount: new Prisma.Decimal(dto.amount),
@@ -101,10 +108,11 @@ export class RevenueOperationsService {
       opportunityId: dto.opportunityId
     });
 
-    return mapContract(record);
+    return this.accessPolicyService.sanitizeReadFields(actor, "contract", mapContract(record));
   }
 
   async createPaymentPlan(dto: CreatePaymentPlanDto, actor: AuthUser) {
+    this.accessPolicyService.assertWritableFields(actor, "payment-plan", dto as unknown as Record<string, unknown>);
     const opportunity = await this.assertWonOpportunityContext(dto.opportunityId, dto.customerId, actor);
 
     if (dto.contractId) {
@@ -112,6 +120,7 @@ export class RevenueOperationsService {
     }
 
     const record = await this.revenueOperationsRepository.createPaymentPlan({
+      tenantId: requireTenantId(actor),
       title: dto.title.trim(),
       plannedAmount: new Prisma.Decimal(dto.plannedAmount),
       plannedDate: new Date(dto.plannedDate),
@@ -126,15 +135,19 @@ export class RevenueOperationsService {
       opportunityId: dto.opportunityId
     });
 
-    return mapPaymentPlan(record);
+    return this.accessPolicyService.sanitizeReadFields(actor, "payment-plan", mapPaymentPlan(record));
   }
 
   async createPaymentRecord(dto: CreatePaymentRecordDto, actor: AuthUser) {
-    const paymentPlan = await this.revenueOperationsRepository.findPaymentPlanContextById(dto.paymentPlanId);
+    this.accessPolicyService.assertWritableFields(actor, "payment-record", dto as unknown as Record<string, unknown>);
+    const paymentPlan = await this.revenueOperationsRepository.findPaymentPlanContextById(
+      dto.paymentPlanId,
+      requireTenantId(actor)
+    );
 
-    await this.dataScopeService.assertOwnerAccessible(
+    await this.dataScopeService.assertCustomerAccessible(
       actor,
-      paymentPlan.ownerId,
+      paymentPlan.customerId,
       "You cannot record revenue data outside your data scope."
     );
 
@@ -144,6 +157,7 @@ export class RevenueOperationsService {
       nextReceivedAmount.greaterThanOrEqualTo(plannedAmount) ? PaymentPlanStatus.PAID : PaymentPlanStatus.PARTIAL;
 
     const { record } = await this.revenueOperationsRepository.createPaymentRecord({
+      tenantId: requireTenantId(actor),
       amount: new Prisma.Decimal(dto.amount),
       receivedAt: new Date(dto.receivedAt),
       note: dto.note?.trim(),
@@ -161,10 +175,11 @@ export class RevenueOperationsService {
       opportunityId: paymentPlan.opportunityId
     });
 
-    return mapPaymentRecord(record);
+    return this.accessPolicyService.sanitizeReadFields(actor, "payment-record", mapPaymentRecord(record));
   }
 
   async createRenewalReminder(dto: CreateRenewalReminderDto, actor: AuthUser) {
+    this.accessPolicyService.assertWritableFields(actor, "renewal-reminder", dto as unknown as Record<string, unknown>);
     const contract = await this.assertContractMatches(
       dto.contractId,
       dto.customerId,
@@ -174,6 +189,7 @@ export class RevenueOperationsService {
     );
 
     const record = await this.revenueOperationsRepository.createRenewalReminder({
+      tenantId: requireTenantId(actor),
       title: dto.title.trim(),
       remindAt: new Date(dto.remindAt),
       note: dto.note?.trim(),
@@ -188,15 +204,43 @@ export class RevenueOperationsService {
       customerId: dto.customerId
     });
 
-    return mapRenewalReminder(record);
+    await this.notificationCenterService.publishEvent({
+      event: {
+        tenantId: requireTenantId(actor),
+        eventType: "RENEWAL_REMINDER",
+        domain: "SCRM",
+        sourceType: "renewal-reminder",
+        sourceId: record.id,
+        title: `${record.title}待跟进`,
+        summary: record.note ?? "合同已进入续费窗口，请及时推进。",
+        priority: this.resolveReminderPriority(record.remindAt),
+        payload: {
+          reminderId: record.id,
+          customerId: record.customerId,
+          contractId: record.contractId,
+          opportunityId: record.opportunityId ?? null
+        },
+        targetPath: `/scrm/revenue-operations?customerId=${record.customerId}&opportunityId=${record.opportunityId ?? ""}`,
+        targetLabel: "进入经营闭环",
+        actorId: actor.id,
+        occurredAt: record.remindAt
+      },
+      recipientIds: [record.ownerId],
+      nudgeBaseAt: record.remindAt
+    });
+
+    return this.accessPolicyService.sanitizeReadFields(actor, "renewal-reminder", mapRenewalReminder(record));
   }
 
   private async assertWonOpportunityContext(opportunityId: string, customerId: string, actor: AuthUser) {
-    const opportunity = await this.revenueOperationsRepository.findOpportunityContextById(opportunityId);
+    const opportunity = await this.revenueOperationsRepository.findOpportunityContextById(
+      opportunityId,
+      requireTenantId(actor)
+    );
 
-    await this.dataScopeService.assertOwnerAccessible(
+    await this.dataScopeService.assertCustomerAccessible(
       actor,
-      opportunity.ownerId,
+      opportunity.customerId,
       "You cannot create revenue data outside your data scope."
     );
 
@@ -218,11 +262,11 @@ export class RevenueOperationsService {
     actor: AuthUser,
     allowImplicitOpportunity = false
   ) {
-    const contract = await this.revenueOperationsRepository.findContractContextById(contractId);
+    const contract = await this.revenueOperationsRepository.findContractContextById(contractId, requireTenantId(actor));
 
-    await this.dataScopeService.assertOwnerAccessible(
+    await this.dataScopeService.assertCustomerAccessible(
       actor,
-      contract.ownerId,
+      contract.customerId,
       "You cannot access revenue data outside your data scope."
     );
 
@@ -262,5 +306,43 @@ export class RevenueOperationsService {
     ].join("");
     const randomSegment = Math.random().toString(36).slice(2, 8).toUpperCase();
     return `${prefix}-${dateSegment}-${randomSegment}`;
+  }
+
+  private resolveReminderPriority(referenceAt: Date) {
+    const diff = referenceAt.getTime() - Date.now();
+
+    if (diff <= 1000 * 60 * 60 * 24) {
+      return "HIGH" as const;
+    }
+
+    if (diff <= 1000 * 60 * 60 * 24 * 3) {
+      return "MEDIUM" as const;
+    }
+
+    return "LOW" as const;
+  }
+
+  private sanitizeOpportunityOverview(
+    actor: AuthUser,
+    payload: ReturnType<typeof mapOpportunityRevenueOverview>
+  ): ReturnType<typeof mapOpportunityRevenueOverview> {
+    return {
+      ...payload,
+      quotes: payload.quotes.map((item) => this.accessPolicyService.sanitizeReadFields(actor, "quote", item)),
+      contracts: payload.contracts.map((item) => this.accessPolicyService.sanitizeReadFields(actor, "contract", item)),
+      paymentPlans: payload.paymentPlans.map((item) =>
+        this.accessPolicyService.sanitizeReadFields(actor, "payment-plan", item)
+      ),
+      paymentRecords: payload.paymentRecords.map((item) =>
+        this.accessPolicyService.sanitizeReadFields(actor, "payment-record", item)
+      ),
+      renewalReminders: payload.renewalReminders.map((item) =>
+        this.accessPolicyService.sanitizeReadFields(actor, "renewal-reminder", item)
+      )
+    };
+  }
+
+  private sanitizeCustomerOverview(actor: AuthUser, payload: ReturnType<typeof mapCustomerRevenueOverview>) {
+    return this.sanitizeOpportunityOverview(actor, payload as ReturnType<typeof mapOpportunityRevenueOverview>);
   }
 }

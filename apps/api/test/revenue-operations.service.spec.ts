@@ -16,25 +16,42 @@ describe("RevenueOperationsService", () => {
     createRenewalReminder: jest.fn()
   };
   const mockDataScope = {
-    assertOwnerAccessible: jest.fn()
+    assertCustomerAccessible: jest.fn(),
+    assertOpportunityAccessible: jest.fn()
   };
   const mockAuditLogs = {
     create: jest.fn()
   };
+  const mockAccessPolicy = {
+    sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
+    assertWritableFields: jest.fn()
+  };
+  const mockNotificationCenter = {
+    publishEvent: jest.fn().mockResolvedValue(undefined)
+  };
 
   const defaultActor = {
     id: "user-1",
+    tenantId: "tenant-default",
+    tenantCode: "default",
     username: "alice",
     displayName: "Alice",
     roleCodes: ["sales-manager"],
     permissions: ["opportunity:write"]
   };
 
-  const service = new RevenueOperationsService(mockRepository as any, mockDataScope as any, mockAuditLogs as any);
+  const service = new RevenueOperationsService(
+    mockRepository as any,
+    mockDataScope as any,
+    mockAuditLogs as any,
+    mockAccessPolicy as any,
+    mockNotificationCenter as any
+  );
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockDataScope.assertOwnerAccessible.mockResolvedValue(undefined);
+    mockDataScope.assertCustomerAccessible.mockResolvedValue(undefined);
+    mockDataScope.assertOpportunityAccessible.mockResolvedValue(undefined);
   });
 
   it("creates a quote under a won opportunity", async () => {
@@ -70,7 +87,7 @@ describe("RevenueOperationsService", () => {
       defaultActor
     );
 
-    expect(mockRepository.findOpportunityContextById).toHaveBeenCalledWith("opportunity-1");
+    expect(mockRepository.findOpportunityContextById).toHaveBeenCalledWith("opportunity-1", "tenant-default");
     expect(mockRepository.createQuote).toHaveBeenCalled();
     expect(mockAuditLogs.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -223,10 +240,10 @@ describe("RevenueOperationsService", () => {
 
     const result = await service.getCustomerOverview("customer-1", defaultActor);
 
-    expect(mockRepository.findCustomerOverview).toHaveBeenCalledWith("customer-1");
-    expect(mockDataScope.assertOwnerAccessible).toHaveBeenCalledWith(
+    expect(mockRepository.findCustomerOverview).toHaveBeenCalledWith("customer-1", "tenant-default");
+    expect(mockDataScope.assertCustomerAccessible).toHaveBeenCalledWith(
       defaultActor,
-      "owner-1",
+      "customer-1",
       expect.any(String)
     );
     expect(result.customerId).toBe("customer-1");
@@ -269,7 +286,7 @@ describe("RevenueOperationsService", () => {
       defaultActor
     );
 
-    expect(mockRepository.findContractContextById).toHaveBeenCalledWith("contract-2");
+    expect(mockRepository.findContractContextById).toHaveBeenCalledWith("contract-2", "tenant-default");
     expect(mockRepository.createRenewalReminder).toHaveBeenCalledWith(
       expect.objectContaining({
         opportunityId: "opportunity-2"
@@ -280,6 +297,14 @@ describe("RevenueOperationsService", () => {
       expect.objectContaining({
         targetType: "revenue-renewal-reminder",
         targetId: "renewal-2"
+      })
+    );
+    expect(mockNotificationCenter.publishEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: expect.objectContaining({
+          eventType: "RENEWAL_REMINDER"
+        }),
+        recipientIds: ["owner-1"]
       })
     );
   });

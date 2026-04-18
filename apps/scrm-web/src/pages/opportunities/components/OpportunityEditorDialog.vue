@@ -61,7 +61,15 @@
         </el-col>
         <el-col :xs="24" :sm="8">
           <el-form-item label="预计金额" prop="expectedAmount" required>
-            <el-input-number v-model="form.expectedAmount" :min="0" :precision="2" :step="1000" controls-position="right" class="full-width" />
+            <el-input-number
+              v-model="form.expectedAmount"
+              :min="0"
+              :precision="2"
+              :step="1000"
+              controls-position="right"
+              class="full-width"
+              placeholder="请输入预计金额"
+            />
           </el-form-item>
         </el-col>
         <el-col :xs="24" :sm="8">

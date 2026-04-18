@@ -22,7 +22,12 @@ describe("PermissionsGuard", () => {
       })
     } as any;
 
-    const guard = new PermissionsGuard(reflector);
+    const guard = new PermissionsGuard(
+      reflector,
+      {
+        assertActionAllowed: jest.fn()
+      } as any
+    );
     expect(guard.canActivate(context)).toBe(true);
   });
 
@@ -46,7 +51,12 @@ describe("PermissionsGuard", () => {
       })
     } as any;
 
-    const guard = new PermissionsGuard(reflector);
+    const guard = new PermissionsGuard(
+      reflector,
+      {
+        assertActionAllowed: jest.fn()
+      } as any
+    );
     expect(guard.canActivate(context)).toBe(true);
   });
 
@@ -70,7 +80,55 @@ describe("PermissionsGuard", () => {
       })
     } as any;
 
-    const guard = new PermissionsGuard(reflector);
+    const guard = new PermissionsGuard(
+      reflector,
+      {
+        assertActionAllowed: jest.fn()
+      } as any
+    );
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
+  });
+
+  it("applies action-level restrictions after the coarse permission check", () => {
+    const assertActionAllowed = jest.fn().mockImplementation(() => {
+      throw new ForbiddenException("denied by policy");
+    });
+    const reflector = {
+      getAllAndOverride: jest
+        .fn()
+        .mockReturnValueOnce(false)
+        .mockReturnValueOnce(["customer:assign"])
+        .mockReturnValueOnce({
+          resource: "customer",
+          action: "assign"
+        })
+    } as any;
+
+    const context = {
+      getHandler: jest.fn(),
+      getClass: jest.fn(),
+      switchToHttp: () => ({
+        getRequest: () => ({
+          user: {
+            permissions: ["customer:assign"]
+          }
+        })
+      })
+    } as any;
+
+    const guard = new PermissionsGuard(
+      reflector,
+      {
+        assertActionAllowed
+      } as any
+    );
+
+    expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
+    expect(assertActionAllowed).toHaveBeenCalledWith(
+      { permissions: ["customer:assign"] },
+      "customer",
+      "assign",
+      "You do not have permission to perform this action."
+    );
   });
 });

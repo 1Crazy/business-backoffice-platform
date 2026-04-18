@@ -30,6 +30,14 @@ import type {
   UserFormModel
 } from "@/types/access-control";
 import {
+  cloneActionPermissionRules,
+  cloneExtendedDataScopeRules,
+  cloneFieldPermissionRules,
+  normalizeActionPermissionRules,
+  normalizeExtendedDataScopeRules,
+  normalizeFieldPermissionRules
+} from "@/pages/platform-governance/policy-helpers";
+import {
   normalizeOptionalTextForCreate,
   normalizeOptionalTextForUpdate,
   normalizeRequiredText,
@@ -75,7 +83,11 @@ export function useAccessControlPage() {
     name: "",
     code: "",
     description: "",
-    permissionIds: []
+    dataScope: "SELF",
+    permissionIds: [],
+    extendedDataScopes: [],
+    fieldPermissionRules: [],
+    actionPermissionRules: []
   });
 
   const departmentRules: FormRules<DepartmentFormModel> = {
@@ -133,6 +145,7 @@ export function useAccessControlPage() {
       { required: true, message: "请输入角色编码", trigger: "blur" },
       { min: 2, message: "角色编码至少需要 2 个字符", trigger: "blur" }
     ],
+    dataScope: [{ required: true, message: "请选择数据范围", trigger: "change" }],
     permissionIds: [{ type: "array", required: true, min: 1, message: "请至少勾选一个权限点", trigger: "change" }]
   };
 
@@ -193,7 +206,13 @@ export function useAccessControlPage() {
       name: normalizeRequiredText(roleForm.name),
       code: normalizeRequiredText(roleForm.code),
       description: normalizeOptionalTextForCreate(roleForm.description),
-      permissionIds: normalizeStringList(roleForm.permissionIds)
+      dataScope: roleForm.dataScope,
+      permissionIds: normalizeStringList(roleForm.permissionIds),
+      policyBundle: {
+        extendedDataScopes: normalizeExtendedDataScopeRules(roleForm.extendedDataScopes),
+        fieldPermissionRules: normalizeFieldPermissionRules(roleForm.fieldPermissionRules),
+        actionPermissionRules: normalizeActionPermissionRules(roleForm.actionPermissionRules)
+      }
     };
   }
 
@@ -201,7 +220,13 @@ export function useAccessControlPage() {
     return {
       name: normalizeRequiredText(roleForm.name),
       description: normalizeOptionalTextForUpdate(roleForm.description),
-      permissionIds: normalizeStringList(roleForm.permissionIds)
+      dataScope: roleForm.dataScope,
+      permissionIds: normalizeStringList(roleForm.permissionIds),
+      policyBundle: {
+        extendedDataScopes: normalizeExtendedDataScopeRules(roleForm.extendedDataScopes),
+        fieldPermissionRules: normalizeFieldPermissionRules(roleForm.fieldPermissionRules),
+        actionPermissionRules: normalizeActionPermissionRules(roleForm.actionPermissionRules)
+      }
     };
   }
 
@@ -324,7 +349,11 @@ export function useAccessControlPage() {
     roleForm.name = role?.name ?? "";
     roleForm.code = role?.code ?? "";
     roleForm.description = role?.description ?? "";
+    roleForm.dataScope = role?.dataScope ?? "SELF";
     roleForm.permissionIds = role ? role.permissions.map((item) => item.permission.id) : [];
+    roleForm.extendedDataScopes = cloneExtendedDataScopeRules(role?.extendedDataScopes);
+    roleForm.fieldPermissionRules = cloneFieldPermissionRules(role?.fieldPermissionRules);
+    roleForm.actionPermissionRules = cloneActionPermissionRules(role?.actionPermissionRules);
     roleDialogVisible.value = true;
     await nextTick();
     roleFormRef.value?.clearValidate();

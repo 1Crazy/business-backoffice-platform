@@ -53,14 +53,25 @@ describe("OfficeAutomationService", () => {
     countActiveAnnouncements: jest.fn(),
     countActiveDepartments: jest.fn(),
     listRecentAnnouncements: jest.fn(),
+    listAnnouncements: jest.fn(),
+    findAnnouncementById: jest.fn(),
+    listActiveDepartments: jest.fn(),
+    listDirectoryMembers: jest.fn(),
     listMyAdministrativeRequests: jest.fn(),
     listPendingAdministrativeApprovals: jest.fn()
   };
   const mockAuditLogs = {
     create: jest.fn()
   };
+  const mockNotificationCenter = {
+    publishEvent: jest.fn().mockResolvedValue(undefined)
+  };
 
-  const service = new OfficeAutomationService(mockRepository as any, mockAuditLogs as any);
+  const service = new OfficeAutomationService(
+    mockRepository as any,
+    mockAuditLogs as any,
+    mockNotificationCenter as any
+  );
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -97,6 +108,7 @@ describe("OfficeAutomationService", () => {
       },
       {
         id: "user-1",
+        tenantId: "tenant-1",
         username: "alice",
         displayName: "Alice",
         roleCodes: ["scrm-user"],
@@ -104,8 +116,14 @@ describe("OfficeAutomationService", () => {
       }
     );
 
-    expect(mockRepository.findDefaultApprover).toHaveBeenCalled();
-    expect(mockRepository.createLeaveRequest).toHaveBeenCalled();
+    expect(mockRepository.findDefaultApprover).toHaveBeenCalledWith("user-1", "tenant-1", "oa:approval:write");
+    expect(mockRepository.createLeaveRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: "tenant-1",
+        applicantId: "user-1",
+        approverId: "approver-1"
+      })
+    );
     expect(mockAuditLogs.create).toHaveBeenCalledWith(
       expect.objectContaining({
         targetType: "oa-leave-request",
@@ -135,7 +153,7 @@ describe("OfficeAutomationService", () => {
       endAt: new Date("2026-04-05T17:00:00Z"),
       reason: "体检",
       status: "APPROVED" as LeaveRequestStatus,
-      applicant: { displayName: "Alice" },
+      applicant: { id: "user-1", displayName: "Alice" },
       approver: { displayName: "Carol" },
       actions: [
         {
@@ -155,6 +173,7 @@ describe("OfficeAutomationService", () => {
       },
       {
         id: "approver-2",
+        tenantId: "tenant-1",
         username: "carol",
         displayName: "Carol",
         roleCodes: ["oa-approver"],
@@ -162,9 +181,10 @@ describe("OfficeAutomationService", () => {
       }
     );
 
-    expect(mockRepository.findLeaveRequestById).toHaveBeenCalledWith("leave-2");
+    expect(mockRepository.findLeaveRequestById).toHaveBeenCalledWith("leave-2", "tenant-1");
     expect(mockRepository.applyApprovalDecision).toHaveBeenCalledWith(
       expect.objectContaining({
+        tenantId: "tenant-1",
         requestId: "leave-2",
         status: LeaveRequestStatus.APPROVED
       })
@@ -173,6 +193,13 @@ describe("OfficeAutomationService", () => {
       expect.objectContaining({
         targetType: "oa-leave-request",
         actionType: "UPDATE"
+      })
+    );
+    expect(mockNotificationCenter.publishEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        event: expect.objectContaining({
+          eventType: "LEAVE_RESULT"
+        })
       })
     );
     expect(result.status).toBe(LeaveRequestStatus.APPROVED);
@@ -211,6 +238,7 @@ describe("OfficeAutomationService", () => {
       },
       {
         id: "user-1",
+        tenantId: "tenant-1",
         username: "alice",
         displayName: "Alice",
         roleCodes: ["oa-member"],
@@ -218,9 +246,10 @@ describe("OfficeAutomationService", () => {
       }
     );
 
-    expect(mockRepository.findDefaultApprover).toHaveBeenCalledWith("user-1", "oa:request:approve");
+    expect(mockRepository.findDefaultApprover).toHaveBeenCalledWith("user-1", "tenant-1", "oa:request:approve");
     expect(mockRepository.createAdministrativeRequest).toHaveBeenCalledWith(
       expect.objectContaining({
+        tenantId: "tenant-1",
         type: AdministrativeRequestType.REIMBURSEMENT,
         applicantId: "user-1",
         approverId: "approver-1"
@@ -277,6 +306,7 @@ describe("OfficeAutomationService", () => {
       },
       {
         id: "approver-2",
+        tenantId: "tenant-1",
         username: "carol",
         displayName: "Carol",
         roleCodes: ["oa-approver"],
@@ -284,9 +314,10 @@ describe("OfficeAutomationService", () => {
       }
     );
 
-    expect(mockRepository.findAdministrativeRequestById).toHaveBeenCalledWith("admin-request-2");
+    expect(mockRepository.findAdministrativeRequestById).toHaveBeenCalledWith("admin-request-2", "tenant-1");
     expect(mockRepository.applyAdministrativeApprovalDecision).toHaveBeenCalledWith(
       expect.objectContaining({
+        tenantId: "tenant-1",
         requestId: "admin-request-2",
         status: AdministrativeRequestStatus.APPROVED
       })
@@ -335,14 +366,16 @@ describe("OfficeAutomationService", () => {
 
     const result = await service.cancelAdministrativeRequest("admin-request-3", {
       id: "user-1",
+      tenantId: "tenant-1",
       username: "alice",
       displayName: "Alice",
       roleCodes: ["oa-member"],
       permissions: ["oa:request:apply"]
     });
 
-    expect(mockRepository.findAdministrativeRequestById).toHaveBeenCalledWith("admin-request-3");
+    expect(mockRepository.findAdministrativeRequestById).toHaveBeenCalledWith("admin-request-3", "tenant-1");
     expect(mockRepository.applyAdministrativeCancellation).toHaveBeenCalledWith({
+      tenantId: "tenant-1",
       requestId: "admin-request-3",
       actorId: "user-1"
     });
@@ -356,5 +389,36 @@ describe("OfficeAutomationService", () => {
       })
     );
     expect(result.status).toBe(AdministrativeRequestStatus.CANCELLED);
+  });
+
+  it("loads announcements and directory inside current tenant", async () => {
+    mockRepository.listAnnouncements.mockResolvedValue([]);
+    mockRepository.listActiveDepartments.mockResolvedValue([]);
+    mockRepository.listDirectoryMembers.mockResolvedValue([]);
+
+    await service.getAnnouncements({
+      id: "user-1",
+      tenantId: "tenant-1",
+      username: "alice",
+      displayName: "Alice",
+      roleCodes: ["oa-member"],
+      permissions: ["oa:announcement:read", "oa:directory:read"]
+    });
+
+    await service.getDirectorySnapshot(
+      {
+        id: "user-1",
+        tenantId: "tenant-1",
+        username: "alice",
+        displayName: "Alice",
+        roleCodes: ["oa-member"],
+        permissions: ["oa:directory:read"]
+      },
+      "dept-1"
+    );
+
+    expect(mockRepository.listAnnouncements).toHaveBeenCalledWith("tenant-1");
+    expect(mockRepository.listActiveDepartments).toHaveBeenCalledWith("tenant-1");
+    expect(mockRepository.listDirectoryMembers).toHaveBeenCalledWith("tenant-1", "dept-1");
   });
 });

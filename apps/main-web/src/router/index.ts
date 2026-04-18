@@ -10,12 +10,16 @@ const LoginPage = () => import("@/pages/login/LoginPage.vue");
 const MicroAppPage = () => import("@/pages/micro-app/MicroAppPage.vue");
 const NoAccessPage = () => import("@/pages/no-access/NoAccessPage.vue");
 const PlatformGovernancePage = () => import("@/pages/platform-governance/PlatformGovernancePage.vue");
+const ProductConfigurationPage = () => import("@/pages/product-configuration/ProductConfigurationPage.vue");
+const TenantOperationsPage = () => import("@/pages/tenant-operations/TenantOperationsPage.vue");
 const WorkfeedPage = () => import("@/pages/workfeed/WorkfeedPage.vue");
 
 const nativePageDefinitions: Record<string, RouteRecordRaw["component"]> = {
   "platform-departments": PlatformGovernancePage,
   "platform-employees": PlatformGovernancePage,
   "platform-roles": PlatformGovernancePage,
+  "platform-product-config": ProductConfigurationPage,
+  "platform-tenants": TenantOperationsPage,
   "platform-workfeed": WorkfeedPage
 };
 

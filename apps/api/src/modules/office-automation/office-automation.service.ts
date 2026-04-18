@@ -3,7 +3,9 @@ import { BadRequestException, ForbiddenException, Injectable } from "@nestjs/com
 import { AdministrativeRequestStatus, AuditActionType, LeaveRequestStatus } from "@prisma/client";
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { NotificationCenterService } from "../notification-center/notification-center.service";
 import { ApprovalActionDto } from "./dto/approval-action.dto";
 import { CreateAdministrativeRequestDto } from "./dto/create-administrative-request.dto";
 import { CreateLeaveRequestDto } from "./dto/create-leave-request.dto";
@@ -31,10 +33,12 @@ const RECENT_ANNOUNCEMENT_LIMIT = 3;
 export class OfficeAutomationService {
   constructor(
     private readonly officeAutomationRepository: OfficeAutomationRepository,
-    private readonly auditLogsService: AuditLogsService
+    private readonly auditLogsService: AuditLogsService,
+    private readonly notificationCenterService: NotificationCenterService
   ) {}
 
   async getWorkspaceOverview(actor: AuthUser) {
+    const tenantId = requireTenantId(actor);
     const [
       pendingLeaveApprovalCount,
       pendingAdministrativeApprovalCount,
@@ -44,13 +48,13 @@ export class OfficeAutomationService {
       directoryDepartmentCount,
       recentAnnouncements
     ] = await Promise.all([
-      this.officeAutomationRepository.countPendingApprovals(actor.id),
-      this.officeAutomationRepository.countPendingAdministrativeApprovals(actor.id),
-      this.officeAutomationRepository.countMyLeaveRequests(actor.id),
-      this.officeAutomationRepository.countMyAdministrativeRequests(actor.id),
-      this.officeAutomationRepository.countActiveAnnouncements(),
-      this.officeAutomationRepository.countActiveDepartments(),
-      this.officeAutomationRepository.listRecentAnnouncements(RECENT_ANNOUNCEMENT_LIMIT)
+      this.officeAutomationRepository.countPendingApprovals(actor.id, tenantId),
+      this.officeAutomationRepository.countPendingAdministrativeApprovals(actor.id, tenantId),
+      this.officeAutomationRepository.countMyLeaveRequests(actor.id, tenantId),
+      this.officeAutomationRepository.countMyAdministrativeRequests(actor.id, tenantId),
+      this.officeAutomationRepository.countActiveAnnouncements(tenantId),
+      this.officeAutomationRepository.countActiveDepartments(tenantId),
+      this.officeAutomationRepository.listRecentAnnouncements(tenantId, RECENT_ANNOUNCEMENT_LIMIT)
     ]);
 
     return mapWorkspaceOverview({
@@ -65,6 +69,7 @@ export class OfficeAutomationService {
   }
 
   async createLeaveRequest(dto: CreateLeaveRequestDto, actor: AuthUser) {
+    const tenantId = requireTenantId(actor);
     const startAt = this.parseDateTime(dto.startAt, "开始时间");
     const endAt = this.parseDateTime(dto.endAt, "结束时间");
 
@@ -72,8 +77,9 @@ export class OfficeAutomationService {
       throw new BadRequestException("结束时间必须晚于开始时间。");
     }
 
-    const approver = await this.resolveApprover(actor.id);
+    const approver = await this.resolveApprover(actor);
     const request = await this.officeAutomationRepository.createLeaveRequest({
+      tenantId,
       applicantId: actor.id,
       approverId: approver.id,
       leaveType: dto.leaveType.trim(),
@@ -100,9 +106,11 @@ export class OfficeAutomationService {
   }
 
   async createAdministrativeRequest(dto: CreateAdministrativeRequestDto, actor: AuthUser) {
-    const approver = await this.resolveApprover(actor.id, "oa:request:approve");
+    const tenantId = requireTenantId(actor);
+    const approver = await this.resolveApprover(actor, "oa:request:approve");
     const draft = buildAdministrativeRequestDraft(dto);
     const request = await this.officeAutomationRepository.createAdministrativeRequest({
+      tenantId,
       requestNo: generateAdministrativeRequestNo(dto.type),
       type: dto.type,
       title: draft.title,
@@ -131,19 +139,19 @@ export class OfficeAutomationService {
   }
 
   async getMyLeaveRequests(actor: AuthUser) {
-    const requests = await this.officeAutomationRepository.listMyLeaveRequests(actor.id);
+    const requests = await this.officeAutomationRepository.listMyLeaveRequests(actor.id, requireTenantId(actor));
     return requests.map((item) => mapLeaveRequestItem(item));
   }
 
   async getMyAdministrativeRequests(actor: AuthUser, query: ListAdministrativeRequestsDto) {
-    const requests = await this.officeAutomationRepository.listMyAdministrativeRequests(actor.id);
+    const requests = await this.officeAutomationRepository.listMyAdministrativeRequests(actor.id, requireTenantId(actor));
     return requests
       .filter((item) => this.matchesAdministrativeRequestFilters(item, query))
       .map((item) => mapAdministrativeRequestItem(item));
   }
 
-  async listAdministrativeRequests(query: ListAdministrativeRequestsDto) {
-    const requests = await this.officeAutomationRepository.listAdministrativeRequests({
+  async listAdministrativeRequests(query: ListAdministrativeRequestsDto, actor: AuthUser) {
+    const requests = await this.officeAutomationRepository.listAdministrativeRequests(requireTenantId(actor), {
       type: query.type,
       status: query.status,
       applicantId: query.applicantId,
@@ -161,16 +169,17 @@ export class OfficeAutomationService {
   }
 
   async getAdministrativeRequestDetail(id: string, actor: AuthUser) {
-    const request = await this.officeAutomationRepository.findAdministrativeRequestById(id);
+    const request = await this.officeAutomationRepository.findAdministrativeRequestById(id, requireTenantId(actor));
 
     this.assertAdministrativeRequestAccessible(request, actor);
     return mapAdministrativeRequestDetail(request);
   }
 
   async getPendingApprovals(actor: AuthUser) {
+    const tenantId = requireTenantId(actor);
     const [leaveRequests, administrativeRequests] = await Promise.all([
-      this.officeAutomationRepository.listPendingApprovals(actor.id),
-      this.officeAutomationRepository.listPendingAdministrativeApprovals(actor.id)
+      this.officeAutomationRepository.listPendingApprovals(actor.id, tenantId),
+      this.officeAutomationRepository.listPendingAdministrativeApprovals(actor.id, tenantId)
     ]);
 
     return [
@@ -180,7 +189,7 @@ export class OfficeAutomationService {
   }
 
   async getPendingAdministrativeApprovals(actor: AuthUser, query: ListAdministrativeRequestsDto) {
-    const requests = await this.officeAutomationRepository.listPendingAdministrativeApprovals(actor.id);
+    const requests = await this.officeAutomationRepository.listPendingAdministrativeApprovals(actor.id, requireTenantId(actor));
 
     return requests
       .filter((item) => this.matchesAdministrativeRequestFilters(item, query))
@@ -188,7 +197,8 @@ export class OfficeAutomationService {
   }
 
   async decideLeaveRequest(requestId: string, dto: ApprovalActionDto, actor: AuthUser) {
-    const request = await this.officeAutomationRepository.findLeaveRequestById(requestId);
+    const tenantId = requireTenantId(actor);
+    const request = await this.officeAutomationRepository.findLeaveRequestById(requestId, tenantId);
     const isSuperAdmin = actor.roleCodes.includes("super-admin");
 
     if (!isSuperAdmin && request.approver.id !== actor.id) {
@@ -203,6 +213,7 @@ export class OfficeAutomationService {
       dto.decision === "APPROVED" ? LeaveRequestStatus.APPROVED : LeaveRequestStatus.REJECTED;
     const normalizedComment = dto.comment?.trim() || undefined;
     const decidedRequest = await this.officeAutomationRepository.applyApprovalDecision({
+      tenantId,
       requestId,
       actorId: actor.id,
       status: nextStatus,
@@ -221,11 +232,35 @@ export class OfficeAutomationService {
       }
     });
 
+    if (decidedRequest.applicant?.id) {
+      await this.notificationCenterService.publishEvent({
+        event: {
+          eventType: "LEAVE_RESULT",
+          domain: "OA",
+          sourceType: "leave-request",
+          sourceId: decidedRequest.id,
+          title: `请假申请已${dto.decision === "APPROVED" ? "通过" : "驳回"}`,
+          summary: `${decidedRequest.leaveType}申请已由${actor.displayName}处理。`,
+          priority: "MEDIUM",
+          payload: {
+            requestId: decidedRequest.id,
+            decision: dto.decision
+          },
+          targetPath: "/oa/approvals/mine",
+          targetLabel: "查看我的申请",
+          actorId: actor.id,
+          occurredAt: decidedRequest.updatedAt
+        },
+        recipientIds: [decidedRequest.applicant.id]
+      });
+    }
+
     return mapLeaveRequestItem(decidedRequest);
   }
 
   async decideAdministrativeRequest(requestId: string, dto: ApprovalActionDto, actor: AuthUser) {
-    const request = await this.officeAutomationRepository.findAdministrativeRequestById(requestId);
+    const tenantId = requireTenantId(actor);
+    const request = await this.officeAutomationRepository.findAdministrativeRequestById(requestId, tenantId);
     const isSuperAdmin = actor.roleCodes.includes("super-admin");
 
     if (!isSuperAdmin && request.approver.id !== actor.id) {
@@ -242,6 +277,7 @@ export class OfficeAutomationService {
         : AdministrativeRequestStatus.REJECTED;
     const normalizedComment = dto.comment?.trim() || undefined;
     const decidedRequest = await this.officeAutomationRepository.applyAdministrativeApprovalDecision({
+      tenantId,
       requestId,
       actorId: actor.id,
       status: nextStatus,
@@ -261,11 +297,36 @@ export class OfficeAutomationService {
       }
     });
 
+    if (decidedRequest.applicant?.id) {
+      await this.notificationCenterService.publishEvent({
+        event: {
+          eventType: "ADMINISTRATIVE_RESULT",
+          domain: "OA",
+          sourceType: "administrative-request",
+          sourceId: decidedRequest.id,
+          title: `${decidedRequest.title}已${dto.decision === "APPROVED" ? "通过" : "驳回"}`,
+          summary: `${decidedRequest.title}已由${actor.displayName}处理。`,
+          priority: "MEDIUM",
+          payload: {
+            requestId: decidedRequest.id,
+            requestNo: decidedRequest.requestNo,
+            decision: dto.decision
+          },
+          targetPath: `/oa/administrative-requests/mine?requestId=${decidedRequest.id}`,
+          targetLabel: "查看申请详情",
+          actorId: actor.id,
+          occurredAt: decidedRequest.updatedAt
+        },
+        recipientIds: [decidedRequest.applicant.id]
+      });
+    }
+
     return mapAdministrativeRequestItem(decidedRequest);
   }
 
   async cancelAdministrativeRequest(requestId: string, actor: AuthUser) {
-    const request = await this.officeAutomationRepository.findAdministrativeRequestById(requestId);
+    const tenantId = requireTenantId(actor);
+    const request = await this.officeAutomationRepository.findAdministrativeRequestById(requestId, tenantId);
     const isSuperAdmin = actor.roleCodes.includes("super-admin");
 
     if (!isSuperAdmin && request.applicant.id !== actor.id) {
@@ -277,6 +338,7 @@ export class OfficeAutomationService {
     }
 
     const cancelledRequest = await this.officeAutomationRepository.applyAdministrativeCancellation({
+      tenantId,
       requestId,
       actorId: actor.id
     });
@@ -296,20 +358,21 @@ export class OfficeAutomationService {
     return mapAdministrativeRequestItem(cancelledRequest);
   }
 
-  async getAnnouncements() {
-    const announcements = await this.officeAutomationRepository.listAnnouncements();
+  async getAnnouncements(actor: AuthUser) {
+    const announcements = await this.officeAutomationRepository.listAnnouncements(requireTenantId(actor));
     return announcements.map((item) => mapAnnouncementSummary(item));
   }
 
-  async getAnnouncementDetail(id: string) {
-    const announcement = await this.officeAutomationRepository.findAnnouncementById(id);
+  async getAnnouncementDetail(id: string, actor: AuthUser) {
+    const announcement = await this.officeAutomationRepository.findAnnouncementById(id, requireTenantId(actor));
     return mapAnnouncementDetail(announcement);
   }
 
-  async getDirectorySnapshot(departmentId?: string) {
+  async getDirectorySnapshot(actor: AuthUser, departmentId?: string) {
+    const tenantId = requireTenantId(actor);
     const [departments, members] = await Promise.all([
-      this.officeAutomationRepository.listActiveDepartments(),
-      this.officeAutomationRepository.listDirectoryMembers(departmentId)
+      this.officeAutomationRepository.listActiveDepartments(tenantId),
+      this.officeAutomationRepository.listDirectoryMembers(tenantId, departmentId)
     ]);
 
     return mapDirectorySnapshot({
@@ -318,10 +381,11 @@ export class OfficeAutomationService {
     });
   }
 
-  private async resolveApprover(applicantId: string, permissionCode = "oa:approval:write") {
+  private async resolveApprover(actor: AuthUser, permissionCode = "oa:approval:write") {
+    const tenantId = requireTenantId(actor);
     const approver =
-      (await this.officeAutomationRepository.findDefaultApprover(applicantId, permissionCode)) ??
-      (await this.officeAutomationRepository.findSelfApprover(applicantId, permissionCode));
+      (await this.officeAutomationRepository.findDefaultApprover(actor.id, tenantId, permissionCode)) ??
+      (await this.officeAutomationRepository.findSelfApprover(actor.id, tenantId, permissionCode));
 
     if (!approver) {
       throw new BadRequestException("当前没有可用审批人，暂时无法提交申请。");

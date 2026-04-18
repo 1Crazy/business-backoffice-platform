@@ -16,87 +16,83 @@
       </div>
     </template>
     <template v-else>
-    <el-form class="audit-filter-form" label-position="top">
-      <el-form-item label="操作人">
-        <el-input v-model="filter.actorName" placeholder="按操作人筛选" class="filter-input" />
-      </el-form-item>
-      <el-form-item label="动作类型">
-        <el-select v-model="filter.actionType" clearable placeholder="全部动作">
-          <el-option v-for="item in auditActionOptions" :key="item" :label="formatAuditActionType(item)" :value="item" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="对象类型">
-        <el-select v-model="filter.targetType" clearable placeholder="全部对象">
-          <el-option v-for="item in auditTargetTypeOptions" :key="item" :label="formatAuditTargetType(item)" :value="item" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="时间范围">
-        <el-date-picker
-          v-model="filter.dateRange"
-          type="daterange"
-          range-separator="至"
-          start-placeholder="开始日期"
-          end-placeholder="结束日期"
-          value-format="YYYY-MM-DD"
-          class="full-width"
-        />
-      </el-form-item>
-      <el-form-item label="排序">
-        <el-select v-model="localSortPreset" placeholder="选择排序方式">
-          <el-option v-for="item in auditSortOptions" :key="item.value" :label="item.label" :value="item.value" />
-        </el-select>
-      </el-form-item>
-    </el-form>
-
-    <div class="toolbar-row">
-      <p>按操作人、动作和时间筛选。</p>
-      <el-button @click="$emit('reset')">重置</el-button>
-    </div>
-
-    <div class="table-meta">
-      <div>
-        <span class="table-kicker">操作审计</span>
-        <h3>审计结果</h3>
-        <p>查看最近关键操作。</p>
+      <el-form class="audit-filter-form" label-position="top">
+        <el-form-item label="操作人">
+          <el-input v-model="filter.actorName" placeholder="按操作人筛选" class="filter-input" />
+        </el-form-item>
+        <el-form-item label="动作类型">
+          <el-select v-model="filter.actionType" clearable placeholder="全部动作">
+            <el-option v-for="item in auditActionOptions" :key="item" :label="formatAuditActionType(item)" :value="item" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="对象类型">
+          <el-select v-model="filter.targetType" clearable placeholder="全部对象">
+            <el-option v-for="item in auditTargetTypeOptions" :key="item" :label="formatAuditTargetType(item)" :value="item" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="时间范围">
+          <el-date-picker
+            v-model="filter.dateRange"
+            type="daterange"
+            range-separator="至"
+            start-placeholder="开始日期"
+            end-placeholder="结束日期"
+            value-format="YYYY-MM-DD"
+            class="full-width"
+          />
+        </el-form-item>
+        <el-form-item label="排序">
+          <el-select v-model="localSortPreset" placeholder="选择排序方式">
+            <el-option v-for="item in auditSortOptions" :key="item.value" :label="item.label" :value="item.value" />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <div class="toolbar-row">
+        <p>按操作人、动作和时间筛选。</p>
+        <el-button @click="$emit('reset')">重置</el-button>
       </div>
-      <div class="meta-pill">{{ refreshing ? "结果同步中" : `排序：${currentSortLabel}` }}</div>
-    </div>
-
-    <div v-if="auditLogs.length" class="page-table-shell">
-      <el-table :data="auditLogs" border>
-        <el-table-column prop="actorName" label="操作人" min-width="160" />
-        <el-table-column label="动作" min-width="140">
-          <template #default="{ row }">
-            {{ formatAuditActionType(row.actionType) }}
-          </template>
-        </el-table-column>
-        <el-table-column label="对象类型" min-width="140">
-          <template #default="{ row }">
-            {{ formatAuditTargetType(row.targetType) }}
-          </template>
-        </el-table-column>
-        <el-table-column prop="targetId" label="对象 ID" min-width="220" />
-        <el-table-column label="时间" min-width="180">
-          <template #default="{ row }">
-            {{ formatDateTime(row.createdAt) }}
-          </template>
-        </el-table-column>
-      </el-table>
-    </div>
-    <el-empty v-else description="当前筛选条件下暂无审计日志" />
-
-    <div class="pagination-row">
-      <el-pagination
-        :current-page="tableState.page"
-        :page-size="tableState.pageSize"
-        :page-sizes="[10, 20, 50]"
-        :total="tableState.total"
-        background
-        layout="total, sizes, prev, pager, next"
-        @current-change="$emit('page-change', $event)"
-        @size-change="$emit('page-size-change', $event)"
-      />
-    </div>
+      <div class="table-meta">
+        <div>
+          <span class="table-kicker">操作审计</span>
+          <h3>审计结果</h3>
+          <p>查看最近关键操作。</p>
+        </div>
+        <div class="meta-pill">{{ refreshing ? "结果同步中" : `排序：${currentSortLabel}` }}</div>
+      </div>
+      <div v-if="auditLogs.length" class="page-table-shell">
+        <el-table :data="auditLogs" border>
+          <el-table-column prop="actorName" label="操作人" min-width="160" />
+          <el-table-column label="动作" min-width="140">
+            <template #default="{ row }">
+              {{ formatAuditActionType(row.actionType) }}
+            </template>
+          </el-table-column>
+          <el-table-column label="对象类型" min-width="140">
+            <template #default="{ row }">
+              {{ formatAuditTargetType(row.targetType) }}
+            </template>
+          </el-table-column>
+          <el-table-column prop="targetId" label="对象 ID" min-width="220" />
+          <el-table-column label="时间" min-width="180">
+            <template #default="{ row }">
+              {{ formatDateTime(row.createdAt) }}
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+      <el-empty v-else description="当前筛选条件下暂无审计日志" />
+      <div class="pagination-row">
+        <el-pagination
+          :current-page="tableState.page"
+          :page-size="tableState.pageSize"
+          :page-sizes="[10, 20, 50]"
+          :total="tableState.total"
+          background
+          layout="total, sizes, prev, pager, next"
+          @current-change="$emit('page-change', $event)"
+          @size-change="$emit('page-size-change', $event)"
+        />
+      </div>
     </template>
   </section>
 </template>

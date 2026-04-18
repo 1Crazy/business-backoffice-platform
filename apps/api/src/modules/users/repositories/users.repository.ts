@@ -29,8 +29,11 @@ export type UserRecord = Prisma.UserGetPayload<{
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  list() {
+  list(tenantId: string) {
     return this.prisma.user.findMany({
+      where: {
+        tenantId
+      },
       include: userInclude,
       orderBy: {
         createdAt: "desc"
@@ -38,14 +41,18 @@ export class UsersRepository {
     });
   }
 
-  findById(id: string) {
-    return this.prisma.user.findUniqueOrThrow({
-      where: { id },
+  findById(id: string, tenantId: string) {
+    return this.prisma.user.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      },
       include: userInclude
     });
   }
 
   async createUser(input: {
+    tenantId: string;
     username: string;
     displayName: string;
     passwordHash: string;
@@ -56,6 +63,7 @@ export class UsersRepository {
   }) {
     const user = await this.prisma.user.create({
       data: {
+        tenantId: input.tenantId,
         username: input.username,
         displayName: input.displayName,
         passwordHash: input.passwordHash,
@@ -70,11 +78,12 @@ export class UsersRepository {
       }
     });
 
-    return this.findById(user.id);
+    return this.findById(user.id, input.tenantId);
   }
 
   async updateUser(
     id: string,
+    tenantId: string,
     input: {
       displayName?: string;
       email?: string | null;
@@ -86,7 +95,14 @@ export class UsersRepository {
   ) {
     await this.prisma.$transaction(async (tx) => {
       if (input.roleIds) {
-        await tx.userRole.deleteMany({ where: { userId: id } });
+        await tx.userRole.deleteMany({
+          where: {
+            userId: id,
+            user: {
+              tenantId
+            }
+          }
+        });
 
         if (input.roleIds.length) {
           await tx.userRole.createMany({
@@ -110,15 +126,18 @@ export class UsersRepository {
       });
     });
 
-    return this.findById(id);
+    return this.findById(id, tenantId);
   }
 
-  async updateStatus(id: string, status: UserStatus) {
-    await this.prisma.user.update({
-      where: { id },
+  async updateStatus(id: string, tenantId: string, status: UserStatus) {
+    await this.prisma.user.updateMany({
+      where: {
+        id,
+        tenantId
+      },
       data: { status }
     });
 
-    return this.findById(id);
+    return this.findById(id, tenantId);
   }
 }

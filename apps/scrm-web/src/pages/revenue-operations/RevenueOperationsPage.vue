@@ -317,7 +317,7 @@
               <el-input v-model="quoteForm.title" placeholder="请输入报价标题" />
             </el-form-item>
             <el-form-item label="报价金额" prop="amount" required>
-              <el-input-number v-model="quoteForm.amount" :min="0" :step="1000" class="full-width" />
+              <el-input-number v-model="quoteForm.amount" :min="0" :step="1000" class="full-width" placeholder="请输入报价金额" />
             </el-form-item>
             <div class="dialog-grid">
               <el-form-item label="出具时间" prop="issuedAt">
@@ -326,6 +326,7 @@
                   type="datetime"
                   value-format="YYYY-MM-DDTHH:mm:ss.SSS[Z]"
                   class="full-width"
+                  placeholder="请选择出具时间"
                 />
               </el-form-item>
               <el-form-item label="失效时间" prop="expiresAt">
@@ -334,11 +335,12 @@
                   type="datetime"
                   value-format="YYYY-MM-DDTHH:mm:ss.SSS[Z]"
                   class="full-width"
+                  placeholder="请选择失效时间"
                 />
               </el-form-item>
             </div>
             <el-form-item label="备注" prop="notes">
-              <el-input v-model="quoteForm.notes" type="textarea" :rows="4" />
+              <el-input v-model="quoteForm.notes" type="textarea" :rows="4" placeholder="选填，补充报价说明或审批备注" />
             </el-form-item>
           </el-form>
 
@@ -356,7 +358,7 @@
               <el-input v-model="contractForm.title" placeholder="请输入合同标题" />
             </el-form-item>
             <el-form-item label="合同金额" prop="amount" required>
-              <el-input-number v-model="contractForm.amount" :min="0" :step="1000" class="full-width" />
+              <el-input-number v-model="contractForm.amount" :min="0" :step="1000" class="full-width" placeholder="请输入合同金额" />
             </el-form-item>
             <div class="dialog-grid">
               <el-form-item label="开始时间" prop="startDate" required>
@@ -365,6 +367,7 @@
                   type="date"
                   value-format="YYYY-MM-DD"
                   class="full-width"
+                  placeholder="请选择开始时间"
                 />
               </el-form-item>
               <el-form-item label="结束时间" prop="endDate" required>
@@ -373,6 +376,7 @@
                   type="date"
                   value-format="YYYY-MM-DD"
                   class="full-width"
+                  placeholder="请选择结束时间"
                 />
               </el-form-item>
             </div>
@@ -382,10 +386,11 @@
                 type="datetime"
                 value-format="YYYY-MM-DDTHH:mm:ss.SSS[Z]"
                 class="full-width"
+                placeholder="请选择签署时间"
               />
             </el-form-item>
             <el-form-item label="备注" prop="notes">
-              <el-input v-model="contractForm.notes" type="textarea" :rows="4" />
+              <el-input v-model="contractForm.notes" type="textarea" :rows="4" placeholder="选填，补充合同条款说明或交付备注" />
             </el-form-item>
           </el-form>
 
@@ -403,7 +408,13 @@
               <el-input v-model="paymentPlanForm.title" placeholder="请输入回款计划标题" />
             </el-form-item>
             <el-form-item label="计划金额" prop="plannedAmount" required>
-              <el-input-number v-model="paymentPlanForm.plannedAmount" :min="0" :step="1000" class="full-width" />
+              <el-input-number
+                v-model="paymentPlanForm.plannedAmount"
+                :min="0"
+                :step="1000"
+                class="full-width"
+                placeholder="请输入计划金额"
+              />
             </el-form-item>
             <div class="dialog-grid">
               <el-form-item label="计划日期" prop="plannedDate" required>
@@ -412,6 +423,7 @@
                   type="date"
                   value-format="YYYY-MM-DD"
                   class="full-width"
+                  placeholder="请选择计划日期"
                 />
               </el-form-item>
               <el-form-item label="关联合同" prop="contractId">
@@ -421,7 +433,7 @@
               </el-form-item>
             </div>
             <el-form-item label="备注" prop="notes">
-              <el-input v-model="paymentPlanForm.notes" type="textarea" :rows="4" />
+              <el-input v-model="paymentPlanForm.notes" type="textarea" :rows="4" placeholder="选填，补充回款节点说明" />
             </el-form-item>
           </el-form>
 
@@ -441,7 +453,13 @@
               </el-select>
             </el-form-item>
             <el-form-item label="实际回款金额" prop="amount" required>
-              <el-input-number v-model="paymentRecordForm.amount" :min="0" :step="1000" class="full-width" />
+              <el-input-number
+                v-model="paymentRecordForm.amount"
+                :min="0"
+                :step="1000"
+                class="full-width"
+                placeholder="请输入实际回款金额"
+              />
             </el-form-item>
             <el-form-item label="实际回款时间" prop="receivedAt" required>
               <el-date-picker
@@ -449,10 +467,11 @@
                 type="datetime"
                 value-format="YYYY-MM-DDTHH:mm:ss.SSS[Z]"
                 class="full-width"
+                placeholder="请选择实际回款时间"
               />
             </el-form-item>
             <el-form-item label="说明" prop="note">
-              <el-input v-model="paymentRecordForm.note" type="textarea" :rows="4" />
+              <el-input v-model="paymentRecordForm.note" type="textarea" :rows="4" placeholder="选填，补充到账说明、票据或核销信息" />
             </el-form-item>
           </el-form>
 
@@ -480,10 +499,11 @@
                 type="datetime"
                 value-format="YYYY-MM-DDTHH:mm:ss.SSS[Z]"
                 class="full-width"
+                placeholder="请选择提醒时间"
               />
             </el-form-item>
             <el-form-item label="说明" prop="note">
-              <el-input v-model="renewalReminderForm.note" type="textarea" :rows="4" />
+              <el-input v-model="renewalReminderForm.note" type="textarea" :rows="4" placeholder="选填，补充续费跟进说明或客户背景" />
             </el-form-item>
           </el-form>
 

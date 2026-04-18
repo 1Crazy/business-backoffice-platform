@@ -3,7 +3,12 @@
   <div class="workspace-shell">
     <WorkspaceLoadingState v-if="isLoading" />
     <template v-else>
-      <WorkspaceHeroSection :overview="overview" :metric-cards="metricCards" />
+      <WorkspaceHeroSection
+        :overview="overview"
+        :metric-cards="metricCards"
+        :template-cards="templateCards"
+        :workfeed-entry-href="workfeedEntryHref"
+      />
       <WorkspaceOverviewPanels
         :focus-items="focusItems"
         :recent-announcements="overview.recentAnnouncements"
@@ -28,8 +33,9 @@ import WorkspaceHeroSection from "@/pages/workspace/components/WorkspaceHeroSect
 import WorkspaceLoadingState from "@/pages/workspace/components/WorkspaceLoadingState.vue";
 import WorkspaceOverviewPanels from "@/pages/workspace/components/WorkspaceOverviewPanels.vue";
 import { useWorkspacePage } from "@/composables/workspace/useWorkspacePage";
+import { getHostAppPath } from "@/utils/host-navigation";
 
-const { overview, isLoading } = useWorkspacePage();
+const { overview, isLoading, templateCards } = useWorkspacePage();
 const {
   announcement,
   drawerVisible,
@@ -37,41 +43,47 @@ const {
   isTabletOrDown,
   openAnnouncementDetail
 } = useAnnouncementDetailDrawer();
+const workfeedEntryHref = getHostAppPath("/workfeed");
 
 const metricCards = computed(() => [
   {
-    label: "全部待我审批",
+    label: "全部待办",
     value: overview.value.pendingApprovalCount
   },
   {
-    label: "行政待我审批",
-    value: overview.value.administrativeRequestPendingCount
-  },
-  {
-    label: "全部我发起的申请",
+    label: "我的申请",
     value: overview.value.myRequestCount
   },
   {
-    label: "我的行政申请",
-    value: overview.value.administrativeRequestMyCount
+    label: "公告",
+    value: overview.value.activeAnnouncementCount
+  },
+  {
+    label: "部门",
+    value: overview.value.directoryDepartmentCount
   }
 ]);
 
 const focusItems = computed(() => [
   {
-    title: "行政待我审批",
-    value: `${overview.value.administrativeRequestPendingCount} 项`,
-    caption: overview.value.administrativeRequestPendingCount > 0 ? "优先进入行政审批处理。" : "当前没有待处理行政审批。"
+    title: "待我审批",
+    value: `${overview.value.pendingApprovalCount} 项`,
+    caption: overview.value.pendingApprovalCount > 0 ? "统一处理" : "当前为空"
   },
   {
-    title: "我的行政申请",
-    value: `${overview.value.administrativeRequestMyCount} 项`,
-    caption: overview.value.administrativeRequestMyCount > 0 ? "可回看最近申请进度与审批意见。" : "暂无进行中的行政申请。"
+    title: "我发起的申请",
+    value: `${overview.value.myRequestCount} 项`,
+    caption: overview.value.myRequestCount > 0 ? "状态跟踪" : "当前为空"
+  },
+  {
+    title: "行政待审",
+    value: `${overview.value.administrativeRequestPendingCount} 项`,
+    caption: overview.value.administrativeRequestPendingCount > 0 ? "高频流程" : "当前为空"
   },
   {
     title: "公告同步",
     value: `${overview.value.activeAnnouncementCount} 条`,
-    caption: overview.value.activeAnnouncementCount > 0 ? "查看最近组织通知。" : "当前无新公告。"
+    caption: overview.value.activeAnnouncementCount > 0 ? "最近发布" : "当前为空"
   }
 ]);
 </script>

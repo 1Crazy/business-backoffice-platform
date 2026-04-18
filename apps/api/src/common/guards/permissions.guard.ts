@@ -2,13 +2,18 @@
 import { CanActivate, ExecutionContext, ForbiddenException, Injectable } from "@nestjs/common";
 import { Reflector } from "@nestjs/core";
 
+import { AccessPolicyService } from "../access-policy/access-policy.service";
 import type { AuthUser } from "../auth/auth-user.interface";
+import { ACTION_PERMISSION_KEY, type ActionPermissionMetadata } from "../decorators/action-permission.decorator";
 import { IS_PUBLIC_KEY } from "../decorators/public.decorator";
 import { PERMISSIONS_KEY } from "../decorators/permissions.decorator";
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly accessPolicyService: AccessPolicyService
+  ) {}
 
   canActivate(context: ExecutionContext): boolean {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
@@ -42,7 +47,20 @@ export class PermissionsGuard implements CanActivate {
       throw new ForbiddenException("Insufficient permissions.");
     }
 
+    const actionPermission = this.reflector.getAllAndOverride<ActionPermissionMetadata | undefined>(ACTION_PERMISSION_KEY, [
+      context.getHandler(),
+      context.getClass()
+    ]);
+
+    if (actionPermission) {
+      this.accessPolicyService.assertActionAllowed(
+        user,
+        actionPermission.resource,
+        actionPermission.action,
+        "You do not have permission to perform this action."
+      );
+    }
+
     return true;
   }
 }
-

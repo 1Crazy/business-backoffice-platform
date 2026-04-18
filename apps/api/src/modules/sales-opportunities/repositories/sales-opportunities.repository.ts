@@ -147,19 +147,26 @@ export class SalesOpportunitiesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(
+    tenantId: string,
     where: Prisma.OpportunityWhereInput,
     orderBy: Prisma.OpportunityOrderByWithRelationInput[],
     pagination: PaginationParams
   ) {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.opportunity.findMany({
-        where,
+        where: {
+          AND: [{ tenantId }, where]
+        },
         include: opportunityListInclude,
         orderBy,
         skip: pagination.skip,
         take: pagination.take
       }),
-      this.prisma.opportunity.count({ where })
+      this.prisma.opportunity.count({
+        where: {
+          AND: [{ tenantId }, where]
+        }
+      })
     ]);
 
     return {
@@ -168,18 +175,25 @@ export class SalesOpportunitiesRepository {
     };
   }
 
-  findDetailById(id: string) {
-    return this.prisma.opportunity.findUniqueOrThrow({
-      where: { id },
+  findDetailById(id: string, tenantId: string) {
+    return this.prisma.opportunity.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      },
       include: opportunityDetailInclude
     });
   }
 
-  findSnapshotById(id: string): Promise<OpportunitySnapshotRecord> {
-    return this.prisma.opportunity.findUniqueOrThrow({
-      where: { id },
+  findSnapshotById(id: string, tenantId: string): Promise<OpportunitySnapshotRecord> {
+    return this.prisma.opportunity.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      },
       select: {
         id: true,
+        tenantId: true,
         ownerId: true,
         customerId: true,
         sourceLeadId: true,
@@ -192,9 +206,12 @@ export class SalesOpportunitiesRepository {
     });
   }
 
-  findCustomerScopeById(id: string): Promise<OpportunityCustomerScopeRecord> {
-    return this.prisma.customer.findUniqueOrThrow({
-      where: { id },
+  findCustomerScopeById(id: string, tenantId: string): Promise<OpportunityCustomerScopeRecord> {
+    return this.prisma.customer.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      },
       select: {
         id: true,
         ownerId: true,
@@ -203,9 +220,12 @@ export class SalesOpportunitiesRepository {
     });
   }
 
-  findLeadScopeById(id: string): Promise<OpportunityLeadScopeRecord> {
-    return this.prisma.lead.findUniqueOrThrow({
-      where: { id },
+  findLeadScopeById(id: string, tenantId: string): Promise<OpportunityLeadScopeRecord> {
+    return this.prisma.lead.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      },
       select: {
         id: true,
         ownerId: true,
@@ -215,6 +235,7 @@ export class SalesOpportunitiesRepository {
   }
 
   createOpportunity(input: {
+    tenantId: string;
     name: string;
     customerId: string;
     sourceLeadId?: string | null;
@@ -229,6 +250,7 @@ export class SalesOpportunitiesRepository {
     return this.prisma.$transaction(async (tx) => {
       const opportunity = await tx.opportunity.create({
         data: {
+          tenantId: input.tenantId,
           name: input.name,
           customerId: input.customerId,
           sourceLeadId: input.sourceLeadId ?? undefined,
@@ -243,6 +265,7 @@ export class SalesOpportunitiesRepository {
 
       await tx.opportunityStageHistory.create({
         data: {
+          tenantId: input.tenantId,
           opportunityId: opportunity.id,
           fromStage: null,
           toStage: input.stage,
@@ -260,6 +283,7 @@ export class SalesOpportunitiesRepository {
 
   async updateOpportunity(
     id: string,
+    tenantId: string,
     input: {
       name?: string;
       sourceLeadId?: string | null;
@@ -270,8 +294,11 @@ export class SalesOpportunitiesRepository {
       notes?: string | null;
     }
   ) {
-    await this.prisma.opportunity.update({
-      where: { id },
+    await this.prisma.opportunity.updateMany({
+      where: {
+        id,
+        tenantId
+      },
       data: {
         name: input.name,
         sourceLeadId: input.sourceLeadId,
@@ -283,21 +310,25 @@ export class SalesOpportunitiesRepository {
       }
     });
 
-    return this.findDetailById(id);
+    return this.findDetailById(id, tenantId);
   }
 
-  async updateOwner(id: string, ownerId: string) {
-    await this.prisma.opportunity.update({
-      where: { id },
+  async updateOwner(id: string, tenantId: string, ownerId: string) {
+    await this.prisma.opportunity.updateMany({
+      where: {
+        id,
+        tenantId
+      },
       data: {
         ownerId
       }
     });
 
-    return this.findDetailById(id);
+    return this.findDetailById(id, tenantId);
   }
 
   changeStage(input: {
+    tenantId: string;
     id: string;
     fromStage: OpportunityStage;
     toStage: OpportunityStage;
@@ -318,6 +349,7 @@ export class SalesOpportunitiesRepository {
 
       await tx.opportunityStageHistory.create({
         data: {
+          tenantId: input.tenantId,
           opportunityId: input.id,
           fromStage: input.fromStage,
           toStage: input.toStage,
@@ -326,8 +358,11 @@ export class SalesOpportunitiesRepository {
         }
       });
 
-      return tx.opportunity.findUniqueOrThrow({
-        where: { id: input.id },
+      return tx.opportunity.findFirstOrThrow({
+        where: {
+          id: input.id,
+          tenantId: input.tenantId
+        },
         include: opportunityDetailInclude
       });
     });

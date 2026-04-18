@@ -16,8 +16,11 @@ export type DepartmentRecord = Prisma.DepartmentGetPayload<{
 export class DepartmentsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  list() {
+  list(tenantId: string) {
     return this.prisma.department.findMany({
+      where: {
+        tenantId
+      },
       include: departmentInclude,
       orderBy: {
         createdAt: "asc"
@@ -25,39 +28,48 @@ export class DepartmentsRepository {
     });
   }
 
-  findById(id: string) {
-    return this.prisma.department.findUniqueOrThrow({
-      where: { id },
+  findById(id: string, tenantId: string) {
+    return this.prisma.department.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      },
       include: departmentInclude
     });
   }
 
   async createDepartment(input: {
+    tenantId: string;
     name: string;
     code: string;
     parentId?: string | null;
   }) {
     const department = await this.prisma.department.create({
       data: {
+        tenantId: input.tenantId,
         name: input.name,
         code: input.code,
         parentId: input.parentId ?? undefined
       }
     });
 
-    return this.findById(department.id);
+    return this.findById(department.id, input.tenantId);
   }
 
   async updateDepartment(
     id: string,
+    tenantId: string,
     input: {
       name?: string;
       code?: string;
       parentId?: string | null;
     }
   ) {
-    await this.prisma.department.update({
-      where: { id },
+    await this.prisma.department.updateMany({
+      where: {
+        id,
+        tenantId
+      },
       data: {
         name: input.name,
         code: input.code,
@@ -65,17 +77,20 @@ export class DepartmentsRepository {
       }
     });
 
-    return this.findById(id);
+    return this.findById(id, tenantId);
   }
 
-  async updateStatus(id: string, status: RecordStatus) {
-    await this.prisma.department.update({
-      where: { id },
+  async updateStatus(id: string, tenantId: string, status: RecordStatus) {
+    await this.prisma.department.updateMany({
+      where: {
+        id,
+        tenantId
+      },
       data: {
         status
       }
     });
 
-    return this.findById(id);
+    return this.findById(id, tenantId);
   }
 }

@@ -20,8 +20,11 @@ export type RoleRecord = Prisma.RoleGetPayload<{
 export class RolesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  list() {
+  list(tenantId: string) {
     return this.prisma.role.findMany({
+      where: {
+        tenantId
+      },
       include: roleInclude,
       orderBy: {
         createdAt: "desc"
@@ -35,28 +38,39 @@ export class RolesRepository {
     });
   }
 
-  findById(id: string) {
-    return this.prisma.role.findUniqueOrThrow({
-      where: { id },
+  findById(id: string, tenantId: string) {
+    return this.prisma.role.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      },
       include: roleInclude
     });
   }
 
   async createRole(input: {
+    tenantId: string;
     name: string;
     code: string;
     description?: string | null;
     isSystem: boolean;
     dataScope: RoleRecord["dataScope"];
     permissionIds: string[];
+    extendedDataScopes?: Prisma.InputJsonValue;
+    fieldPermissionRules?: Prisma.InputJsonValue;
+    actionPermissionRules?: Prisma.InputJsonValue;
   }) {
     const role = await this.prisma.role.create({
       data: {
+        tenantId: input.tenantId,
         name: input.name,
         code: input.code,
         description: input.description ?? undefined,
         isSystem: input.isSystem,
         dataScope: input.dataScope,
+        extendedDataScopes: input.extendedDataScopes,
+        fieldPermissionRules: input.fieldPermissionRules,
+        actionPermissionRules: input.actionPermissionRules,
         permissions: {
           createMany: {
             data: input.permissionIds.map((permissionId) => ({ permissionId }))
@@ -65,23 +79,32 @@ export class RolesRepository {
       }
     });
 
-    return this.findById(role.id);
+    return this.findById(role.id, input.tenantId);
   }
 
   async updateRole(
     id: string,
+    tenantId: string,
     input: {
       name?: string;
       description?: string | null;
       isSystem?: boolean;
       dataScope?: RoleRecord["dataScope"];
       permissionIds?: string[];
+      extendedDataScopes?: Prisma.InputJsonValue;
+      fieldPermissionRules?: Prisma.InputJsonValue;
+      actionPermissionRules?: Prisma.InputJsonValue;
     }
   ) {
     await this.prisma.$transaction(async (tx) => {
       if (input.permissionIds) {
-        await tx.rolePermission.deleteMany({
-          where: { roleId: id }
+      await tx.rolePermission.deleteMany({
+          where: {
+            roleId: id,
+            role: {
+              tenantId
+            }
+          }
         });
 
         if (input.permissionIds.length) {
@@ -100,22 +123,28 @@ export class RolesRepository {
           name: input.name,
           description: input.description,
           isSystem: input.isSystem,
-          dataScope: input.dataScope
+          dataScope: input.dataScope,
+          extendedDataScopes: input.extendedDataScopes,
+          fieldPermissionRules: input.fieldPermissionRules,
+          actionPermissionRules: input.actionPermissionRules
         }
       });
     });
 
-    return this.findById(id);
+    return this.findById(id, tenantId);
   }
 
-  async updateStatus(id: string, status: RecordStatus) {
-    await this.prisma.role.update({
-      where: { id },
+  async updateStatus(id: string, tenantId: string, status: RecordStatus) {
+    await this.prisma.role.updateMany({
+      where: {
+        id,
+        tenantId
+      },
       data: {
         status
       }
     });
 
-    return this.findById(id);
+    return this.findById(id, tenantId);
   }
 }

@@ -9,6 +9,16 @@ export class CurrentUserVo {
   id!: string;
 
   @ApiProperty({
+    description: "所属租户 ID。"
+  })
+  tenantId!: string;
+
+  @ApiProperty({
+    description: "所属租户编码。"
+  })
+  tenantCode!: string;
+
+  @ApiProperty({
     description: "登录用户名。"
   })
   username!: string;

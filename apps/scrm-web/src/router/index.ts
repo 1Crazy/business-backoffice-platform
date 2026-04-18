@@ -5,6 +5,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
 import { getMicroAppRouterBase } from "@/micro/runtime";
 import { resolveFirstAccessiblePath } from "@/router/access";
 import { useAuthStore } from "@/stores/auth";
+import { redirectToLoginFromGuard } from "@/utils/host-navigation";
 
 // 页面按路由入口懒加载，避免登录页首次进入时把整套后台业务代码一次性打进主包。
 const AppLayout = () => import("@/layout/AppLayout.vue");
@@ -118,7 +119,7 @@ router.beforeEach(async (to) => {
 
   if (to.path === "/login") {
     if (!authStore.token) {
-      return true;
+      return redirectToLoginFromGuard({ allowStandaloneLogin: true });
     }
 
     if (!authStore.currentUser) {
@@ -127,7 +128,7 @@ router.beforeEach(async (to) => {
       } catch (error) {
         await authStore.logout();
         ElMessage.error("登录状态已失效，请重新登录。");
-        return true;
+        return redirectToLoginFromGuard({ allowStandaloneLogin: true });
       }
     }
 
@@ -135,7 +136,7 @@ router.beforeEach(async (to) => {
   }
 
   if (!authStore.token) {
-    return "/login";
+    return redirectToLoginFromGuard();
   }
 
   if (!authStore.currentUser) {
@@ -144,7 +145,7 @@ router.beforeEach(async (to) => {
     } catch (error) {
       await authStore.logout();
       ElMessage.error("登录状态已失效，请重新登录。");
-      return "/login";
+      return redirectToLoginFromGuard();
     }
   }
 

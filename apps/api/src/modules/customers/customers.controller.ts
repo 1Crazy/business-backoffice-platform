@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from "@
 
 import { FollowUpVo } from "@/common/vo/entity.vo";
 import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { ActionPermission } from "@/common/decorators/action-permission.decorator";
 import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { Permissions } from "@/common/decorators/permissions.decorator";
 import { CreateCustomerDto } from "./dto/create-customer.dto";
@@ -52,8 +53,8 @@ export class CustomersController {
     type: CustomerTagVo,
     isArray: true
   })
-  listTags() {
-    return this.customersService.listTags();
+  listTags(@CurrentUser() user: AuthUser) {
+    return this.customersService.listTags(user);
   }
 
   @Post("tags")
@@ -123,6 +124,7 @@ export class CustomersController {
 
   @Patch(":id/owner")
   @Permissions("customer:assign")
+  @ActionPermission("customer", "assign")
   @ApiOperation({
     summary: "转移客户负责人",
     description: "转移客户负责人。"

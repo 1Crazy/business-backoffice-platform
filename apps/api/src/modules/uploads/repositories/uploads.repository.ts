@@ -10,9 +10,10 @@ export type AttachmentRecord = Prisma.AttachmentGetPayload<Record<string, never>
 export class UploadsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  listByBusiness(businessType: AttachmentRecord["businessType"], businessId: string) {
+  listByBusiness(tenantId: string, businessType: AttachmentRecord["businessType"], businessId: string) {
     return this.prisma.attachment.findMany({
       where: {
+        tenantId,
         businessType,
         businessId
       },
@@ -23,6 +24,7 @@ export class UploadsRepository {
   }
 
   createAttachment(input: {
+    tenantId: string;
     businessType: AttachmentRecord["businessType"];
     businessId: string;
     fileName: string;
@@ -35,6 +37,7 @@ export class UploadsRepository {
   }) {
     return this.prisma.attachment.create({
       data: {
+        tenantId: input.tenantId,
         businessType: input.businessType,
         businessId: input.businessId,
         fileName: input.fileName,
@@ -50,24 +53,33 @@ export class UploadsRepository {
     });
   }
 
-  findAttachmentById(id: string) {
-    return this.prisma.attachment.findUniqueOrThrow({
-      where: { id }
+  findAttachmentById(id: string, tenantId: string) {
+    return this.prisma.attachment.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      }
     });
   }
 
-  findCustomerOwnerById(customerId: string) {
-    return this.prisma.customer.findUniqueOrThrow({
-      where: { id: customerId },
+  findCustomerOwnerById(customerId: string, tenantId: string) {
+    return this.prisma.customer.findFirstOrThrow({
+      where: {
+        id: customerId,
+        tenantId
+      },
       select: {
         ownerId: true
       }
     });
   }
 
-  findLeadOwnerById(leadId: string) {
-    return this.prisma.lead.findUniqueOrThrow({
-      where: { id: leadId },
+  findLeadOwnerById(leadId: string, tenantId: string) {
+    return this.prisma.lead.findFirstOrThrow({
+      where: {
+        id: leadId,
+        tenantId
+      },
       select: {
         ownerId: true
       }

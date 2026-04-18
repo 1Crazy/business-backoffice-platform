@@ -25,7 +25,25 @@ vi.mock("@/composables/workspace/useWorkspacePage", () => ({
           publishedByName: "行政中心"
         }
       ]
-    })
+    }),
+    templateCards: ref([
+      {
+        key: "LEAVE",
+        label: "请假申请",
+        shortLabel: "请假",
+        caption: "假勤",
+        createRoute: "/leave/request",
+        listRoute: "/approvals/mine"
+      },
+      {
+        key: "SEAL",
+        label: "用印申请",
+        shortLabel: "用印",
+        caption: "法务",
+        createRoute: "/administrative-requests/new?type=SEAL",
+        listRoute: "/approvals/mine"
+      }
+    ])
   })
 }));
 
@@ -53,11 +71,12 @@ describe("WorkspacePage", () => {
       }
     });
 
-    expect(wrapper.text()).toContain("先处理待办");
-    expect(wrapper.text()).toContain("行政待我审批");
+    expect(wrapper.text()).toContain("按模板发起");
+    expect(wrapper.text()).toContain("待我审批");
+    expect(wrapper.text()).toContain("统一待办入口");
     expect(wrapper.text()).toContain("12");
-    expect(wrapper.text()).toContain("报销申请");
-    expect(wrapper.text()).toContain("采购申请");
+    expect(wrapper.text()).toContain("请假申请");
+    expect(wrapper.text()).toContain("用印申请");
     expect(wrapper.text()).toContain("最近公告");
     expect(wrapper.text()).toContain("五一节假期值班排班发布");
 

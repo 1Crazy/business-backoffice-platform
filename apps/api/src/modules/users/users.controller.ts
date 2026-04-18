@@ -27,8 +27,8 @@ export class UsersController {
     type: UserVo,
     isArray: true
   })
-  list() {
-    return this.usersService.list();
+  list(@CurrentUser() user: AuthUser) {
+    return this.usersService.list(user);
   }
 
   @Post()

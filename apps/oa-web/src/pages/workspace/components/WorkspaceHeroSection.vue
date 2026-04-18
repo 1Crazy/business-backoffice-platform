@@ -2,25 +2,32 @@
   <div class="hero-stack">
     <section class="hero-card page-card">
       <div class="hero-copy">
-        <h2>先处理待办。</h2>
+        <span class="page-kicker">流程工作台</span>
+        <h2>按模板发起。</h2>
         <div class="hero-signals">
           <span class="hero-signal">待办 {{ overview.pendingApprovalCount }}</span>
           <span class="hero-signal">申请 {{ overview.myRequestCount }}</span>
-          <span class="hero-signal">行政待审 {{ overview.administrativeRequestPendingCount }}</span>
-          <span class="hero-signal">我的行政 {{ overview.administrativeRequestMyCount }}</span>
+          <span class="hero-signal">公告 {{ overview.activeAnnouncementCount }}</span>
+          <span class="hero-signal">部门 {{ overview.directoryDepartmentCount }}</span>
         </div>
       </div>
+
       <div class="hero-actions">
-        <span class="hero-actions-label">快捷处理</span>
-        <div class="quick-actions">
-          <RouterLink
-            v-for="item in quickActions"
-            :key="item.label"
-            :class="['quick-link', { 'primary-action': item.isPrimary, soft: item.tone === 'soft' }]"
-            :to="item.to"
-          >
-            {{ item.label }}
-          </RouterLink>
+        <div class="hero-operations">
+          <RouterLink class="hero-control primary" to="/approvals/pending">待我审批</RouterLink>
+          <RouterLink class="hero-control" to="/approvals/mine">我发起的申请</RouterLink>
+          <a class="hero-control workfeed-control" :href="workfeedEntryHref">统一待办入口</a>
+        </div>
+
+        <div>
+          <span class="hero-actions-label">流程模板</span>
+          <div v-if="templateCards.length" class="template-grid">
+            <RouterLink v-for="item in templateCards" :key="item.key" class="template-link" :to="item.createRoute">
+              <small>{{ item.caption }}</small>
+              <strong>{{ item.label }}</strong>
+            </RouterLink>
+          </div>
+          <p v-else class="template-empty">当前账号暂时没有可发起的流程模板。</p>
         </div>
       </div>
     </section>
@@ -35,61 +42,20 @@
 </template>
 
 <script setup lang="ts">
-import type { RouteLocationRaw } from "vue-router";
 import type { WorkspaceOverview } from "@/types/office-automation";
+import type { WorkflowTemplateDefinition } from "@/config/workflow-templates";
 
-interface MetricCard { label: string; value: number; }
-interface QuickAction { label: string; to: RouteLocationRaw; isPrimary?: boolean; tone?: "soft"; }
-defineProps<{ overview: WorkspaceOverview; metricCards: MetricCard[] }>();
+interface MetricCard {
+  label: string;
+  value: number;
+}
 
-const quickActions: QuickAction[] = [
-  {
-    label: "立即处理待办",
-    to: "/administrative-requests/pending",
-    isPrimary: true
-  },
-  {
-    label: "报销申请",
-    to: {
-      path: "/administrative-requests/new",
-      query: {
-        type: "REIMBURSEMENT"
-      }
-    }
-  },
-  {
-    label: "出差申请",
-    to: {
-      path: "/administrative-requests/new",
-      query: {
-        type: "TRAVEL"
-      }
-    }
-  },
-  {
-    label: "采购申请",
-    to: {
-      path: "/administrative-requests/new",
-      query: {
-        type: "PURCHASE"
-      }
-    }
-  },
-  {
-    label: "用印申请",
-    to: {
-      path: "/administrative-requests/new",
-      query: {
-        type: "SEAL"
-      }
-    }
-  },
-  {
-    label: "我的行政申请",
-    to: "/administrative-requests/mine",
-    tone: "soft"
-  }
-];
+defineProps<{
+  overview: WorkspaceOverview;
+  metricCards: MetricCard[];
+  templateCards: WorkflowTemplateDefinition[];
+  workfeedEntryHref: string;
+}>();
 </script>
 
 <style scoped>
@@ -97,16 +63,19 @@ const quickActions: QuickAction[] = [
   display: grid;
   gap: 18px;
 }
+
 .hero-card {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
+  gap: 18px;
 }
+
 .hero-copy {
   display: grid;
   gap: 10px;
   align-content: start;
 }
+
 h2 {
   margin: 0;
   max-width: none;
@@ -114,12 +83,14 @@ h2 {
   line-height: 1.12;
   letter-spacing: -0.035em;
 }
+
 .hero-signals {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin-top: 10px;
 }
+
 .hero-signal {
   display: inline-flex;
   align-items: center;
@@ -132,94 +103,137 @@ h2 {
   font-size: 12px;
   font-weight: 600;
 }
+
 .hero-actions {
   display: grid;
-  gap: 10px;
+  gap: 14px;
   align-content: start;
   max-width: 980px;
 }
+
+.hero-operations {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.hero-control,
+.template-link {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(125, 148, 171, 0.16);
+  background: rgba(255, 255, 255, 0.74);
+  color: var(--app-text-primary);
+  transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hero-control {
+  align-items: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.hero-control.primary {
+  border-color: rgba(37, 99, 235, 0.2);
+  background: linear-gradient(135deg, rgba(219, 234, 254, 0.92), rgba(239, 246, 255, 0.96));
+  color: var(--app-accent-strong);
+}
+
+.workfeed-control {
+  text-decoration: none;
+}
+
 .hero-actions-label {
+  display: inline-flex;
+  margin-bottom: 10px;
   color: var(--app-text-tertiary);
   font-size: 12px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
-.quick-actions {
+
+.template-empty {
+  margin: 0;
+  color: var(--app-text-secondary);
+  font-size: 13px;
+}
+
+.template-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 10px;
 }
-.quick-link {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-start;
-  width: 100%;
-  min-width: 0;
-  min-height: 44px;
-  padding: 12px 14px;
-  line-height: 1.2;
-  border-radius: 14px;
-  border: 1px solid rgba(125, 148, 171, 0.16);
-  background: rgba(255, 255, 255, 0.74);
-  color: var(--app-text-primary);
-  font-size: 13px;
-  font-weight: 600;
-  box-shadow: none;
-  transition: transform 0.2s ease, border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
-}
-.primary-action {
-  border-color: rgba(37, 99, 235, 0.2);
-  background: linear-gradient(135deg, rgba(219, 234, 254, 0.92), rgba(239, 246, 255, 0.96));
-  color: var(--app-accent-strong);
+
+.template-link small {
+  color: var(--app-text-tertiary);
+  font-size: 11px;
   font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
-.quick-link.soft {
-  color: var(--app-text-secondary);
+
+.template-link strong {
+  line-height: 1.35;
 }
-.quick-link:hover {
+
+.hero-control:hover,
+.template-link:hover {
   transform: translateY(-1px);
   border-color: rgba(37, 99, 235, 0.2);
   background: rgba(255, 255, 255, 0.9);
   box-shadow: 0 12px 24px rgba(23, 32, 43, 0.05);
 }
+
 .metric-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 14px;
 }
+
 .metric-card {
   display: grid;
   gap: 8px;
   align-content: start;
 }
+
 .metric-card span {
   color: var(--app-text-tertiary);
   font-size: 12px;
   font-weight: 700;
 }
+
 .metric-card strong {
   font-size: clamp(28px, 3vw, 34px);
   line-height: 1;
 }
-@media (max-width: 1080px) {
-  .quick-actions {
+
+@media (max-width: 1180px) {
+  .hero-operations {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .template-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
+
 @media (max-width: 960px) {
   .metric-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
 @media (max-width: 640px) {
-  .quick-actions,
+  .hero-operations,
+  .template-grid,
   .metric-grid {
     grid-template-columns: 1fr;
-  }
-
-  .hero-card {
-    gap: 16px;
   }
 }
 </style>

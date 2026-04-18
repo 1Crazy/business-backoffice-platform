@@ -15,7 +15,7 @@ const OA_ROUTE_ACCESS: PageAccessRule[] = [
   },
   {
     path: "/approvals/mine",
-    permission: "oa:leave:apply"
+    permission: "oa:request:apply"
   },
   {
     path: "/administrative-requests/new",
@@ -28,6 +28,10 @@ const OA_ROUTE_ACCESS: PageAccessRule[] = [
   {
     path: "/administrative-requests/pending",
     permission: "oa:request:approve"
+  },
+  {
+    path: "/administrative-requests/search",
+    permission: "oa:request:read"
   },
   {
     path: "/leave/request",

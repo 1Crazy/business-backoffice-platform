@@ -2,12 +2,13 @@
 import { Module } from "@nestjs/common";
 
 import { AuditLogsModule } from "../audit-logs/audit-logs.module";
+import { NotificationCenterModule } from "../notification-center/notification-center.module";
 import { OfficeAutomationController } from "./office-automation.controller";
 import { OfficeAutomationRepository } from "./repositories/office-automation.repository";
 import { OfficeAutomationService } from "./office-automation.service";
 
 @Module({
-  imports: [AuditLogsModule],
+  imports: [AuditLogsModule, NotificationCenterModule],
   controllers: [OfficeAutomationController],
   providers: [OfficeAutomationService, OfficeAutomationRepository]
 })

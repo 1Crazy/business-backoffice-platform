@@ -1,4 +1,10 @@
 /** 共享 mapper：负责在数据库结果、公共领域对象和对外契约之间做统一转换。 */
+import {
+  readActionPermissionRules,
+  readExtendedDataScopeRules,
+  readFieldPermissionRules
+} from "@/common/access-policy/access-policy.util";
+
 import { toIsoString } from "./date-time.mapper";
 
 interface DepartmentParentRecord {
@@ -38,6 +44,9 @@ interface RoleRecord {
   isSystem: boolean;
   status: "ACTIVE" | "DISABLED";
   dataScope: "SELF" | "DEPARTMENT" | "DEPARTMENT_AND_SUBTREE" | "ALL";
+  extendedDataScopes?: unknown;
+  fieldPermissionRules?: unknown;
+  actionPermissionRules?: unknown;
   permissions?: RolePermissionRelationRecord[];
   createdAt: Date;
   updatedAt: Date;
@@ -108,6 +117,9 @@ export function mapRole(record: RoleRecord) {
     permissions: (record.permissions ?? []).map((relation) => ({
       permission: mapPermission(relation.permission)
     })),
+    extendedDataScopes: readExtendedDataScopeRules(record.extendedDataScopes),
+    fieldPermissionRules: readFieldPermissionRules(record.fieldPermissionRules),
+    actionPermissionRules: readActionPermissionRules(record.actionPermissionRules),
     createdAt: toIsoString(record.createdAt)!,
     updatedAt: toIsoString(record.updatedAt)!
   };

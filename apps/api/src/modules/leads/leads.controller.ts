@@ -4,6 +4,7 @@ import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from "@
 
 import { FollowUpVo } from "@/common/vo/entity.vo";
 import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { ActionPermission } from "@/common/decorators/action-permission.decorator";
 import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { Permissions } from "@/common/decorators/permissions.decorator";
 import { CreateLeadDto } from "./dto/create-lead.dto";
@@ -102,6 +103,7 @@ export class LeadsController {
 
   @Patch(":id/owner")
   @Permissions("lead:assign")
+  @ActionPermission("lead", "assign")
   @ApiOperation({
     summary: "转移线索负责人",
     description: "转移线索负责人。"
@@ -115,6 +117,7 @@ export class LeadsController {
 
   @Post(":id/convert")
   @Permissions("lead:convert")
+  @ActionPermission("lead", "convert")
   @ApiOperation({
     summary: "将线索转为客户",
     description: "将线索转为客户。"

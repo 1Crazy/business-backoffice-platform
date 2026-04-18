@@ -6,14 +6,16 @@ describe("UnifiedWorkfeedService", () => {
     listPendingAdministrativeApprovals: jest.fn(),
     listPendingReminders: jest.fn(),
     listPendingRenewalReminders: jest.fn(),
-    listApplicantLeaveResults: jest.fn(),
-    listApplicantAdministrativeResults: jest.fn(),
     listActiveAnnouncements: jest.fn(),
     listNotificationReadStates: jest.fn(),
     markNotificationRead: jest.fn()
   };
+  const notificationCenterRepository = {
+    listNotificationRecords: jest.fn(),
+    markNotificationRead: jest.fn()
+  };
 
-  const service = new UnifiedWorkfeedService(repository as any);
+  const service = new UnifiedWorkfeedService(repository as any, notificationCenterRepository as any);
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -38,25 +40,27 @@ describe("UnifiedWorkfeedService", () => {
     repository.listPendingAdministrativeApprovals.mockResolvedValue([]);
     repository.listPendingReminders.mockResolvedValue([]);
     repository.listPendingRenewalReminders.mockResolvedValue([]);
-    repository.listApplicantLeaveResults.mockResolvedValue([]);
-    repository.listApplicantAdministrativeResults.mockResolvedValue([
+    notificationCenterRepository.listNotificationRecords.mockResolvedValue([
       {
-        id: "admin-1",
-        requestNo: "BX-001",
-        type: "REIMBURSEMENT",
+        id: "notification-1",
+        eventId: "event-1",
+        recipientId: "user-1",
+        domain: "OA",
+        eventType: "ADMINISTRATIVE_RESULT",
         title: "差旅报销",
         summary: "杭州差旅 1280 元",
-        status: "APPROVED",
-        submittedAt: new Date("2026-04-10T09:00:00.000Z"),
+        priority: "MEDIUM",
+        status: "UNREAD",
+        targetPath: "/oa/administrative-requests/mine?requestId=admin-1",
+        targetLabel: "查看申请详情",
+        channelPreferences: null,
+        routingSnapshot: null,
+        deliveredAt: new Date("2026-04-11T10:00:00.000Z"),
+        readAt: null,
+        archivedAt: null,
+        createdAt: new Date("2026-04-11T10:00:00.000Z"),
         updatedAt: new Date("2026-04-11T10:00:00.000Z"),
-        applicant: {
-          id: "user-1",
-          displayName: "Bob"
-        },
-        approver: {
-          id: "approver-1",
-          displayName: "Carol"
-        }
+        deliveries: []
       }
     ]);
     repository.listActiveAnnouncements.mockResolvedValue([
@@ -71,13 +75,7 @@ describe("UnifiedWorkfeedService", () => {
         }
       }
     ]);
-    repository.listNotificationReadStates.mockResolvedValue([
-      {
-        notificationType: "ADMINISTRATIVE_RESULT",
-        sourceId: "admin-1",
-        readAt: new Date("2026-04-11T12:00:00.000Z")
-      }
-    ]);
+    repository.listNotificationReadStates.mockResolvedValue([]);
 
     const todos = await service.listTodos(
       {
@@ -110,8 +108,12 @@ describe("UnifiedWorkfeedService", () => {
       type: "LEAVE_APPROVAL",
       targetPath: "/oa/approvals/pending"
     });
-    expect(notifications).toHaveLength(1);
+    expect(notifications).toHaveLength(2);
     expect(notifications[0]).toMatchObject({
+      type: "ADMINISTRATIVE_RESULT",
+      isRead: false
+    });
+    expect(notifications[1]).toMatchObject({
       type: "ANNOUNCEMENT",
       isRead: false
     });

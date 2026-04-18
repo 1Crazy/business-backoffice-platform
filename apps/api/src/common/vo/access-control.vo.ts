@@ -105,6 +105,59 @@ export class RolePermissionRelationVo {
   permission!: PermissionVo;
 }
 
+export class ExtendedDataScopeRuleVo {
+  @ApiProperty({
+    description: "扩展数据范围维度。"
+  })
+  dimension!: string;
+
+  @ApiProperty({
+    description: "维度值列表。",
+    type: [String]
+  })
+  values!: string[];
+
+  @ApiPropertyOptional({
+    description: "规则备注。",
+    nullable: true
+  })
+  note?: string | null;
+}
+
+export class FieldPermissionRuleVo {
+  @ApiProperty({
+    description: "业务资源编码。"
+  })
+  resource!: string;
+
+  @ApiProperty({
+    description: "字段编码。"
+  })
+  field!: string;
+
+  @ApiProperty({
+    description: "字段控制级别。"
+  })
+  visibility!: string;
+}
+
+export class ActionPermissionRuleVo {
+  @ApiProperty({
+    description: "业务资源编码。"
+  })
+  resource!: string;
+
+  @ApiProperty({
+    description: "动作编码。"
+  })
+  action!: string;
+
+  @ApiProperty({
+    description: "动作是否允许。"
+  })
+  allowed!: boolean;
+}
+
 export class RoleVo {
   @ApiProperty({
     description: "记录 ID。"
@@ -149,6 +202,24 @@ enum: DataScope
     type: () => [RolePermissionRelationVo]
   })
   permissions!: RolePermissionRelationVo[];
+
+  @ApiProperty({
+    description: "扩展数据范围策略。",
+    type: () => [ExtendedDataScopeRuleVo]
+  })
+  extendedDataScopes!: ExtendedDataScopeRuleVo[];
+
+  @ApiProperty({
+    description: "字段级权限规则。",
+    type: () => [FieldPermissionRuleVo]
+  })
+  fieldPermissionRules!: FieldPermissionRuleVo[];
+
+  @ApiProperty({
+    description: "动作级权限规则。",
+    type: () => [ActionPermissionRuleVo]
+  })
+  actionPermissionRules!: ActionPermissionRuleVo[];
 
   @ApiProperty({
     description: "创建时间。",

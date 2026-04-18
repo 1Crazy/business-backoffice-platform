@@ -130,4 +130,29 @@ export class UploadsController {
 
     return new StreamableFile(file.stream);
   }
+
+  @Get(":id/preview")
+  @ApiOperation({
+    summary: "预览业务附件",
+    description: "按附件 ID 安全预览受支持的附件内容，并保留访问审计记录。"
+  })
+  @ApiOkResponse({
+    description: "返回可内联渲染的二进制文件流；仅支持 PDF、图片和文本类附件。"
+  })
+  async preview(@Param("id") id: string, @CurrentUser() user: AuthUser, @Res({ passthrough: true }) response: Response) {
+    const file = await this.uploadsService.preview(id, user);
+    const encodedFileName = encodeURIComponent(file.attachment.originalName);
+
+    response.setHeader("Content-Type", file.attachment.mimeType);
+    response.setHeader("Content-Disposition", `inline; filename*=UTF-8''${encodedFileName}`);
+    response.setHeader("Cache-Control", "private, no-store, max-age=0");
+    response.setHeader("X-Content-Type-Options", "nosniff");
+    response.setHeader("Content-Security-Policy", "default-src 'none'; img-src 'self' data: blob:; style-src 'unsafe-inline';");
+
+    if (typeof file.size === "number") {
+      response.setHeader("Content-Length", String(file.size));
+    }
+
+    return new StreamableFile(file.stream);
+  }
 }

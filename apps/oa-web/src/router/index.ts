@@ -5,6 +5,7 @@ import { createRouter, createWebHistory, type RouteRecordRaw } from "vue-router"
 import { getMicroAppRouterBase } from "@/micro/runtime";
 import { resolveFirstAccessiblePath } from "@/router/access";
 import { useAuthStore } from "@/stores/auth";
+import { redirectToLoginFromGuard } from "@/utils/host-navigation";
 
 const AppLayout = () => import("@/layout/AppLayout.vue");
 const LoginPage = () => import("@/pages/login/LoginPage.vue");
@@ -15,6 +16,7 @@ const MyRequestsPage = () => import("@/pages/approvals/MyRequestsPage.vue");
 const AdministrativeRequestPage = () => import("@/pages/administrative-requests/AdministrativeRequestPage.vue");
 const AdministrativeRequestsMinePage = () => import("@/pages/administrative-requests/AdministrativeRequestsMinePage.vue");
 const AdministrativeApprovalsPage = () => import("@/pages/administrative-requests/AdministrativeApprovalsPage.vue");
+const AdministrativeRequestsSearchPage = () => import("@/pages/administrative-requests/AdministrativeRequestsSearchPage.vue");
 const LeaveRequestPage = () => import("@/pages/leave/LeaveRequestPage.vue");
 const AnnouncementsPage = () => import("@/pages/announcements/AnnouncementsPage.vue");
 const DirectoryPage = () => import("@/pages/directory/DirectoryPage.vue");
@@ -106,6 +108,15 @@ const routes: RouteRecordRaw[] = [
         }
       },
       {
+        path: "administrative-requests/search",
+        name: "administrative-request-search",
+        component: AdministrativeRequestsSearchPage,
+        meta: {
+          title: "行政申请检索",
+          permission: "oa:request:read"
+        }
+      },
+      {
         path: "leave/request",
         name: "leave-request",
         component: LeaveRequestPage,
@@ -161,7 +172,7 @@ router.beforeEach(async (to) => {
 
   if (to.path === "/login") {
     if (!authStore.token) {
-      return true;
+      return redirectToLoginFromGuard({ allowStandaloneLogin: true });
     }
 
     if (!authStore.currentUser) {
@@ -170,7 +181,7 @@ router.beforeEach(async (to) => {
       } catch {
         await authStore.logout();
         ElMessage.error("登录状态已失效，请重新登录。");
-        return true;
+        return redirectToLoginFromGuard({ allowStandaloneLogin: true });
       }
     }
 
@@ -178,7 +189,7 @@ router.beforeEach(async (to) => {
   }
 
   if (!authStore.token) {
-    return "/login";
+    return redirectToLoginFromGuard();
   }
 
   if (!authStore.currentUser) {
@@ -187,7 +198,7 @@ router.beforeEach(async (to) => {
     } catch {
       await authStore.logout();
       ElMessage.error("登录状态已失效，请重新登录。");
-      return "/login";
+      return redirectToLoginFromGuard();
     }
   }
 

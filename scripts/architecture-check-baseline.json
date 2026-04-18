@@ -2,11 +2,20 @@
   "maxVueLines": {
     "limit": 250,
     "allow": [
+      "apps/oa-web/src/pages/administrative-requests/AdministrativeApprovalsPage.vue",
+      "apps/oa-web/src/pages/administrative-requests/AdministrativeRequestPage.vue",
+      "apps/oa-web/src/pages/administrative-requests/AdministrativeRequestsMinePage.vue",
+      "apps/oa-web/src/pages/administrative-requests/components/AdministrativeRequestDetailDrawer.vue",
+      "apps/oa-web/src/pages/approvals/ApprovalsInboxPage.vue",
       "apps/oa-web/src/layout/AppLayout.vue",
       "apps/oa-web/src/pages/login/LoginPage.vue",
       "apps/oa-web/src/pages/workspace/WorkspacePage.vue",
       "apps/scrm-web/src/layout/AppLayout.vue",
-      "apps/scrm-web/src/pages/login/LoginPage.vue"
+      "apps/scrm-web/src/pages/dashboard/components/DashboardFunnelSection.vue",
+      "apps/scrm-web/src/pages/login/LoginPage.vue",
+      "apps/scrm-web/src/pages/revenue-operations/RevenueOperationsPage.vue",
+      "apps/scrm-web/src/pages/revenue-operations/RevenueOperationsWorkspacePage.vue",
+      "apps/scrm-web/src/pages/revenue-operations/components/RevenueOperationDetailDrawer.vue"
     ]
   },
   "presentationHttpImports": {

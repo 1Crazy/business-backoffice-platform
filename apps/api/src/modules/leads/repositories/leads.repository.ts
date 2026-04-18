@@ -46,6 +46,7 @@ export type LeadReminderRecord = Prisma.ReminderGetPayload<{
 type LeadSnapshotRecord = Prisma.LeadGetPayload<{
   select: {
     id: true;
+    tenantId: true;
     name: true;
     contactName: true;
     phone: true;
@@ -62,19 +63,26 @@ export class LeadsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   async list(
+    tenantId: string,
     where: Prisma.LeadWhereInput,
     orderBy: Prisma.LeadOrderByWithRelationInput[],
     pagination: PaginationParams
   ) {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.lead.findMany({
-        where,
+        where: {
+          AND: [{ tenantId }, where]
+        },
         include: leadListInclude,
         orderBy,
         skip: pagination.skip,
         take: pagination.take
       }),
-      this.prisma.lead.count({ where })
+      this.prisma.lead.count({
+        where: {
+          AND: [{ tenantId }, where]
+        }
+      })
     ]);
 
     return {
@@ -84,19 +92,26 @@ export class LeadsRepository {
   }
 
   async listPendingReminders(
+    tenantId: string,
     where: Prisma.ReminderWhereInput,
     orderBy: Prisma.ReminderOrderByWithRelationInput[],
     pagination: PaginationParams
   ) {
     const [items, total] = await this.prisma.$transaction([
       this.prisma.reminder.findMany({
-        where,
+        where: {
+          AND: [{ tenantId }, where]
+        },
         include: reminderInclude,
         orderBy,
         skip: pagination.skip,
         take: pagination.take
       }),
-      this.prisma.reminder.count({ where })
+      this.prisma.reminder.count({
+        where: {
+          AND: [{ tenantId }, where]
+        }
+      })
     ]);
 
     return {
@@ -105,27 +120,37 @@ export class LeadsRepository {
     };
   }
 
-  findDetailById(id: string) {
-    return this.prisma.lead.findUniqueOrThrow({
-      where: { id },
+  findDetailById(id: string, tenantId: string) {
+    return this.prisma.lead.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      },
       include: leadDetailInclude
     });
   }
 
-  findOwnerById(id: string) {
-    return this.prisma.lead.findUniqueOrThrow({
-      where: { id },
+  findOwnerById(id: string, tenantId: string) {
+    return this.prisma.lead.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      },
       select: {
         ownerId: true
       }
     });
   }
 
-  findSnapshotById(id: string): Promise<LeadSnapshotRecord> {
-    return this.prisma.lead.findUniqueOrThrow({
-      where: { id },
+  findSnapshotById(id: string, tenantId: string): Promise<LeadSnapshotRecord> {
+    return this.prisma.lead.findFirstOrThrow({
+      where: {
+        id,
+        tenantId
+      },
       select: {
         id: true,
+        tenantId: true,
         name: true,
         contactName: true,
         phone: true,
@@ -139,6 +164,7 @@ export class LeadsRepository {
   }
 
   async createLead(input: {
+    tenantId: string;
     name: string;
     contactName?: string | null;
     phone?: string | null;
@@ -148,6 +174,7 @@ export class LeadsRepository {
   }) {
     const lead = await this.prisma.lead.create({
       data: {
+        tenantId: input.tenantId,
         name: input.name,
         contactName: input.contactName ?? undefined,
         phone: input.phone ?? undefined,
@@ -157,11 +184,12 @@ export class LeadsRepository {
       }
     });
 
-    return this.findDetailById(lead.id);
+    return this.findDetailById(lead.id, input.tenantId);
   }
 
   async updateLead(
     id: string,
+    tenantId: string,
     input: {
       name?: string;
       contactName?: string | null;
@@ -172,8 +200,11 @@ export class LeadsRepository {
       status?: LeadStatus;
     }
   ) {
-    await this.prisma.lead.update({
-      where: { id },
+    await this.prisma.lead.updateMany({
+      where: {
+        id,
+        tenantId
+      },
       data: {
         name: input.name,
         contactName: input.contactName,
@@ -185,24 +216,28 @@ export class LeadsRepository {
       }
     });
 
-    return this.findDetailById(id);
+    return this.findDetailById(id, tenantId);
   }
 
-  async updateOwner(id: string, ownerId: string) {
-    await this.prisma.lead.update({
-      where: { id },
+  async updateOwner(id: string, tenantId: string, ownerId: string) {
+    await this.prisma.lead.updateMany({
+      where: {
+        id,
+        tenantId
+      },
       data: {
         ownerId
       }
     });
 
-    return this.findDetailById(id);
+    return this.findDetailById(id, tenantId);
   }
 
-  convertLeadToCustomer(lead: LeadSnapshotRecord) {
+  convertLeadToCustomer(lead: LeadSnapshotRecord & { tenantId: string }) {
     return this.prisma.$transaction(async (tx) => {
       const customer = await tx.customer.create({
         data: {
+          tenantId: lead.tenantId,
           name: lead.name,
           contactName: lead.contactName,
           phone: lead.phone,
@@ -225,10 +260,11 @@ export class LeadsRepository {
     });
   }
 
-  listFollowUps(leadId: string) {
+  listFollowUps(leadId: string, tenantId: string) {
     return this.prisma.followUp.findMany({
       where: {
-        leadId
+        leadId,
+        tenantId
       },
       include: followUpInclude,
       orderBy: {
@@ -238,6 +274,7 @@ export class LeadsRepository {
   }
 
   createFollowUp(input: {
+    tenantId: string;
     leadId: string;
     ownerId: string;
     createdById: string;
@@ -248,6 +285,7 @@ export class LeadsRepository {
     return this.prisma.$transaction(async (tx) => {
       const created = await tx.followUp.create({
         data: {
+          tenantId: input.tenantId,
           entityType: input.entityType,
           leadId: input.leadId,
           createdById: input.createdById,
@@ -259,6 +297,7 @@ export class LeadsRepository {
       if (input.nextFollowUpAt) {
         await tx.reminder.create({
           data: {
+            tenantId: input.tenantId,
             entityType: input.entityType,
             leadId: input.leadId,
             followUpId: created.id,

@@ -2,6 +2,8 @@
 import { Controller, Get, Query } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from "@nestjs/swagger";
 
+import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { Permissions } from "@/common/decorators/permissions.decorator";
 import { PaginatedAuditLogsResponseDto } from "./dto/list-audit-logs-response.dto";
 import { AUDIT_LOG_SORT_FIELDS, ListAuditLogsDto } from "./dto/list-audit-logs.dto";
@@ -28,7 +30,7 @@ export class AuditLogsController {
   @ApiOkResponse({
     type: PaginatedAuditLogsResponseDto
   })
-  list(@Query() query: ListAuditLogsDto) {
-    return this.auditLogsService.list(query);
+  list(@Query() query: ListAuditLogsDto, @CurrentUser() user: AuthUser) {
+    return this.auditLogsService.list(query, user);
   }
 }

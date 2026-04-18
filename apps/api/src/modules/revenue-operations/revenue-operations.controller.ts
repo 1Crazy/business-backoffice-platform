@@ -2,6 +2,7 @@ import { Body, Controller, Get, Param, Post } from "@nestjs/common";
 import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from "@nestjs/swagger";
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { ActionPermission } from "@/common/decorators/action-permission.decorator";
 import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { Permissions } from "@/common/decorators/permissions.decorator";
 import { CreateContractDto } from "./dto/create-contract.dto";
@@ -93,6 +94,7 @@ export class RevenueOperationsController {
 
   @Post("payment-records")
   @Permissions("opportunity:write")
+  @ActionPermission("revenue", "confirm-payment")
   @ApiOperation({
     summary: "登记回款记录",
     description: "在回款计划上下文中登记实际回款记录。"

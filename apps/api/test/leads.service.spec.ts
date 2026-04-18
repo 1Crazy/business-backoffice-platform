@@ -40,6 +40,7 @@ describe("LeadsService", () => {
     const leadsRepository = {
       findSnapshotById: jest.fn().mockResolvedValue({
         id: "lead-1",
+        tenantId: "tenant-default",
         name: "Acme 潜客",
         contactName: "王强",
         phone: "13800000000",
@@ -58,8 +59,21 @@ describe("LeadsService", () => {
       assertOwnerAccessible: jest.fn().mockResolvedValue(undefined),
       buildScopedOwnerFilter: jest.fn().mockResolvedValue({})
     } as any;
+    const accessPolicyService = {
+      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: jest.fn()
+    } as any;
+    const notificationCenterService = {
+      publishEvent: jest.fn().mockResolvedValue(undefined)
+    } as any;
 
-    const service = new LeadsService(leadsRepository, auditLogsService, dataScopeService);
+    const service = new LeadsService(
+      leadsRepository,
+      auditLogsService,
+      dataScopeService,
+      accessPolicyService,
+      notificationCenterService
+    );
     jest.spyOn(service, "detail").mockResolvedValue({
       id: "lead-1",
       convertedCustomerId: "customer-1"
@@ -67,13 +81,14 @@ describe("LeadsService", () => {
 
     const result = await service.convert("lead-1", {
       id: "user-1",
+      tenantId: "tenant-default",
       username: "sales",
       displayName: "销售",
       roleCodes: ["sales-member"],
       permissions: ["lead:convert"]
     });
 
-    expect(leadsRepository.findSnapshotById).toHaveBeenCalledWith("lead-1");
+    expect(leadsRepository.findSnapshotById).toHaveBeenCalledWith("lead-1", "tenant-default");
     expect(leadsRepository.convertLeadToCustomer).toHaveBeenCalled();
     expect(result.convertedCustomerId).toBe("customer-1");
     expect(auditLogsService.create).toHaveBeenCalled();
@@ -83,6 +98,7 @@ describe("LeadsService", () => {
     const leadsRepository = {
       findSnapshotById: jest.fn().mockResolvedValue({
         id: "lead-1",
+        tenantId: "tenant-default",
         ownerId: "user-1",
         status: "CONVERTED",
         convertedCustomerId: "customer-1"
@@ -92,18 +108,27 @@ describe("LeadsService", () => {
       assertOwnerAccessible: jest.fn().mockResolvedValue(undefined),
       buildScopedOwnerFilter: jest.fn().mockResolvedValue({})
     } as any;
+    const accessPolicyService = {
+      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: jest.fn()
+    } as any;
 
     const service = new LeadsService(
       leadsRepository,
       {
         create: jest.fn()
       } as any,
-      dataScopeService
+      dataScopeService,
+      accessPolicyService,
+      {
+        publishEvent: jest.fn().mockResolvedValue(undefined)
+      } as any
     );
 
     await expect(
       service.convert("lead-1", {
         id: "user-1",
+        tenantId: "tenant-default",
         username: "sales",
         displayName: "销售",
         roleCodes: ["sales-member"],
@@ -127,15 +152,24 @@ describe("LeadsService", () => {
         }
       })
     } as any;
+    const accessPolicyService = {
+      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: jest.fn()
+    } as any;
     const service = new LeadsService(
       leadsRepository,
       {
         create: jest.fn().mockResolvedValue(undefined)
       } as any,
-      dataScopeService
+      dataScopeService,
+      accessPolicyService,
+      {
+        publishEvent: jest.fn().mockResolvedValue(undefined)
+      } as any
     );
     const actor = {
       id: "manager-1",
+      tenantId: "tenant-default",
       username: "manager",
       displayName: "销售主管",
       roleCodes: ["sales-manager"],
@@ -154,6 +188,7 @@ describe("LeadsService", () => {
 
     expect(dataScopeService.buildScopedOwnerFilter).toHaveBeenCalledWith(actor, undefined);
     expect(leadsRepository.listPendingReminders).toHaveBeenCalledWith(
+      "tenant-default",
       {
         ownerId: {
           in: ["user-1", "user-2"]

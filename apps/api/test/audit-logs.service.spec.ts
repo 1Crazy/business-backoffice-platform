@@ -38,6 +38,7 @@ describe("AuditLogsService", () => {
     });
 
     expect(auditLogsRepository.list).toHaveBeenCalledWith(
+      undefined,
       {
         actionType: AuditActionType.UPDATE,
         targetType: "customer",

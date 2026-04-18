@@ -22,7 +22,9 @@ function normalizeRequestId(queryValue: LocationQueryValue | LocationQueryValue[
   return trimmedValue ? trimmedValue : null;
 }
 
-export function useAdministrativeRequestDetailDrawer() {
+export function useAdministrativeRequestDetailDrawer(
+  fetchDetail: (requestId: string) => Promise<AdministrativeRequestDetail> = fetchAdministrativeRequestDetail
+) {
   const route = useRoute();
   const router = useRouter();
   const { isTabletOrDown } = useViewport();
@@ -54,7 +56,7 @@ export function useAdministrativeRequestDetailDrawer() {
     isLoading.value = true;
 
     try {
-      const detail = await fetchAdministrativeRequestDetail(requestId);
+      const detail = await fetchDetail(requestId);
 
       if (currentRequestId !== latestRequestId) {
         return;

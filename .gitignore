@@ -9,4 +9,4 @@ apps/api/.env
 apps/web/.env
 apps/api/uploads
 apps/api/prisma/dev.db
-
+.log

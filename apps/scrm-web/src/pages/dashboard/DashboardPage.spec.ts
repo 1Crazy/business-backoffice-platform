@@ -167,6 +167,7 @@ describe("DashboardPage", () => {
     expect(wrapper.text()).toContain("36");
     expect(wrapper.text()).toContain("销售概览");
     expect(wrapper.text()).toContain("本期经营态势");
+    expect(wrapper.text()).toContain("经营结果");
     expect(wrapper.text()).toContain("商机赢单率");
     expect(wrapper.text()).toContain("负责人排行");
     expect(wrapper.text()).toContain("团队排行");

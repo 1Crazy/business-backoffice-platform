@@ -19,7 +19,7 @@
       <el-row :gutter="16">
         <el-col :xs="24" :sm="12">
           <el-form-item label="类型" prop="type" required>
-            <el-input v-model="form.type" placeholder="请输入类型，例如 customer-source" />
+            <el-input v-model="form.type" placeholder="请输入类型，例如 客户来源（customer-source）" />
           </el-form-item>
         </el-col>
         <el-col :xs="24" :sm="12">
@@ -34,7 +34,7 @@
         </el-col>
         <el-col :xs="24" :sm="12">
           <el-form-item label="排序" prop="sort">
-            <el-input-number v-model="form.sort" :min="0" class="full-width" />
+            <el-input-number v-model="form.sort" :min="0" class="full-width" placeholder="请输入排序值" />
           </el-form-item>
         </el-col>
       </el-row>
