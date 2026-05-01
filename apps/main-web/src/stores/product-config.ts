@@ -21,8 +21,14 @@ export const useProductConfigStore = defineStore("product-config", () => {
       return;
     }
 
-    runtimeConfig.value = await fetchRuntimeProductConfig();
-    isLoaded.value = true;
+    try {
+      runtimeConfig.value = await fetchRuntimeProductConfig();
+    } catch {
+      // 运行时配置不可达时保留默认主题和导航，不把网络错误扩散到页面控制台。
+      runtimeConfig.value = null;
+    } finally {
+      isLoaded.value = true;
+    }
   }
 
   function reset(): void {

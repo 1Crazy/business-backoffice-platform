@@ -48,7 +48,8 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   function hasPermission(permission: string): boolean {
-    return currentUser.value?.permissions.includes(permission) ?? false;
+    // 外部会话恢复或联调 mock 可能缺少 permissions 字段，权限判断必须失败关闭而不是白屏。
+    return currentUser.value?.permissions?.includes(permission) ?? false;
   }
 
   return {

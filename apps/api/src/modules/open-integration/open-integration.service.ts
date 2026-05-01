@@ -1,4 +1,6 @@
-import { createHash, createHmac, randomBytes } from "crypto";
+import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
+import { lookup } from "dns/promises";
+import { isIP } from "net";
 
 import {
   BadRequestException,
@@ -6,6 +8,7 @@ import {
   Injectable,
   UnauthorizedException
 } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import {
   AuditActionType,
   IdentityConnectorMatchField,
@@ -17,6 +20,8 @@ import {
 } from "@prisma/client";
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { isLocalRuntime } from "@/common/security/security-config.util";
+import { RiskThrottleService } from "@/common/security/risk-throttle.service";
 import {
   buildPaginatedResponse,
   getPaginationParams,
@@ -50,13 +55,41 @@ const WEBHOOK_EVENT_OPTIONS = [
   "GOVERNANCE_ALERT"
 ] as const;
 const OPEN_API_CUSTOMER_SORT_FIELDS = ["createdAt", "updatedAt", "name"] as const;
+const OPEN_API_THROTTLE = {
+  maxAttempts: 10,
+  windowMs: 1000 * 60 * 10,
+  lockMs: 1000 * 60 * 15
+};
+const CONNECTOR_LOGIN_THROTTLE = {
+  maxAttempts: 8,
+  windowMs: 1000 * 60 * 10,
+  lockMs: 1000 * 60 * 15
+};
+const WEBHOOK_RESPONSE_BODY_LIMIT = 2048;
+const WEBHOOK_TEST_MODE_OPTIONS = ["REAL", "SIMULATION"] as const;
+
+type WebhookTestMode = (typeof WEBHOOK_TEST_MODE_OPTIONS)[number];
+
+interface WebhookDeliveryResult {
+  status: WebhookDeliveryStatus;
+  attemptCount: number;
+  responseStatusCode: number | null;
+  responseBody: string | null;
+  errorMessage: string | null;
+  nextRetryAt: Date | null;
+  deliveredAt: Date | null;
+  deliveryMode: WebhookTestMode;
+  durationMs: number | null;
+}
 
 @Injectable()
 export class OpenIntegrationService {
   constructor(
     private readonly openIntegrationRepository: OpenIntegrationRepository,
     private readonly auditLogsService: AuditLogsService,
-    private readonly authService: AuthService
+    private readonly authService: AuthService,
+    private readonly configService?: ConfigService,
+    private readonly riskThrottleService?: RiskThrottleService
   ) {}
 
   async listOpenApiCredentials(actor: AuthUser) {
@@ -197,14 +230,18 @@ export class OpenIntegrationService {
       tenantId
     };
     const signature = this.signWebhookPayload(subscription.signingSecret, payload);
-    const result = this.simulateWebhookDelivery(subscription.endpointUrl, subscription.maxAttempts);
+    const result = await this.runWebhookTestDelivery(subscription, payload, signature);
     const delivery = await this.openIntegrationRepository.createWebhookDelivery({
       tenantId,
       subscriptionId: subscription.id,
       eventType: payload.eventType,
       sourceType: payload.sourceType,
       sourceId: payload.sourceId,
-      payload,
+      payload: {
+        ...payload,
+        deliveryMode: result.deliveryMode,
+        durationMs: result.durationMs
+      },
       signature,
       status: result.status,
       attemptCount: result.attemptCount,
@@ -233,7 +270,9 @@ export class OpenIntegrationService {
       {
         endpointUrl: subscription.endpointUrl,
         eventType: delivery.eventType,
-        attemptCount: delivery.attemptCount
+        attemptCount: delivery.attemptCount,
+        deliveryMode: result.deliveryMode,
+        durationMs: result.durationMs
       }
     );
 
@@ -316,6 +355,8 @@ export class OpenIntegrationService {
   }
 
   async loginWithIdentityConnector(connectorId: string, dto: ConnectorLoginDto) {
+    const throttleKey = this.buildThrottleKey("connector-login", connectorId, dto.email ?? dto.username ?? dto.subject ?? "anonymous");
+    this.riskThrottleService?.assertAllowed(throttleKey, CONNECTOR_LOGIN_THROTTLE);
     const connector = await this.openIntegrationRepository.findIdentityConnectorById(connectorId);
     const tenantId = connector.tenantId;
 
@@ -330,7 +371,16 @@ export class OpenIntegrationService {
           reason: "connector_disabled"
         }
       });
+      this.riskThrottleService?.recordFailure(throttleKey, CONNECTOR_LOGIN_THROTTLE);
       throw new UnauthorizedException("Identity connector is disabled.");
+    }
+
+    try {
+      this.assertConnectorLoginProof(connector, dto);
+    } catch (error) {
+      await this.handleConnectorLoginFailure(connector, dto, "invalid_login_proof");
+      this.riskThrottleService?.recordFailure(throttleKey, CONNECTOR_LOGIN_THROTTLE);
+      throw error;
     }
 
     const normalizedEmail = this.normalizeText(dto.email)?.toLowerCase();
@@ -339,6 +389,7 @@ export class OpenIntegrationService {
       this.assertEmailDomainAllowed(connector, normalizedEmail);
     } catch (error) {
       await this.handleConnectorLoginFailure(connector, dto, "domain_not_allowed");
+      this.riskThrottleService?.recordFailure(throttleKey, CONNECTOR_LOGIN_THROTTLE);
       throw error;
     }
 
@@ -359,6 +410,7 @@ export class OpenIntegrationService {
 
     if (!user) {
       await this.handleConnectorLoginFailure(connector, dto, "user_not_found");
+      this.riskThrottleService?.recordFailure(throttleKey, CONNECTOR_LOGIN_THROTTLE);
       throw new UnauthorizedException("The identity cannot be mapped to a tenant user.");
     }
 
@@ -379,7 +431,7 @@ export class OpenIntegrationService {
       lastFailureMessage: null
     });
 
-    return this.authService.loginWithUser(user, {
+    const result = await this.authService.loginWithUser(user, {
       targetType: "identity-connector",
       targetId: connector.id,
       detail: {
@@ -389,6 +441,9 @@ export class OpenIntegrationService {
         username: this.normalizeText(dto.username)
       }
     });
+    this.riskThrottleService?.recordSuccess(throttleKey);
+
+    return result;
   }
 
   async listOpenApiCustomers(query: ListOpenApiCustomersDto, accessKey?: string, secret?: string) {
@@ -463,10 +518,14 @@ export class OpenIntegrationService {
       throw new UnauthorizedException("Missing open API credentials.");
     }
 
-    const credential = await this.openIntegrationRepository.findOpenApiCredentialByAccessKey(accessKey.trim());
+    const normalizedAccessKey = accessKey.trim();
+    const throttleKey = this.buildThrottleKey("open-api", normalizedAccessKey);
+    this.riskThrottleService?.assertAllowed(throttleKey, OPEN_API_THROTTLE);
+    const credential = await this.openIntegrationRepository.findOpenApiCredentialByAccessKey(normalizedAccessKey);
     const secretHash = this.hashValue(secret.trim());
 
-    if (!credential || credential.secretHash !== secretHash) {
+    if (!credential || !this.isHashEqual(credential.secretHash, secretHash)) {
+      this.riskThrottleService?.recordFailure(throttleKey, OPEN_API_THROTTLE);
       await this.auditLogsService.create({
         actorName: accessKey,
         actionType: AuditActionType.ACCESS_DENIED,
@@ -484,6 +543,7 @@ export class OpenIntegrationService {
       credential.revokedAt ||
       (credential.expiresAt && credential.expiresAt <= new Date())
     ) {
+      this.riskThrottleService?.recordFailure(throttleKey, OPEN_API_THROTTLE);
       await this.auditLogsService.create({
         tenantId: credential.tenantId,
         actorName: credential.name,
@@ -517,6 +577,7 @@ export class OpenIntegrationService {
       throw new ForbiddenException("Open API credential scope is insufficient.");
     }
 
+    this.riskThrottleService?.recordSuccess(throttleKey);
     await this.openIntegrationRepository.updateOpenApiCredential(credential.id, credential.tenantId, {
       lastUsedAt: new Date()
     });
@@ -555,6 +616,32 @@ export class OpenIntegrationService {
         reason
       }
     });
+  }
+
+  private assertConnectorLoginProof(connector: IdentityConnectorRecord, dto: ConnectorLoginDto): void {
+    if (dto.proofType === "MOCK") {
+      if (this.isMockConnectorLoginAllowed()) {
+        return;
+      }
+
+      throw new UnauthorizedException("Mock connector login is disabled.");
+    }
+
+    if (dto.proofType !== "CLIENT_SECRET" || !dto.proofSecret) {
+      throw new UnauthorizedException("Connector login proof is required.");
+    }
+
+    if (!connector.clientSecretHash || !this.isHashEqual(connector.clientSecretHash, this.hashValue(dto.proofSecret.trim()))) {
+      throw new UnauthorizedException("Connector login proof is invalid.");
+    }
+  }
+
+  private isMockConnectorLoginAllowed(): boolean {
+    if (!this.configService || !isLocalRuntime(this.configService)) {
+      return false;
+    }
+
+    return this.configService.get<string>("ALLOW_MOCK_CONNECTOR_LOGIN")?.trim().toLowerCase() === "true";
   }
 
   private assertEmailDomainAllowed(connector: IdentityConnectorRecord, email?: string | null) {
@@ -634,6 +721,21 @@ export class OpenIntegrationService {
     return createHash("sha256").update(value).digest("hex");
   }
 
+  private isHashEqual(expectedHash: string, actualHash: string): boolean {
+    const expected = Buffer.from(expectedHash, "hex");
+    const actual = Buffer.from(actualHash, "hex");
+
+    if (expected.length !== actual.length) {
+      return false;
+    }
+
+    return timingSafeEqual(expected, actual);
+  }
+
+  private buildThrottleKey(...parts: string[]): string {
+    return parts.map((part) => part.trim().toLowerCase()).join(":");
+  }
+
   private buildSecretHint(secret: string) {
     return `${secret.slice(0, 6)}...${secret.slice(-4)}`;
   }
@@ -642,16 +744,36 @@ export class OpenIntegrationService {
     return `sha256=${createHmac("sha256", secret).update(JSON.stringify(payload)).digest("hex")}`;
   }
 
-  private simulateWebhookDelivery(endpointUrl: string, maxAttempts: number) {
+  private getWebhookTestMode(): WebhookTestMode {
+    const configuredMode = this.configService?.get<string>("WEBHOOK_TEST_MODE")?.trim().toUpperCase();
+
+    return configuredMode === "SIMULATION" ? "SIMULATION" : "REAL";
+  }
+
+  private async runWebhookTestDelivery(
+    subscription: WebhookSubscriptionRecord,
+    payload: Record<string, unknown>,
+    signature: string
+  ): Promise<WebhookDeliveryResult> {
+    if (this.getWebhookTestMode() === "SIMULATION") {
+      return this.simulateWebhookDelivery(subscription.endpointUrl, subscription.maxAttempts);
+    }
+
+    return this.deliverWebhookTest(subscription, payload, signature);
+  }
+
+  private simulateWebhookDelivery(endpointUrl: string, maxAttempts: number): WebhookDeliveryResult {
     if (!/^https?:\/\//.test(endpointUrl)) {
       return {
         status: WebhookDeliveryStatus.FAILED,
         attemptCount: 1,
         responseStatusCode: 400,
-        responseBody: "invalid_endpoint",
+        responseBody: "simulation:invalid_endpoint",
         errorMessage: "回调地址必须以 http:// 或 https:// 开头。",
         nextRetryAt: null,
-        deliveredAt: null
+        deliveredAt: null,
+        deliveryMode: "SIMULATION",
+        durationMs: 0
       };
     }
 
@@ -674,10 +796,12 @@ export class OpenIntegrationService {
         status: WebhookDeliveryStatus.SUCCEEDED,
         attemptCount,
         responseStatusCode: 200,
-        responseBody: "accepted",
+        responseBody: "simulation:accepted",
         errorMessage: null,
         nextRetryAt: null,
-        deliveredAt: new Date()
+        deliveredAt: new Date(),
+        deliveryMode: "SIMULATION",
+        durationMs: 0
       };
     }
 
@@ -685,11 +809,225 @@ export class OpenIntegrationService {
       status: WebhookDeliveryStatus.FAILED,
       attemptCount,
       responseStatusCode: 502,
-      responseBody: "upstream_failed",
+      responseBody: "simulation:upstream_failed",
       errorMessage: `模拟回调连续失败，已执行 ${attemptCount} 次重试。`,
       nextRetryAt: null,
-      deliveredAt: null
+      deliveredAt: null,
+      deliveryMode: "SIMULATION",
+      durationMs: 0
     };
+  }
+
+  private async deliverWebhookTest(
+    subscription: WebhookSubscriptionRecord,
+    payload: Record<string, unknown>,
+    signature: string
+  ): Promise<WebhookDeliveryResult> {
+    const startedAt = Date.now();
+
+    try {
+      const endpoint = await this.assertWebhookEndpointAllowed(subscription.endpointUrl);
+      let lastResult: WebhookDeliveryResult | null = null;
+
+      for (let attempt = 1; attempt <= subscription.maxAttempts; attempt += 1) {
+        lastResult = await this.sendWebhookAttempt(endpoint, subscription, payload, signature, attempt, startedAt);
+
+        if (lastResult.status === WebhookDeliveryStatus.SUCCEEDED) {
+          return lastResult;
+        }
+      }
+
+      return (
+        lastResult ?? {
+          status: WebhookDeliveryStatus.FAILED,
+          attemptCount: 0,
+          responseStatusCode: null,
+          responseBody: null,
+          errorMessage: "真实投递未执行。",
+          nextRetryAt: null,
+          deliveredAt: null,
+          deliveryMode: "REAL",
+          durationMs: Date.now() - startedAt
+        }
+      );
+    } catch (error) {
+      return {
+        status: WebhookDeliveryStatus.FAILED,
+        attemptCount: 1,
+        responseStatusCode: null,
+        responseBody: null,
+        errorMessage: error instanceof Error ? error.message : "真实投递失败。",
+        nextRetryAt: null,
+        deliveredAt: null,
+        deliveryMode: "REAL",
+        durationMs: Date.now() - startedAt
+      };
+    }
+  }
+
+  private async sendWebhookAttempt(
+    endpoint: URL,
+    subscription: WebhookSubscriptionRecord,
+    payload: Record<string, unknown>,
+    signature: string,
+    attempt: number,
+    startedAt: number
+  ): Promise<WebhookDeliveryResult> {
+    const abortController = new AbortController();
+    const timeout = setTimeout(() => abortController.abort(), subscription.timeoutSeconds * 1000);
+
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        redirect: "manual",
+        signal: abortController.signal,
+        headers: {
+          "content-type": "application/json",
+          "x-platform-signature": signature,
+          "x-platform-event": String(payload.eventType),
+          "x-platform-delivery-mode": "real"
+        },
+        body: JSON.stringify(payload)
+      });
+      const responseBody = await this.readClippedResponseBody(response);
+      const isRedirect = response.status >= 300 && response.status < 400;
+      const succeeded = response.status >= 200 && response.status < 300;
+
+      return {
+        status: succeeded ? WebhookDeliveryStatus.SUCCEEDED : WebhookDeliveryStatus.FAILED,
+        attemptCount: attempt,
+        responseStatusCode: response.status,
+        responseBody,
+        errorMessage: succeeded
+          ? null
+          : isRedirect
+            ? "真实投递禁止跟随重定向。"
+            : `真实投递返回 HTTP ${response.status}。`,
+        nextRetryAt: null,
+        deliveredAt: succeeded ? new Date() : null,
+        deliveryMode: "REAL",
+        durationMs: Date.now() - startedAt
+      };
+    } catch (error) {
+      return {
+        status: WebhookDeliveryStatus.FAILED,
+        attemptCount: attempt,
+        responseStatusCode: null,
+        responseBody: null,
+        errorMessage:
+          error instanceof Error && error.name === "AbortError"
+            ? `真实投递超过 ${subscription.timeoutSeconds} 秒超时。`
+            : error instanceof Error
+              ? error.message
+              : "真实投递失败。",
+        nextRetryAt: null,
+        deliveredAt: null,
+        deliveryMode: "REAL",
+        durationMs: Date.now() - startedAt
+      };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private async assertWebhookEndpointAllowed(endpointUrl: string): Promise<URL> {
+    let endpoint: URL;
+
+    try {
+      endpoint = new URL(endpointUrl);
+    } catch {
+      throw new BadRequestException("回调地址格式不正确。");
+    }
+
+    if (!["http:", "https:"].includes(endpoint.protocol)) {
+      throw new BadRequestException("回调地址只允许 http:// 或 https:// 协议。");
+    }
+
+    if (!endpoint.hostname) {
+      throw new BadRequestException("回调地址缺少主机名。");
+    }
+
+    if (isIP(endpoint.hostname)) {
+      this.assertPublicIpAddress(endpoint.hostname);
+      return endpoint;
+    }
+
+    if (endpoint.hostname.toLowerCase() === "localhost") {
+      throw new BadRequestException("真实 Webhook 测试不允许投递到 localhost。");
+    }
+
+    const records = await lookup(endpoint.hostname, {
+      all: true,
+      verbatim: true
+    });
+
+    if (!records.length) {
+      throw new BadRequestException("回调地址域名无法解析。");
+    }
+
+    for (const record of records) {
+      this.assertPublicIpAddress(record.address);
+    }
+
+    return endpoint;
+  }
+
+  private assertPublicIpAddress(address: string): void {
+    const version = isIP(address);
+
+    if (version === 4 && this.isPrivateIpv4(address)) {
+      throw new BadRequestException("真实 Webhook 测试不允许投递到内网或本机地址。");
+    }
+
+    if (version === 6 && this.isPrivateIpv6(address)) {
+      throw new BadRequestException("真实 Webhook 测试不允许投递到内网或本机地址。");
+    }
+
+    if (!version) {
+      throw new BadRequestException("回调地址解析到了无效 IP。");
+    }
+  }
+
+  private isPrivateIpv4(address: string): boolean {
+    const [first = 0, second = 0] = address.split(".").map((part) => Number(part));
+
+    return (
+      first === 0 ||
+      first === 10 ||
+      first === 127 ||
+      (first === 100 && second >= 64 && second <= 127) ||
+      (first === 169 && second === 254) ||
+      (first === 172 && second >= 16 && second <= 31) ||
+      (first === 192 && second === 168) ||
+      first >= 224
+    );
+  }
+
+  private isPrivateIpv6(address: string): boolean {
+    const normalized = address.toLowerCase();
+
+    // SSRF 防护优先拦截本机、未指定、唯一本地、链路本地、组播和 IPv4 映射地址。
+    return (
+      normalized === "::" ||
+      normalized === "::1" ||
+      normalized.startsWith("fc") ||
+      normalized.startsWith("fd") ||
+      normalized.startsWith("fe80") ||
+      normalized.startsWith("ff") ||
+      normalized.startsWith("::ffff:")
+    );
+  }
+
+  private async readClippedResponseBody(response: Response): Promise<string | null> {
+    const rawBody = await response.text().catch(() => "");
+
+    if (!rawBody) {
+      return null;
+    }
+
+    return rawBody.length > WEBHOOK_RESPONSE_BODY_LIMIT
+      ? `${rawBody.slice(0, WEBHOOK_RESPONSE_BODY_LIMIT)}...(truncated)`
+      : rawBody;
   }
 
   private readStringArray(value: unknown): string[] {
@@ -736,6 +1074,19 @@ export class OpenIntegrationService {
   }
 
   private mapWebhookDelivery(record: WebhookDeliveryRecord) {
+    const payloadMetadata =
+      record.payload && typeof record.payload === "object" && !Array.isArray(record.payload)
+        ? (record.payload as Record<string, unknown>)
+        : {};
+    const responseBody = record.responseBody ?? null;
+    const inferredDeliveryMode =
+      payloadMetadata.deliveryMode === "REAL" || payloadMetadata.deliveryMode === "SIMULATION"
+        ? payloadMetadata.deliveryMode
+        : responseBody?.startsWith("simulation:")
+          ? "SIMULATION"
+          : "REAL";
+    const durationMs = typeof payloadMetadata.durationMs === "number" ? payloadMetadata.durationMs : null;
+
     return {
       id: record.id,
       eventType: record.eventType,
@@ -743,9 +1094,11 @@ export class OpenIntegrationService {
       sourceId: record.sourceId,
       status: record.status,
       attemptCount: record.attemptCount,
+      deliveryMode: inferredDeliveryMode,
+      durationMs,
       signature: record.signature,
       responseStatusCode: record.responseStatusCode ?? null,
-      responseBody: record.responseBody ?? null,
+      responseBody,
       errorMessage: record.errorMessage ?? null,
       nextRetryAt: toIsoString(record.nextRetryAt) ?? null,
       deliveredAt: toIsoString(record.deliveredAt) ?? null,

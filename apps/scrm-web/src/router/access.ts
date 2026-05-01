@@ -1,10 +1,10 @@
 /** 路由层：负责页面导航、访问控制和首屏跳转规则。 */
-interface AccessibleRouteDefinition {
+export interface AccessibleRouteDefinition {
   path: string;
   permission?: string;
 }
 
-const accessibleRouteDefinitions: AccessibleRouteDefinition[] = [
+export const SCRM_ROUTE_ACCESS: AccessibleRouteDefinition[] = [
   {
     path: "/dashboard",
     permission: "dashboard:view"
@@ -36,7 +36,7 @@ const accessibleRouteDefinitions: AccessibleRouteDefinition[] = [
 ];
 
 export function resolveFirstAccessiblePath(permissions: string[]): string | null {
-  const route = accessibleRouteDefinitions.find(
+  const route = SCRM_ROUTE_ACCESS.find(
     (item) => !item.permission || permissions.includes(item.permission)
   );
 

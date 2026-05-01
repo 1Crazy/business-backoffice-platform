@@ -238,7 +238,10 @@ export async function fetchWebhookDeliveries(id: string): Promise<WebhookDeliver
 
 export async function fetchIdentityConnectors(): Promise<IdentityConnectorRecord[]> {
   const { data } = await http.get<IdentityConnectorRecord[]>("/open-integration/connectors");
-  return data;
+  return data.map((item) => ({
+    ...item,
+    allowedDomains: Array.isArray(item.allowedDomains) ? item.allowedDomains : []
+  }));
 }
 
 export async function createIdentityConnector(

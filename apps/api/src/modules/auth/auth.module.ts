@@ -5,6 +5,8 @@ import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
 
 import { JwtStrategy } from "@/common/auth/jwt.strategy";
+import { getRequiredJwtSecret } from "@/common/security/security-config.util";
+import { RiskThrottleService } from "@/common/security/risk-throttle.service";
 import { AuthController } from "./auth.controller";
 import { AuthRepository } from "./repositories/auth.repository";
 import { AuthService } from "./auth.service";
@@ -16,7 +18,7 @@ import { AuthService } from "./auth.service";
     JwtModule.registerAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
-        secret: configService.get<string>("JWT_SECRET", "replace-with-a-long-secret"),
+        secret: getRequiredJwtSecret(configService),
         signOptions: {
           expiresIn: "12h"
         }
@@ -24,7 +26,7 @@ import { AuthService } from "./auth.service";
     })
   ],
   controllers: [AuthController],
-  providers: [AuthService, AuthRepository, JwtStrategy],
+  providers: [AuthService, AuthRepository, JwtStrategy, RiskThrottleService],
   exports: [AuthService]
 })
 export class AuthModule {}

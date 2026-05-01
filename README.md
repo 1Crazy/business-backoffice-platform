@@ -97,10 +97,19 @@ pnpm install
 核心变量说明：
 
 - 根目录 `.env`：`POSTGRES_DB`、`POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_PORT`、`JWT_SECRET`
-- `apps/api/.env`：`PORT`、`JWT_SECRET`、`DATABASE_URL`
+- `apps/api/.env`：`PORT`、`JWT_SECRET`、`DATABASE_URL`、`CORS_ALLOWED_ORIGINS`、`SWAGGER_ENABLED`、`ALLOW_MOCK_CONNECTOR_LOGIN`、`WEBHOOK_TEST_MODE`
 - `apps/main-web/.env`：`VITE_API_BASE_URL`、`VITE_OA_ENTRY`、`VITE_SCRM_ENTRY`
 - `apps/oa-web/.env`：`VITE_API_BASE_URL`
 - `apps/scrm-web/.env`：`VITE_API_BASE_URL`
+
+安全配置要求：
+
+- `JWT_SECRET` 必须替换为至少 32 位随机字符串；后端启动时会拒绝空值、模板默认值或弱密钥。
+- 非本地/测试环境必须显式配置 `CORS_ALLOWED_ORIGINS`，多个来源用英文逗号分隔；本地环境未配置时才允许开发态宽松 CORS。
+- `SWAGGER_ENABLED` 未配置时只在本地/测试环境默认开启；生产环境需要显式配置才会暴露 `/docs`。
+- `ALLOW_MOCK_CONNECTOR_LOGIN` 仅用于本地或测试环境的身份连接器联调，生产环境即使配置也不会允许 mock 登录。
+- `WEBHOOK_TEST_MODE` 默认使用 `REAL` 真实 HTTP 投递测试；如需旧的字符串模拟联调，可在本地或测试环境显式设为 `SIMULATION`，页面会标记为“模拟测试”。
+- 当前 refresh token 仍沿用主应用与子应用共享的浏览器存储；安全加固的过渡策略是先收紧刷新入口限流与审计，再迁移到 `HttpOnly; Secure; SameSite` cookie 并验证 qiankun 联调兼容。
 
 默认模板口径：
 
@@ -133,6 +142,22 @@ pnpm dev:full
 - `pnpm dev:scrm-web`
 - `pnpm docker:infra:logs`
 - `pnpm docker:infra:down`
+
+安全与展示相关变更至少运行：
+
+```bash
+pnpm --filter platform-api lint
+pnpm --filter platform-api test
+pnpm --filter main-web lint
+pnpm --filter main-web test
+pnpm --filter oa-web lint
+pnpm --filter oa-web test
+pnpm --filter scrm-web lint
+pnpm --filter scrm-web test
+openspec validate <change-name>
+```
+
+若改动涉及 `main-web` 壳层、qiankun 容器或 OA/SCRM 全局样式，还需要记录桌面、移动端、host 嵌入 OA、host 嵌入 SCRM、standalone OA/SCRM 的视觉检查结果。
 
 默认本地地址：
 

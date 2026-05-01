@@ -57,6 +57,7 @@ export type NotificationChannel = "IN_APP" | "EMAIL" | "ENTERPRISE_IM";
 export type OpenApiCredentialStatus = "ACTIVE" | "REVOKED";
 export type WebhookSubscriptionStatus = "ACTIVE" | "DISABLED";
 export type WebhookDeliveryStatus = "PENDING" | "SUCCEEDED" | "FAILED";
+export type WebhookDeliveryMode = "REAL" | "SIMULATION";
 export type IdentityConnectorType = "SSO" | "LDAP" | "OAUTH";
 export type IdentityConnectorMatchField = "USERNAME" | "EMAIL";
 
@@ -162,6 +163,8 @@ export interface WebhookDeliveryRecord {
   sourceId: string;
   status: WebhookDeliveryStatus;
   attemptCount: number;
+  deliveryMode?: WebhookDeliveryMode;
+  durationMs?: number | null;
   signature: string;
   responseStatusCode?: number | null;
   responseBody?: string | null;

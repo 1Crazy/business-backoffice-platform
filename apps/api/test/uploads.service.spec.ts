@@ -111,7 +111,8 @@ describe("UploadsService", () => {
           file: {
             originalname: "malware.exe",
             mimetype: "application/x-msdownload",
-            size: 1024
+            size: 1024,
+            buffer: Buffer.from("MZ")
           } as Express.Multer.File
         },
         {
@@ -155,7 +156,8 @@ describe("UploadsService", () => {
           file: {
             originalname: "too-large.pdf",
             mimetype: "application/pdf",
-            size: MAX_ATTACHMENT_SIZE_BYTES + 1
+            size: MAX_ATTACHMENT_SIZE_BYTES + 1,
+            buffer: Buffer.from("%PDF")
           } as Express.Multer.File
         },
         {
@@ -436,5 +438,113 @@ describe("UploadsService", () => {
 
     expect(previewBlockedGovernanceService.assertStoragePreviewAllowed).toHaveBeenCalledWith("OBJECT_STORAGE");
     expect(storageDriver.openReadStream).not.toHaveBeenCalled();
+  });
+
+  it("rejects attachments whose content does not match the declared MIME type", async () => {
+    const storageDriver = {
+      store: jest.fn(),
+      openReadStream: jest.fn(),
+      delete: jest.fn()
+    } as any;
+    const service = new UploadsService(
+      {} as any,
+      {
+        create: jest.fn().mockResolvedValue(undefined)
+      } as any,
+      {
+        assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+      } as any,
+      governanceService,
+      storageDriver
+    );
+
+    await expect(
+      service.create(
+        {
+          businessType: AttachmentBusinessType.CUSTOMER,
+          businessId: "customer-1",
+          file: {
+            originalname: "fake.pdf",
+            mimetype: "application/pdf",
+            size: 1024,
+            buffer: Buffer.from("not a pdf")
+          } as Express.Multer.File
+        },
+        {
+          id: "user-1",
+          tenantId: "tenant-default",
+          tenantCode: "default",
+          username: "sales",
+          displayName: "销售",
+          roleCodes: ["sales-member"],
+          permissions: ["upload:write", "customer:read"]
+        }
+      )
+    ).rejects.toThrow("Attachment content does not match the declared type.");
+
+    expect(storageDriver.store).not.toHaveBeenCalled();
+  });
+
+  it("normalizes uploaded filenames before storage and metadata persistence", async () => {
+    const uploadsRepository = {
+      findCustomerOwnerById: jest.fn().mockResolvedValue({
+        ownerId: "owner-1"
+      }),
+      createAttachment: jest.fn().mockImplementation(async (input) => ({
+        id: "attachment-5",
+        ...input,
+        createdAt: new Date("2026-04-05T08:00:00.000Z")
+      }))
+    } as any;
+    const dataScopeService = {
+      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+    } as any;
+    const storageDriver = {
+      store: jest.fn().mockResolvedValue({
+        storageProvider: "LOCAL",
+        storageKey: "stored.pdf",
+        fileName: "stored.pdf"
+      }),
+      openReadStream: jest.fn(),
+      delete: jest.fn()
+    } as any;
+    const service = new UploadsService(
+      uploadsRepository,
+      {
+        create: jest.fn().mockResolvedValue(undefined)
+      } as any,
+      dataScopeService,
+      governanceService,
+      storageDriver
+    );
+
+    await service.create(
+      {
+        businessType: AttachmentBusinessType.CUSTOMER,
+        businessId: "customer-1",
+        file: {
+          originalname: "../contract.pdf",
+          mimetype: "application/pdf",
+          size: 1024,
+          buffer: Buffer.from("%PDF-1.7")
+        } as Express.Multer.File
+      },
+      {
+        id: "user-1",
+        tenantId: "tenant-default",
+        tenantCode: "default",
+        username: "sales",
+        displayName: "销售",
+        roleCodes: ["sales-member"],
+        permissions: ["upload:write", "customer:read"]
+      }
+    );
+
+    expect(storageDriver.store).toHaveBeenCalledWith(expect.objectContaining({ originalname: ".._contract.pdf" }));
+    expect(uploadsRepository.createAttachment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        originalName: ".._contract.pdf"
+      })
+    );
   });
 });

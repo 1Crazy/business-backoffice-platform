@@ -6,6 +6,7 @@ import { ExtractJwt, Strategy } from "passport-jwt";
 
 import type { AuthUser } from "./auth-user.interface";
 import { AuthService } from "@/modules/auth/auth.service";
+import { getRequiredJwtSecret } from "@/common/security/security-config.util";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -16,7 +17,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
-      secretOrKey: configService.get<string>("JWT_SECRET", "replace-with-a-long-secret")
+      secretOrKey: getRequiredJwtSecret(configService)
     });
   }
 

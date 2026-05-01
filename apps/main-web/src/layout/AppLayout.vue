@@ -212,13 +212,23 @@ async function handleLogout(): Promise<void> {
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.28) transparent;
   overscroll-behavior: contain;
 }
 
 .host-content::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+  width: 8px;
+  height: 8px;
+}
+
+.host-content::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(100, 116, 139, 0.28);
+}
+
+.host-content::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 @media (max-width: 1180px) {

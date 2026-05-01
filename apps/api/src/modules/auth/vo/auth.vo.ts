@@ -58,7 +58,7 @@ export class LoginResponseVo {
   accessToken!: string;
 
   @ApiProperty({
-    description: "刷新令牌。"
+    description: "刷新令牌。迁移期仍返回给前端；后端同时写入 HttpOnly Cookie。"
   })
   refreshToken!: string;
 

@@ -8,7 +8,7 @@ import type { MicroAppName } from "@/types/navigation";
 interface MicroRuntimeState {
   initialized: boolean;
   loadingAppName: MicroAppName | null;
-  errors: Partial<Record<MicroAppName, string>>;
+  errors: Partial<Record<MicroAppName, { message: string; entry: string }>>;
 }
 
 const microRuntimeState = reactive<MicroRuntimeState>({
@@ -70,7 +70,11 @@ export function initializeMicroApps(): void {
           : "子应用加载失败，请确认联调服务是否已经启动。";
 
     if (activeAppName) {
-      microRuntimeState.errors[activeAppName] = errorMessage;
+      const definition = microAppDefinitions.find((item) => item.name === activeAppName);
+      microRuntimeState.errors[activeAppName] = {
+        message: errorMessage,
+        entry: definition?.entry ?? "unknown"
+      };
       microRuntimeState.loadingAppName = null;
     }
   });

@@ -98,6 +98,18 @@ export class WebhookDeliveryVo {
   @ApiProperty()
   attemptCount!: number;
 
+  @ApiProperty({
+    enum: ["REAL", "SIMULATION"],
+    description: "测试投递模式。REAL 表示真实 HTTP 投递，SIMULATION 表示服务端模拟结果。"
+  })
+  deliveryMode!: "REAL" | "SIMULATION";
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: "真实投递或模拟计算耗时，单位毫秒。"
+  })
+  durationMs?: number | null;
+
   @ApiProperty()
   signature!: string;
 

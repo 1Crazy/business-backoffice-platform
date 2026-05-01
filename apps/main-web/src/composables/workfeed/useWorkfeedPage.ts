@@ -86,7 +86,7 @@ export function useWorkfeedPage() {
     toggleSubscription
   } = useWorkfeedPreferences();
 
-  const unreadCount = computed(() => notifications.value.filter((item) => !item.isRead).length);
+  const unreadCount = computed(() => (Array.isArray(notifications.value) ? notifications.value : []).filter((item) => !item.isRead).length);
   const domainOptions = computed(() => buildDomainOptions());
   const todoTypeOptions = computed(() => buildTodoTypeOptions());
   const notificationTypeOptions = computed(() => buildNotificationTypeOptions());

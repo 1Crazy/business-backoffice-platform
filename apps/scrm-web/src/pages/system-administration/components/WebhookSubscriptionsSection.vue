@@ -45,16 +45,31 @@
           <div class="history-list">
             <article v-for="delivery in deliveriesBySubscriptionId[item.id]" :key="delivery.id" class="history-card">
               <div class="history-top">
-                <strong>{{ formatWebhookEventType(delivery.eventType) }}</strong>
-                <span class="delivery-pill" :class="delivery.status.toLowerCase()">
-                  {{ formatWebhookDeliveryStatus(delivery.status) }}
-                </span>
+                <div>
+                  <strong>{{ formatWebhookEventType(delivery.eventType) }}</strong>
+                  <p class="history-subtitle">
+                    {{ getDeliveryModeLabel(delivery) }} · {{ formatDateTime(delivery.deliveredAt ?? delivery.createdAt) }}
+                  </p>
+                </div>
+                <div class="delivery-badges">
+                  <span class="mode-pill" :class="getDeliveryModeClass(delivery)">
+                    {{ getDeliveryModeLabel(delivery) }}
+                  </span>
+                  <span class="delivery-pill" :class="delivery.status.toLowerCase()">
+                    {{ formatWebhookDeliveryStatus(delivery.status) }}
+                  </span>
+                </div>
               </div>
               <div class="history-meta">
                 <span>尝试 {{ delivery.attemptCount }} 次</span>
-                <span>{{ formatDateTime(delivery.createdAt) }}</span>
+                <span v-if="delivery.responseStatusCode">HTTP {{ delivery.responseStatusCode }}</span>
+                <span v-if="delivery.durationMs !== null && delivery.durationMs !== undefined">
+                  耗时 {{ delivery.durationMs }}ms
+                </span>
+                <span>创建 {{ formatDateTime(delivery.createdAt) }}</span>
                 <span v-if="delivery.errorMessage">{{ delivery.errorMessage }}</span>
               </div>
+              <code v-if="delivery.responseBody" class="response-body">{{ delivery.responseBody }}</code>
             </article>
           </div>
         </div>
@@ -93,6 +108,18 @@ defineEmits<{
   edit: [record: WebhookSubscriptionRecord];
   test: [record: WebhookSubscriptionRecord];
 }>();
+
+function getDeliveryModeLabel(delivery: WebhookDeliveryRecord): string {
+  if (delivery.deliveryMode === "SIMULATION" || delivery.responseBody?.startsWith("simulation:")) {
+    return "模拟测试";
+  }
+
+  return "真实投递";
+}
+
+function getDeliveryModeClass(delivery: WebhookDeliveryRecord): string {
+  return getDeliveryModeLabel(delivery) === "模拟测试" ? "simulation" : "real";
+}
 </script>
 
 <style scoped>
@@ -182,12 +209,26 @@ defineEmits<{
   font-size: 12px;
 }
 
+.history-subtitle {
+  margin: 4px 0 0;
+  color: var(--app-text-secondary);
+  font-size: 12px;
+}
+
 .history-shell {
   display: grid;
   gap: 12px;
 }
 
+.delivery-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
 .delivery-pill,
+.mode-pill,
 .status-pill {
   display: inline-flex;
   align-items: center;
@@ -197,6 +238,16 @@ defineEmits<{
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
+}
+
+.mode-pill.real {
+  background: rgba(21, 128, 61, 0.1);
+  color: #15803d;
+}
+
+.mode-pill.simulation {
+  background: rgba(180, 83, 9, 0.12);
+  color: #b45309;
 }
 
 .status-pill.active,
@@ -216,6 +267,19 @@ defineEmits<{
   color: #1d4ed8;
 }
 
+.response-body {
+  display: block;
+  max-height: 120px;
+  overflow: auto;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(15, 23, 42, 0.9);
+  color: #f8fafc;
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 @media (max-width: 960px) {
   .toolbar-row,
   .card-top,
@@ -223,6 +287,10 @@ defineEmits<{
   .history-top {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .delivery-badges {
+    justify-content: flex-start;
   }
 }
 </style>

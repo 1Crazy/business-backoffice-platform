@@ -7,6 +7,7 @@ import { AuditActionType, Prisma, RecordStatus, UserStatus } from "@prisma/clien
 import bcrypt from "bcryptjs";
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { RiskThrottleService } from "@/common/security/risk-throttle.service";
 import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { LoginDto } from "./dto/login.dto";
@@ -16,6 +17,16 @@ import { AuthRepository, type AuthUserRecord } from "./repositories/auth.reposit
 
 const REFRESH_TOKEN_BYTES = 48;
 const REFRESH_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+const LOGIN_THROTTLE = {
+  maxAttempts: 5,
+  windowMs: 1000 * 60 * 10,
+  lockMs: 1000 * 60 * 15
+};
+const REFRESH_THROTTLE = {
+  maxAttempts: 10,
+  windowMs: 1000 * 60 * 10,
+  lockMs: 1000 * 60 * 15
+};
 
 interface LoginAuditContext {
   targetType?: string;
@@ -28,15 +39,19 @@ export class AuthService {
   constructor(
     private readonly authRepository: AuthRepository,
     private readonly jwtService: JwtService,
-    private readonly auditLogsService: AuditLogsService
+    private readonly auditLogsService: AuditLogsService,
+    private readonly riskThrottleService?: RiskThrottleService
   ) {}
 
   async login(dto: LoginDto) {
+    const loginThrottleKey = this.buildThrottleKey("auth:login", dto.username);
+    this.riskThrottleService?.assertAllowed(loginThrottleKey, LOGIN_THROTTLE);
     const user = await this.authRepository.findUserByUsername(dto.username);
     const isTenantUnavailable = !user?.tenant || user.tenant.status !== RecordStatus.ACTIVE || Boolean(user.tenant.archivedAt);
     const isUserUnavailable = !user || user.status !== UserStatus.ACTIVE;
 
     if (!user || isUserUnavailable || isTenantUnavailable) {
+      this.riskThrottleService?.recordFailure(loginThrottleKey, LOGIN_THROTTLE);
       await this.auditLogsService.create({
         actorId: user?.id,
         actorName: user?.displayName ?? dto.username,
@@ -54,6 +69,7 @@ export class AuthService {
     const isValidPassword = await bcrypt.compare(dto.password, user.passwordHash);
 
     if (!isValidPassword) {
+      this.riskThrottleService?.recordFailure(loginThrottleKey, LOGIN_THROTTLE);
       await this.auditLogsService.create({
         actorId: user.id,
         actorName: user.displayName,
@@ -68,13 +84,16 @@ export class AuthService {
       throw new UnauthorizedException("Invalid credentials.");
     }
 
-    return this.loginWithUser(user, {
+    const result = await this.loginWithUser(user, {
       targetType: "auth",
       targetId: user.id,
       detail: {
         loginType: "password"
       }
     });
+    this.riskThrottleService?.recordSuccess(loginThrottleKey);
+
+    return result;
   }
 
   async loginWithUser(user: AuthUserRecord, auditContext: LoginAuditContext = {}) {
@@ -86,7 +105,14 @@ export class AuthService {
   }
 
   async refresh(dto: RefreshTokenDto) {
-    const session = await this.authRepository.findSessionByRefreshTokenHash(this.hashRefreshToken(dto.refreshToken));
+    if (!dto.refreshToken) {
+      throw new UnauthorizedException("Session is invalid.");
+    }
+
+    const refreshTokenHash = this.hashRefreshToken(dto.refreshToken);
+    const refreshThrottleKey = this.buildThrottleKey("auth:refresh", refreshTokenHash);
+    this.riskThrottleService?.assertAllowed(refreshThrottleKey, REFRESH_THROTTLE);
+    const session = await this.authRepository.findSessionByRefreshTokenHash(refreshTokenHash);
 
     if (
       !session ||
@@ -97,6 +123,7 @@ export class AuthService {
       Boolean(session.user.tenant.archivedAt) ||
       session.user.tenantId !== session.tenantId
     ) {
+      this.riskThrottleService?.recordFailure(refreshThrottleKey, REFRESH_THROTTLE);
       throw new UnauthorizedException("Session is invalid.");
     }
 
@@ -106,6 +133,7 @@ export class AuthService {
     };
 
     await this.authRepository.touchSession(session.id);
+    this.riskThrottleService?.recordSuccess(refreshThrottleKey);
 
     return {
       accessToken: await this.signAccessToken(authUser),
@@ -203,6 +231,10 @@ export class AuthService {
 
   private hashRefreshToken(refreshToken: string): string {
     return createHash("sha256").update(refreshToken).digest("hex");
+  }
+
+  private buildThrottleKey(scope: string, value: string): string {
+    return `${scope}:${value.trim().toLowerCase()}`;
   }
 
   private signAccessToken(payload: AuthUser) {

@@ -22,5 +22,8 @@
     "prisma:generate": "pnpm --filter platform-api prisma generate",
     "prisma:migrate": "pnpm --filter platform-api prisma migrate dev",
     "prisma:seed": "pnpm --filter platform-api prisma db seed"
+  },
+  "devDependencies": {
+    "playwright": "^1.59.1"
   }
 }

@@ -2,6 +2,7 @@ import bcrypt from "bcryptjs";
 import { UnauthorizedException } from "@nestjs/common";
 
 import { AuthService } from "../src/modules/auth/auth.service";
+import { RiskThrottleService } from "../src/common/security/risk-throttle.service";
 
 function buildAuthUserRecord(overrides: Record<string, unknown> = {}) {
   return {
@@ -293,5 +294,62 @@ describe("AuthService", () => {
         })
       })
     );
+  });
+
+  it("throttles repeated invalid password attempts", async () => {
+    const passwordHash = await bcrypt.hash("Admin123456!", 10);
+    const authRepository = {
+      findUserByUsername: jest.fn().mockResolvedValue(buildAuthUserRecord({ passwordHash }))
+    } as any;
+    const auditLogsService = {
+      create: jest.fn().mockResolvedValue(undefined)
+    } as any;
+    const service = new AuthService(
+      authRepository,
+      {
+        signAsync: jest.fn()
+      } as any,
+      auditLogsService,
+      new RiskThrottleService()
+    );
+
+    for (let index = 0; index < 5; index += 1) {
+      await expect(
+        service.login({
+          username: "admin",
+          password: "WrongPassword!"
+        })
+      ).rejects.toBeInstanceOf(UnauthorizedException);
+    }
+
+    await expect(
+      service.login({
+        username: "admin",
+        password: "WrongPassword!"
+      })
+    ).rejects.toThrow("Too many failed attempts");
+  });
+
+  it("throttles repeated invalid refresh token attempts", async () => {
+    const authRepository = {
+      findSessionByRefreshTokenHash: jest.fn().mockResolvedValue(null)
+    } as any;
+    const service = new AuthService(
+      authRepository,
+      {
+        signAsync: jest.fn()
+      } as any,
+      {
+        create: jest.fn().mockResolvedValue(undefined)
+      } as any,
+      new RiskThrottleService()
+    );
+    const refreshToken = "b".repeat(96);
+
+    for (let index = 0; index < 10; index += 1) {
+      await expect(service.refresh({ refreshToken })).rejects.toBeInstanceOf(UnauthorizedException);
+    }
+
+    await expect(service.refresh({ refreshToken })).rejects.toThrow("Too many failed attempts");
   });
 });

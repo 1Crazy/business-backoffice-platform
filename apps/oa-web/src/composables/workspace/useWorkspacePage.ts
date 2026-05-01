@@ -18,6 +18,26 @@ const EMPTY_OVERVIEW: WorkspaceOverview = {
   recentAnnouncements: []
 };
 
+function normalizeOverview(value: WorkspaceOverview): WorkspaceOverview {
+  return {
+    ...EMPTY_OVERVIEW,
+    ...value,
+    recentAnnouncements: Array.isArray(value.recentAnnouncements) ? value.recentAnnouncements : []
+  };
+}
+
+function normalizeArray<T>(value: unknown): T[] {
+  if (Array.isArray(value)) {
+    return value;
+  }
+
+  if (value && typeof value === "object" && Array.isArray((value as { items?: unknown }).items)) {
+    return (value as { items: T[] }).items;
+  }
+
+  return [];
+}
+
 export function useWorkspacePage() {
   const overview = ref<WorkspaceOverview>(EMPTY_OVERVIEW);
   const templateCards = ref<WorkflowTemplateDefinition[]>([]);
@@ -33,7 +53,11 @@ export function useWorkspacePage() {
         fetchPendingWorkflowTasks(),
         fetchMyWorkflowInstances()
       ]);
-      const activeTemplateKeys = activeTemplates
+      const normalizedActiveTemplates = normalizeArray<WorkflowTemplateDefinition>(activeTemplates);
+      const normalizedPendingTasks = normalizeArray<{ template?: { key?: string } }>(pendingTasks);
+      const normalizedMyInstances = normalizeArray<{ template?: { key?: string } }>(myInstances);
+
+      const activeTemplateKeys = normalizedActiveTemplates
         .map((item) => item.key)
         .filter((item): item is (typeof WORKFLOW_TEMPLATE_KEY_ORDER)[number] =>
           WORKFLOW_TEMPLATE_KEY_ORDER.includes(item as (typeof WORKFLOW_TEMPLATE_KEY_ORDER)[number])
@@ -42,13 +66,13 @@ export function useWorkspacePage() {
       templateCards.value = activeTemplateKeys
         .sort((left, right) => WORKFLOW_TEMPLATE_KEY_ORDER.indexOf(left) - WORKFLOW_TEMPLATE_KEY_ORDER.indexOf(right))
         .map((key) => getWorkflowTemplateDefinition(key));
-      overview.value = {
+      overview.value = normalizeOverview({
         ...workspaceOverview,
-        pendingApprovalCount: pendingTasks.length,
-        myRequestCount: myInstances.length,
-        administrativeRequestPendingCount: pendingTasks.filter((item) => item.template.key !== "LEAVE").length,
-        administrativeRequestMyCount: myInstances.filter((item) => item.template.key !== "LEAVE").length
-      };
+        pendingApprovalCount: normalizedPendingTasks.length,
+        myRequestCount: normalizedMyInstances.length,
+        administrativeRequestPendingCount: normalizedPendingTasks.filter((item) => item.template?.key !== "LEAVE").length,
+        administrativeRequestMyCount: normalizedMyInstances.filter((item) => item.template?.key !== "LEAVE").length
+      });
     } catch (error) {
       ElMessage.error(getRequestErrorMessage(error, "OA 工作台数据加载失败，请稍后重试。"));
     } finally {

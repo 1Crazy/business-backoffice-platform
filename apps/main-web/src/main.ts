@@ -2,7 +2,7 @@
 import { createPinia } from "pinia";
 import ElementPlus from "element-plus";
 import "element-plus/dist/index.css";
-import { createApp } from "vue";
+import { createApp, nextTick } from "vue";
 
 import App from "@/App.vue";
 import { initializeMicroApps } from "@/micro/runtime";
@@ -41,6 +41,8 @@ router.afterEach(() => {
 
 void router.isReady().then(() => {
   syncMainNativeDocumentState();
-  // 等宿主路由准备好后再启动 qiankun，避免首次直达子应用页面时容器尚未渲染完成。
-  initializeMicroApps();
+  // 等宿主路由和 RouterView 完成首屏渲染后再启动 qiankun，避免直达子应用时容器尚未挂载。
+  void nextTick(() => {
+    initializeMicroApps();
+  });
 });

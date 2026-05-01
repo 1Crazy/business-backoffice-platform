@@ -1,10 +1,10 @@
 /** 路由访问规则：负责定义 OA 应用内的页面入口与权限对应关系。 */
-interface PageAccessRule {
+export interface PageAccessRule {
   path: string;
   permission?: string;
 }
 
-const OA_ROUTE_ACCESS: PageAccessRule[] = [
+export const OA_ROUTE_ACCESS: PageAccessRule[] = [
   {
     path: "/workspace",
     permission: "oa:workspace:view"

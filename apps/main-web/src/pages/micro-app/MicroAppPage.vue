@@ -3,7 +3,20 @@
     <div v-if="currentError" class="state-block error-state">
       <span class="state-kicker">子应用异常</span>
       <h2>当前页面暂时无法加载</h2>
-      <p>{{ currentError }}</p>
+      <dl class="error-detail">
+        <div>
+          <dt>应用</dt>
+          <dd>{{ currentMicroAppName }}</dd>
+        </div>
+        <div>
+          <dt>入口</dt>
+          <dd>{{ currentError.entry }}</dd>
+        </div>
+        <div>
+          <dt>错误</dt>
+          <dd>{{ currentError.message }}</dd>
+        </div>
+      </dl>
       <div class="state-actions">
         <el-button type="primary" @click="handleReload">刷新页面</el-button>
         <el-button @click="handleBackToHome">返回首页</el-button>
@@ -137,6 +150,34 @@ function handleBackToHome(): void {
   gap: 10px;
   flex-wrap: wrap;
   margin-top: 18px;
+}
+
+.error-detail {
+  display: grid;
+  gap: 10px;
+  margin: 16px 0 0;
+}
+
+.error-detail div {
+  display: grid;
+  gap: 4px;
+}
+
+.error-detail dt,
+.error-detail dd {
+  margin: 0;
+}
+
+.error-detail dt {
+  color: var(--app-text-tertiary);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.error-detail dd {
+  overflow-wrap: anywhere;
+  color: var(--app-text-secondary);
+  line-height: 1.6;
 }
 
 .fade-enter-active,

@@ -59,7 +59,11 @@ export class UploadsService {
   async create(input: UploadInput, actor: AuthUser) {
     this.validateFile(input.file);
     await this.assertBusinessAccessible(input.businessType, input.businessId, actor);
-    const storedFile = await this.storageDriver.store(input.file);
+    const normalizedFile = {
+      ...input.file,
+      originalname: this.normalizeOriginalName(input.file.originalname)
+    };
+    const storedFile = await this.storageDriver.store(normalizedFile);
 
     try {
       const attachment = await this.uploadsRepository.createAttachment({
@@ -67,9 +71,9 @@ export class UploadsService {
         businessType: input.businessType,
         businessId: input.businessId,
         fileName: storedFile.fileName,
-        originalName: input.file.originalname,
-        mimeType: input.file.mimetype,
-        size: input.file.size,
+        originalName: normalizedFile.originalname,
+        mimeType: normalizedFile.mimetype,
+        size: normalizedFile.size,
         storageProvider: storedFile.storageProvider,
         storageKey: storedFile.storageKey,
         uploadedById: actor.id
@@ -195,6 +199,10 @@ export class UploadsService {
     if (!ALLOWED_ATTACHMENT_MIME_TYPES.includes(file.mimetype as (typeof ALLOWED_ATTACHMENT_MIME_TYPES)[number])) {
       throw new UnsupportedMediaTypeException("Attachment type is not supported.");
     }
+
+    if (!file.buffer || !this.isContentConsistentWithMime(file.buffer, file.mimetype)) {
+      throw new UnsupportedMediaTypeException("Attachment content does not match the declared type.");
+    }
   }
 
   private assertPreviewSupported(mimeType: string): void {
@@ -205,5 +213,46 @@ export class UploadsService {
     ) {
       throw new BadRequestException("Attachment preview is not supported for this file type.");
     }
+  }
+
+  private normalizeOriginalName(originalName: string): string {
+    const fallbackName = "attachment";
+    const normalized = originalName
+      .replace(/[\\/]/g, "_")
+      .replace(/[\u0000-\u001f\u007f]/g, "")
+      .trim();
+
+    return normalized || fallbackName;
+  }
+
+  private isContentConsistentWithMime(buffer: Buffer, mimeType: string): boolean {
+    if (mimeType === "application/pdf") {
+      return buffer.subarray(0, 4).toString("ascii") === "%PDF";
+    }
+
+    if (mimeType === "image/jpeg") {
+      return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+    }
+
+    if (mimeType === "image/png") {
+      return buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
+    }
+
+    if (mimeType === "application/msword" || mimeType === "application/vnd.ms-excel") {
+      return buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]));
+    }
+
+    if (
+      mimeType === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
+      mimeType === "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    ) {
+      return buffer.length >= 4 && buffer.subarray(0, 4).equals(Buffer.from([0x50, 0x4b, 0x03, 0x04]));
+    }
+
+    if (mimeType === "text/plain" || mimeType === "text/csv") {
+      return !buffer.includes(0);
+    }
+
+    return false;
   }
 }

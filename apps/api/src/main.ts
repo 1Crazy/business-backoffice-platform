@@ -8,14 +8,20 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 import { AppModule } from "./app.module";
 import { PrismaClientExceptionFilter } from "./common/filters/prisma-client-exception.filter";
+import {
+  assertRuntimeSecurityConfig,
+  getAllowedCorsOrigins,
+  shouldEnableSwagger
+} from "./common/security/security-config.util";
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   const configService = app.get(ConfigService);
   const port = configService.get<number>("PORT", 3000);
+  assertRuntimeSecurityConfig(configService);
 
   app.enableCors({
-    origin: true,
+    origin: getAllowedCorsOrigins(configService),
     credentials: true
   });
 
@@ -29,15 +35,17 @@ async function bootstrap(): Promise<void> {
   );
   app.useGlobalFilters(new PrismaClientExceptionFilter());
 
-  const swaggerConfig = new DocumentBuilder()
-    .setTitle("Business Platform API")
-    .setDescription("Shared API for multi-application business back-office services")
-    .setVersion("0.1.0")
-    .addBearerAuth()
-    .build();
+  if (shouldEnableSwagger(configService)) {
+    const swaggerConfig = new DocumentBuilder()
+      .setTitle("Business Platform API")
+      .setDescription("Shared API for multi-application business back-office services")
+      .setVersion("0.1.0")
+      .addBearerAuth()
+      .build();
 
-  const document = SwaggerModule.createDocument(app, swaggerConfig);
-  SwaggerModule.setup("docs", app, document);
+    const document = SwaggerModule.createDocument(app, swaggerConfig);
+    SwaggerModule.setup("docs", app, document);
+  }
 
   await app.listen(port, "0.0.0.0");
 }

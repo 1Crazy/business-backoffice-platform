@@ -83,13 +83,15 @@ export class UploadsController {
     }
   })
   @UseInterceptors(
-    FileInterceptor("file", {
-      storage: memoryStorage(),
-      limits: {
-        fileSize: MAX_ATTACHMENT_SIZE_BYTES
-      }
-    })
-  )
+	    FileInterceptor("file", {
+	      storage: memoryStorage(),
+	      limits: {
+	        fileSize: MAX_ATTACHMENT_SIZE_BYTES,
+	        files: 1,
+	        fields: 2
+	      }
+	    })
+	  )
   @ApiOkResponse({
     type: AttachmentVo
   })

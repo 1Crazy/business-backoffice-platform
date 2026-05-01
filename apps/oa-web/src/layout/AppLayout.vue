@@ -201,7 +201,8 @@ defineExpose({
   min-height: 0;
   overflow-x: hidden;
   overflow-y: auto;
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(125, 148, 171, 0.3) transparent;
   overscroll-behavior: contain;
 }
 
@@ -211,8 +212,8 @@ defineExpose({
 }
 
 .content::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+  width: 8px;
+  height: 8px;
 }
 
 .content::-webkit-scrollbar-thumb {

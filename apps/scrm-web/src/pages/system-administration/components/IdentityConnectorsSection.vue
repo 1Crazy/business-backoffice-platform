@@ -27,8 +27,8 @@
           <span>最近失败：{{ formatDateTime(item.lastFailureAt) }}</span>
         </div>
 
-        <div v-if="item.allowedDomains.length" class="tag-row">
-          <span v-for="domain in item.allowedDomains" :key="domain" class="meta-chip">{{ domain }}</span>
+        <div v-if="getAllowedDomains(item).length" class="tag-row">
+          <span v-for="domain in getAllowedDomains(item)" :key="domain" class="meta-chip">{{ domain }}</span>
         </div>
 
         <div v-if="item.lastFailureMessage" class="failure-note">
@@ -60,6 +60,10 @@ defineEmits<{
   create: [];
   edit: [record: IdentityConnectorRecord];
 }>();
+
+function getAllowedDomains(record: IdentityConnectorRecord): string[] {
+  return Array.isArray(record.allowedDomains) ? record.allowedDomains : [];
+}
 </script>
 
 <style scoped>

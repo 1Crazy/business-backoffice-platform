@@ -26,7 +26,7 @@
 - **THEN** 系统继续按现有规则激活对应业务子应用，而不会因为平台治理域的引入改变 OA 与 SCRM 的承载方式
 
 ### Requirement: 主应用通过 qiankun 承载 OA 与 SCRM 内容页
-主应用 SHALL 使用 `qiankun` 承载 `oa-web` 与 `scrm-web` 子应用，并根据当前路由前缀激活相应子应用。OA 页面 MUST 挂载在 `/oa/**` 路径空间下，SCRM 页面 MUST 挂载在 `/scrm/**` 路径空间下。
+主应用 SHALL 使用 `qiankun` 承载 `oa-web` 与 `scrm-web` 子应用，并根据当前路由前缀激活相应子应用。OA 页面 MUST 挂载在 `/oa/**` 路径空间下，SCRM 页面 MUST 挂载在 `/scrm/**` 路径空间下。主应用 MUST 在子应用加载失败时展示可诊断错误态，包括子应用名称、入口地址、错误摘要和重试入口。
 
 #### Scenario: 主应用进入 OA 页面时激活 OA 子应用
 - **WHEN** 用户在主应用中访问 `/oa/workspace` 或其他 `/oa/**` 页面
@@ -35,6 +35,11 @@
 #### Scenario: 主应用进入 SCRM 页面时激活 SCRM 子应用
 - **WHEN** 用户在主应用中访问 `/scrm/dashboard` 或其他 `/scrm/**` 页面
 - **THEN** 系统加载并激活 `scrm-web` 子应用，在主应用内容区渲染对应 SCRM 页面
+
+#### Scenario: 子应用加载失败时展示诊断信息
+- **WHEN** 主应用加载某个子应用失败
+- **THEN** 错误态展示子应用名称、entry 地址和错误摘要
+- **AND** 用户可以触发重试或返回首个可访问页面
 
 ### Requirement: 子应用在宿主模式与独立模式下都可运行
 `oa-web` 与 `scrm-web` SHALL 同时支持独立运行模式与 `qiankun` 宿主模式。子应用在独立运行时 MUST 保留完整登录与导航壳层；在宿主模式下 MUST 隐藏重复的应用级导航壳层，仅渲染业务内容区，并继续保持原有页面权限、路由守卫与业务行为。

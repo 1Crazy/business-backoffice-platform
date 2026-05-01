@@ -8,12 +8,14 @@ const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api"
 
 export const http = axios.create({
   baseURL,
-  timeout: 20000
+  timeout: 20000,
+  withCredentials: true
 });
 
 const refreshHttp = axios.create({
   baseURL,
-  timeout: 20000
+  timeout: 20000,
+  withCredentials: true
 });
 
 let refreshPromise: Promise<string | null> | null = null;

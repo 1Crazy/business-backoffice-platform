@@ -10,3 +10,4 @@ apps/web/.env
 apps/api/uploads
 apps/api/prisma/dev.db
 .log
+.omx/

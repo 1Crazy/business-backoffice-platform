@@ -22,7 +22,7 @@ export class LocalAttachmentStorageDriver implements AttachmentStorageDriver {
   }
 
   async store(file: Express.Multer.File): Promise<AttachmentStorageWriteResult> {
-    const extension = extname(file.originalname);
+    const extension = extname(basename(file.originalname));
     const storageKey = `${randomUUID()}${extension}`;
 
     await fs.writeFile(this.resolvePath(storageKey), file.buffer);

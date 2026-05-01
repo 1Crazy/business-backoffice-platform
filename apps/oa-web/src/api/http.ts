@@ -8,12 +8,14 @@ const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api"
 
 export const http = axios.create({
   baseURL,
-  timeout: 20000
+  timeout: 20000,
+  withCredentials: true
 });
 
 const refreshHttp = axios.create({
   baseURL,
-  timeout: 20000
+  timeout: 20000,
+  withCredentials: true
 });
 
 // 同一时间只允许一个刷新令牌请求在飞，避免多个 401 并发时把本地会话状态相互覆盖。

@@ -25,9 +25,9 @@
         </div>
       </div>
 
-      <div v-if="recentAnnouncements.length" class="announcement-list">
+      <div v-if="normalizedAnnouncements.length" class="announcement-list">
         <button
-          v-for="item in recentAnnouncements"
+          v-for="item in normalizedAnnouncements"
           :key="item.id"
           type="button"
           class="announcement-item"
@@ -47,6 +47,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from "vue";
+
 import type { AnnouncementSummary } from "@/types/office-automation";
 import { formatDateTime } from "@/utils/display";
 
@@ -56,10 +58,14 @@ interface FocusItem {
   caption: string;
 }
 
-defineProps<{
+const props = defineProps<{
   focusItems: FocusItem[];
   recentAnnouncements: AnnouncementSummary[];
 }>();
+
+const normalizedAnnouncements = computed(() =>
+  Array.isArray(props.recentAnnouncements) ? props.recentAnnouncements : []
+);
 
 const emit = defineEmits<{
   "open-announcement": [id: string];

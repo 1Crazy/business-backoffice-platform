@@ -177,6 +177,8 @@ describe("SystemAdminPage", () => {
               sourceId: "webhook-1",
               status: "SUCCEEDED",
               attemptCount: 2,
+              deliveryMode: "REAL",
+              durationMs: 86,
               signature: "sha256=abc",
               responseStatusCode: 200,
               responseBody: "accepted",
