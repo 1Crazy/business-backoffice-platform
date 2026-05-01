@@ -884,6 +884,16 @@ model UserSession {
   @@index([revokedAt])
 }
 
+model RiskThrottleEntry {
+  key            String    @id
+  attempts       Int
+  firstAttemptAt DateTime
+  lockedUntil    DateTime?
+  updatedAt      DateTime  @updatedAt
+
+  @@index([lockedUntil])
+}
+
 model OpenApiCredential {
   id            String                  @id @default(cuid())
   tenantId      String

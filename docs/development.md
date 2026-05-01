@@ -89,14 +89,16 @@
 前端 `apps/scrm-web/.env` 与 `apps/oa-web/.env`：
 
 - `VITE_API_BASE_URL`
+- `VITE_DEV_HOST_ORIGIN`
+- `VITE_DEV_ALLOW_LAN`
 
 ## 会话治理
 
-- 访问令牌由后端 JWT 模块签发，当前固定有效期为 `12h`。
-- 刷新令牌通过 `UserSession` 持久化管理，当前固定有效期为 `30d`。
-- 登录成功后返回 `accessToken`、`refreshToken`、`sessionExpiresAt` 和当前用户资料。
-- `POST /api/auth/refresh` 使用刷新令牌续期访问令牌。
-- `POST /api/auth/logout` 只撤销当前会话；会话撤销或账号停用后，请求会在下一次受保护访问时失效。
+- 访问令牌由后端 JWT 模块签发，默认有效期为 `30m`，`JWT_ACCESS_TOKEN_TTL` 不得超过 30 分钟。
+- 刷新令牌通过 `UserSession` 持久化管理，固定有效期为 `30d`，每次刷新都会轮换 refresh token hash。
+- 登录成功后返回 `accessToken`、`sessionExpiresAt` 和当前用户资料；refresh token 只通过 `HttpOnly` cookie 下发。
+- `POST /api/auth/refresh` 不再接收请求体 refresh token，前端通过 cookie 完成续期。
+- `POST /api/auth/logout` 会撤销当前会话并清理 refresh cookie；会话撤销、账号停用或 refresh token 重放都会导致刷新失败并记录审计。
 
 ## 分页与数据范围
 
@@ -181,6 +183,8 @@ pnpm dev:full
 
 - `pnpm docker:infra` 只启动 PostgreSQL，适合本地热更新开发前的基础设施准备。
 - `pnpm dev:full` 会并行启动本地 `platform-api`、`main-web`、`oa-web` 与 `scrm-web`，适合作为主应用联调入口。
+- 默认 Vite 开发服务器只监听 `localhost`；需要局域网联调时使用 `pnpm dev:full:lan` 或对应的 `dev:*:lan` 脚本。
+- 本地登录联调请使用 `http://localhost:5175` 访问主应用，保持与默认 `VITE_API_BASE_URL=http://localhost:3000/api` 同站，确保 `HttpOnly` refresh cookie 可被浏览器保存和续期。
 - 如果只改宿主壳层，可以保留数据库容器并执行 `pnpm dev:main-web`，再按需单独启动 OA 或 SCRM 子应用。
 - 如果只改某个前端，可以保留数据库容器，仅执行 `pnpm dev:scrm-web` 或 `pnpm dev:oa-web`。
 - `pnpm docker:up` 仍保留给全量联调、验收和近部署环境验证，不建议作为每次改代码后的默认入口。
@@ -206,6 +210,15 @@ pnpm docker:infra:down
 ```bash
 pnpm docker:up
 ```
+
+Docker 联调默认地址：
+
+- 主应用：`http://localhost:8080`
+- OA 子应用：`http://localhost:8081`
+- SCRM 子应用：`http://localhost:8082`
+- API：`http://localhost:3000/api`
+
+数据库备份恢复、上传文件一致性和生产环境变量见 [`docs/operations.md`](./operations.md)。
 
 ## 第一阶段模块说明
 

@@ -6,7 +6,8 @@ import {
   Param,
   Patch,
   Post,
-  Query
+  Query,
+  Res
 } from "@nestjs/common";
 import {
   ApiBearerAuth,
@@ -15,12 +16,22 @@ import {
   ApiOperation,
   ApiTags
 } from "@nestjs/swagger";
+import type { Response } from "express";
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { Permissions } from "@/common/decorators/permissions.decorator";
 import { Public } from "@/common/decorators/public.decorator";
-import { ConnectorLoginResponseVo, IdentityConnectorVo, OpenApiCredentialVo, OpenApiCustomerVo, PaginatedOpenApiCustomersResponseVo, WebhookDeliveryVo, WebhookSubscriptionVo } from "./vo/open-integration.vo";
+import { setRefreshTokenCookie, toClientLoginResponse } from "../auth/auth-cookie.util";
+import {
+  ConnectorLoginResponseVo,
+  IdentityConnectorVo,
+  OpenApiCredentialVo,
+  OpenApiCustomerVo,
+  PaginatedOpenApiCustomersResponseVo,
+  WebhookDeliveryVo,
+  WebhookSubscriptionVo
+} from "./vo/open-integration.vo";
 import { ConnectorLoginDto } from "./dto/connector-login.dto";
 import { CreateIdentityConnectorDto } from "./dto/create-identity-connector.dto";
 import { CreateOpenApiCredentialDto } from "./dto/create-open-api-credential.dto";
@@ -213,8 +224,14 @@ export class OpenIntegrationController {
   @ApiOkResponse({
     type: ConnectorLoginResponseVo
   })
-  loginWithIdentityConnector(@Param("id") id: string, @Body() dto: ConnectorLoginDto) {
-    return this.openIntegrationService.loginWithIdentityConnector(id, dto);
+  async loginWithIdentityConnector(
+    @Param("id") id: string,
+    @Body() dto: ConnectorLoginDto,
+    @Res({ passthrough: true }) response: Response
+  ) {
+    const loginResponse = await this.openIntegrationService.loginWithIdentityConnector(id, dto);
+    setRefreshTokenCookie(response, loginResponse.refreshToken);
+    return toClientLoginResponse(loginResponse);
   }
 }
 

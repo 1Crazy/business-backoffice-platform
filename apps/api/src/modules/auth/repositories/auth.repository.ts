@@ -67,10 +67,11 @@ export class AuthRepository {
     });
   }
 
-  touchSession(sessionId: string) {
+  rotateSessionRefreshToken(sessionId: string, refreshTokenHash: string) {
     return this.prisma.userSession.update({
       where: { id: sessionId },
       data: {
+        refreshTokenHash,
         lastSeenAt: new Date()
       }
     });

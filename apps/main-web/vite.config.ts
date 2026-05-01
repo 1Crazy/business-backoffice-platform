@@ -2,6 +2,8 @@ import path from "node:path";
 import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vite";
 
+const devHost = process.env.VITE_DEV_ALLOW_LAN === "true" ? "0.0.0.0" : "localhost";
+
 export default defineConfig({
   build: {
     rollupOptions: {
@@ -48,6 +50,7 @@ export default defineConfig({
     }
   },
   server: {
+    host: devHost,
     port: 5175
   }
 });

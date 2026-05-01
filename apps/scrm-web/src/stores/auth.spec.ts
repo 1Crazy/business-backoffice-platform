@@ -22,11 +22,11 @@ describe("auth store", () => {
     getMock.mockReset();
   });
 
-  it("stores both access token and refresh token after login", async () => {
+  it("stores access token but never stores browser-readable refresh token after login", async () => {
+    window.localStorage.setItem("platform-refresh-token", "legacy-refresh");
     postMock.mockResolvedValue({
       data: {
         accessToken: "access-1",
-        refreshToken: "refresh-1",
         sessionExpiresAt: "2026-04-06T00:00:00.000Z",
         user: {
           id: "user-1",
@@ -42,9 +42,8 @@ describe("auth store", () => {
     await store.login("member", "123123123");
 
     expect(store.token).toBe("access-1");
-    expect(store.refreshToken).toBe("refresh-1");
     expect(window.localStorage.getItem("platform-access-token")).toBe("access-1");
-    expect(window.localStorage.getItem("platform-refresh-token")).toBe("refresh-1");
+    expect(window.localStorage.getItem("platform-refresh-token")).toBeNull();
   });
 
   it("clears the local session after logout", async () => {
@@ -59,6 +58,5 @@ describe("auth store", () => {
     expect(window.localStorage.getItem("platform-access-token")).toBeNull();
     expect(window.localStorage.getItem("platform-refresh-token")).toBeNull();
     expect(store.token).toBeNull();
-    expect(store.refreshToken).toBeNull();
   });
 });

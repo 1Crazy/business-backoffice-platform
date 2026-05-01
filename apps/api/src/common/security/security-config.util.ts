@@ -3,6 +3,8 @@ import { ConfigService } from "@nestjs/config";
 
 export const DEFAULT_INSECURE_JWT_SECRET = "replace-with-a-long-secret";
 const MIN_JWT_SECRET_LENGTH = 32;
+const DEFAULT_ACCESS_TOKEN_TTL = "30m";
+const MAX_ACCESS_TOKEN_TTL_SECONDS = 60 * 30;
 
 export function isLocalRuntime(configService: ConfigService): boolean {
   const nodeEnv = configService.get<string>("NODE_ENV", "development").trim().toLowerCase();
@@ -25,6 +27,42 @@ export function getRequiredJwtSecret(configService: ConfigService): string {
   }
 
   return jwtSecret;
+}
+
+export function getJwtAccessTokenTtl(configService: ConfigService): string {
+  const rawTtl = configService.get<string>("JWT_ACCESS_TOKEN_TTL")?.trim() || DEFAULT_ACCESS_TOKEN_TTL;
+  const ttlSeconds = parseTtlSeconds(rawTtl);
+
+  if (ttlSeconds <= 0) {
+    throw new Error("JWT_ACCESS_TOKEN_TTL must be greater than 0.");
+  }
+
+  if (ttlSeconds > MAX_ACCESS_TOKEN_TTL_SECONDS) {
+    throw new Error("JWT_ACCESS_TOKEN_TTL must not exceed 30 minutes.");
+  }
+
+  return rawTtl;
+}
+
+function parseTtlSeconds(value: string): number {
+  const match = value.match(/^(\d+)(s|m|h)$/);
+
+  if (!match) {
+    throw new Error("JWT_ACCESS_TOKEN_TTL must use a duration like 900s, 15m, or 1h.");
+  }
+
+  const amount = Number(match[1]);
+  const unit = match[2];
+
+  if (unit === "s") {
+    return amount;
+  }
+
+  if (unit === "m") {
+    return amount * 60;
+  }
+
+  return amount * 60 * 60;
 }
 
 export function getAllowedCorsOrigins(configService: ConfigService): string[] | true {
@@ -58,7 +96,26 @@ export function shouldEnableSwagger(configService: ConfigService): boolean {
   return isLocalRuntime(configService);
 }
 
+export function getRiskThrottleStoreMode(configService: ConfigService): "memory" | "database" {
+  const rawMode = configService.get<string>("RISK_THROTTLE_STORE")?.trim().toLowerCase();
+
+  if (rawMode === "database") {
+    return "database";
+  }
+
+  if (rawMode === "memory" || !rawMode) {
+    if (!isLocalRuntime(configService)) {
+      throw new Error("RISK_THROTTLE_STORE=database is required outside local/test environments.");
+    }
+
+    return "memory";
+  }
+
+  throw new Error("RISK_THROTTLE_STORE must be either memory or database.");
+}
+
 export function assertRuntimeSecurityConfig(configService: ConfigService): void {
   getRequiredJwtSecret(configService);
   getAllowedCorsOrigins(configService);
+  getRiskThrottleStoreMode(configService);
 }

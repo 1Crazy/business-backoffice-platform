@@ -2,6 +2,10 @@
   "maxVueLines": {
     "limit": 250,
     "allow": [
+      "apps/main-web/src/layout/AppLayout.vue",
+      "apps/main-web/src/pages/product-configuration/ProductConfigurationPage.vue",
+      "apps/main-web/src/pages/tenant-operations/TenantOperationsPage.vue",
+      "apps/main-web/src/pages/workfeed/components/WorkfeedPreferencePanel.vue",
       "apps/oa-web/src/pages/administrative-requests/AdministrativeApprovalsPage.vue",
       "apps/oa-web/src/pages/administrative-requests/AdministrativeRequestPage.vue",
       "apps/oa-web/src/pages/administrative-requests/AdministrativeRequestsMinePage.vue",
@@ -15,7 +19,9 @@
       "apps/scrm-web/src/pages/login/LoginPage.vue",
       "apps/scrm-web/src/pages/revenue-operations/RevenueOperationsPage.vue",
       "apps/scrm-web/src/pages/revenue-operations/RevenueOperationsWorkspacePage.vue",
-      "apps/scrm-web/src/pages/revenue-operations/components/RevenueOperationDetailDrawer.vue"
+      "apps/scrm-web/src/pages/revenue-operations/components/RevenueOperationDetailDrawer.vue",
+      "apps/scrm-web/src/pages/system-administration/SystemAdminPage.vue",
+      "apps/scrm-web/src/pages/system-administration/components/WebhookSubscriptionsSection.vue"
     ]
   },
   "presentationHttpImports": {

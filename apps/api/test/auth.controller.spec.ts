@@ -19,16 +19,20 @@ describe("AuthController", () => {
       password: "Admin123456!"
     };
 
-    await controller.login(payload, response);
+    const result = await controller.login(payload, response);
 
     expect(authService.login).toHaveBeenCalledWith(payload);
+    expect(result).toEqual({
+      accessToken: "token",
+      sessionExpiresAt: "2026-05-01T00:00:00.000Z"
+    });
     expect(response.cookie).toHaveBeenCalledWith(
       "platform_refresh_token",
       "refresh",
       expect.objectContaining({
         httpOnly: true,
         sameSite: "lax",
-        path: "/api/auth"
+        path: "/api"
       })
     );
   });
@@ -57,6 +61,29 @@ describe("AuthController", () => {
     expect(response.cookie).toHaveBeenCalledWith("platform_refresh_token", "cookie-refresh", expect.any(Object));
   });
 
+  it("prefers refresh token from cookie over request body", async () => {
+    const authService = {
+      refresh: jest.fn().mockResolvedValue({
+        accessToken: "token",
+        refreshToken: "cookie-refresh-next",
+        sessionExpiresAt: "2026-05-01T00:00:00.000Z"
+      })
+    } as any;
+    const controller = new AuthController(authService);
+    const request = {
+      headers: {
+        cookie: "platform_refresh_token=cookie-refresh"
+      }
+    } as any;
+    const response = {
+      cookie: jest.fn()
+    } as any;
+
+    await controller.refresh({ refreshToken: "body-refresh" }, request, response);
+
+    expect(authService.refresh).toHaveBeenCalledWith({ refreshToken: "cookie-refresh" });
+  });
+
   it("clears refresh token cookie during logout", async () => {
     const authService = {
       logout: jest.fn().mockResolvedValue({ success: true })
@@ -76,7 +103,7 @@ describe("AuthController", () => {
     expect(response.clearCookie).toHaveBeenCalledWith(
       "platform_refresh_token",
       expect.objectContaining({
-        path: "/api/auth"
+        path: "/api"
       })
     );
   });

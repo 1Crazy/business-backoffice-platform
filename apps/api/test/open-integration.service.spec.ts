@@ -357,6 +357,42 @@ describe("OpenIntegrationService", () => {
     expect(result.errorMessage).toBe("真实 Webhook 测试不允许投递到内网或本机地址。");
   });
 
+  it("rejects webhook targets outside configured domain allowlist", async () => {
+    configService.get.mockImplementation((key: string) => {
+      const values: Record<string, string> = {
+        NODE_ENV: "test",
+        ALLOW_MOCK_CONNECTOR_LOGIN: "true",
+        WEBHOOK_TEST_MODE: "REAL",
+        WEBHOOK_ALLOWED_DOMAINS: "hooks.allowed.test,*.trusted.test"
+      };
+      return values[key];
+    });
+    mockWebhookSubscription({
+      endpointUrl: "https://evil.example.test/webhook"
+    });
+    mockWebhookDeliveryCreate();
+
+    const result = await service.triggerWebhookTest("webhook-1", buildActor());
+
+    expect(result.status).toBe(WebhookDeliveryStatus.FAILED);
+    expect(result.deliveryMode).toBe("REAL");
+    expect(result.errorMessage).toBe("Webhook 目标域名不在允许名单内。");
+  });
+
+  it("allows webhook targets matching configured wildcard domain allowlist", async () => {
+    configService.get.mockImplementation((key: string) => {
+      const values: Record<string, string> = {
+        NODE_ENV: "test",
+        ALLOW_MOCK_CONNECTOR_LOGIN: "true",
+        WEBHOOK_TEST_MODE: "REAL",
+        WEBHOOK_ALLOWED_DOMAINS: "*.trusted.test"
+      };
+      return values[key];
+    });
+
+    expect(() => (service as any).assertWebhookDomainAllowed("tenant.trusted.test")).not.toThrow();
+  });
+
   it("rejects private IP addresses with the SSRF guard", () => {
     expect(() => (service as any).assertPublicIpAddress("10.0.0.1")).toThrow(BadRequestException);
     expect(() => (service as any).assertPublicIpAddress("192.168.1.10")).toThrow(BadRequestException);

@@ -1,6 +1,7 @@
 import { AttachmentStorageProvider, BatchTaskCategory, BatchTaskStatus } from "@prisma/client";
 import { Readable } from "stream";
 
+import { TenantQuotaExceededException } from "../src/common/tenant/tenant-quota.service";
 import { BatchTasksService } from "../src/modules/batch-tasks/batch-tasks.service";
 
 function buildActor(overrides: Record<string, unknown> = {}) {
@@ -107,10 +108,14 @@ describe("BatchTasksService", () => {
       openReadStream: jest.fn(),
       delete: jest.fn()
     } as any;
+    const tenantQuotaService = {
+      assertMonthlyTaskQuotaAvailable: jest.fn().mockResolvedValue(undefined)
+    } as any;
     const service = new BatchTasksService(
       batchTasksRepository,
       dataScopeService,
       auditLogsService,
+      tenantQuotaService,
       storageDriver
     );
     const actor = buildActor();
@@ -129,9 +134,10 @@ describe("BatchTasksService", () => {
       expect.objectContaining({
         category: BatchTaskCategory.EXPORT,
         resourceType: "CUSTOMER",
-        operatorId: actor.id
+      operatorId: actor.id
       })
     );
+    expect(tenantQuotaService.assertMonthlyTaskQuotaAvailable).toHaveBeenCalledWith("tenant-default");
     expect(dataScopeService.buildScopedCustomerFilter).toHaveBeenCalledWith(actor, "owner-1");
     expect(batchTasksRepository.listCustomersForExport).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -211,10 +217,14 @@ describe("BatchTasksService", () => {
       openReadStream: jest.fn(),
       delete: jest.fn()
     } as any;
+    const tenantQuotaService = {
+      assertMonthlyTaskQuotaAvailable: jest.fn().mockResolvedValue(undefined)
+    } as any;
     const service = new BatchTasksService(
       batchTasksRepository,
       dataScopeService,
       auditLogsService,
+      tenantQuotaService,
       storageDriver
     );
     const actor = buildActor();
@@ -299,10 +309,14 @@ describe("BatchTasksService", () => {
     const auditLogsService = {
       create: jest.fn().mockResolvedValue(undefined)
     } as any;
+    const tenantQuotaService = {
+      assertMonthlyTaskQuotaAvailable: jest.fn().mockResolvedValue(undefined)
+    } as any;
     const service = new BatchTasksService(
       batchTasksRepository,
       {} as any,
       auditLogsService,
+      tenantQuotaService,
       storageDriver
     );
     const actor = buildActor({
@@ -325,5 +339,50 @@ describe("BatchTasksService", () => {
       mimeType: "text/csv",
       size: 8
     });
+  });
+
+  it("rejects customer export tasks when monthlyTaskQuota is exhausted", async () => {
+    const batchTasksRepository = {
+      createTask: jest.fn()
+    } as any;
+    const auditLogsService = {
+      create: jest.fn().mockResolvedValue(undefined)
+    } as any;
+    const tenantQuotaService = {
+      assertMonthlyTaskQuotaAvailable: jest.fn().mockRejectedValue(
+        new TenantQuotaExceededException({
+          type: "monthlyTasks",
+          limit: 3,
+          used: 3,
+          requested: 1,
+          message: "租户月度任务配额不足。"
+        })
+      )
+    } as any;
+    const service = new BatchTasksService(
+      batchTasksRepository,
+      {} as any,
+      auditLogsService,
+      tenantQuotaService,
+      {
+        store: jest.fn(),
+        openReadStream: jest.fn(),
+        delete: jest.fn()
+      } as any
+    );
+
+    await expect(service.createCustomerExportTask({}, buildActor())).rejects.toThrow("租户月度任务配额不足。");
+
+    expect(batchTasksRepository.createTask).not.toHaveBeenCalled();
+    expect(auditLogsService.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionType: "ACCESS_DENIED",
+        targetType: "tenant-quota",
+        detail: expect.objectContaining({
+          quotaType: "monthlyTasks",
+          attemptedOperation: "batch-task.customer-export"
+        })
+      })
+    );
   });
 });

@@ -3,6 +3,13 @@ import vue from "@vitejs/plugin-vue";
 import { defineConfig } from "vite";
 import qiankun from "vite-plugin-qiankun";
 
+const devHost = process.env.VITE_DEV_ALLOW_LAN === "true" ? "0.0.0.0" : "localhost";
+const allowedHostOrigins = [
+  "http://localhost:5175",
+  "http://127.0.0.1:5175",
+  ...(process.env.VITE_DEV_HOST_ORIGIN ? process.env.VITE_DEV_HOST_ORIGIN.split(",").map((item) => item.trim()).filter(Boolean) : [])
+];
+
 export default defineConfig({
   build: {
     rollupOptions: {
@@ -45,10 +52,11 @@ export default defineConfig({
     }
   },
   server: {
-    cors: true,
-    headers: {
-      "Access-Control-Allow-Origin": "*"
+    cors: {
+      origin: allowedHostOrigins,
+      credentials: true
     },
+    host: devHost,
     hmr: false,
     origin: "http://localhost:5173",
     port: 5173

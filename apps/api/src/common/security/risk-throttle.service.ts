@@ -1,63 +1,92 @@
-/** 轻量风险限流：为登录、刷新令牌和开放接口凭证校验提供进程内失败窗口。 */
-import { HttpException, HttpStatus, Injectable } from "@nestjs/common";
+/** 风险限流服务：把登录、刷新和开放接口失败窗口委托给可替换 store，支持本地内存与生产共享存储。 */
+import { HttpException, HttpStatus, Inject, Injectable, Optional } from "@nestjs/common";
 
-interface RiskThrottleOptions {
+export const RISK_THROTTLE_STORE = Symbol("RISK_THROTTLE_STORE");
+
+export interface RiskThrottleOptions {
   maxAttempts: number;
   windowMs: number;
   lockMs: number;
 }
 
-interface RiskThrottleEntry {
+export interface RiskThrottleEntry {
   attempts: number;
-  firstAttemptAt: number;
-  lockedUntil?: number;
+  firstAttemptAt: Date;
+  lockedUntil?: Date | null;
+}
+
+export interface RiskThrottleStore {
+  get(key: string): Promise<RiskThrottleEntry | null>;
+  set(key: string, entry: RiskThrottleEntry): Promise<void>;
+  delete(key: string): Promise<void>;
+}
+
+@Injectable()
+export class InMemoryRiskThrottleStore implements RiskThrottleStore {
+  private readonly entries = new Map<string, RiskThrottleEntry>();
+
+  async get(key: string): Promise<RiskThrottleEntry | null> {
+    return this.entries.get(key) ?? null;
+  }
+
+  async set(key: string, entry: RiskThrottleEntry): Promise<void> {
+    this.entries.set(key, entry);
+  }
+
+  async delete(key: string): Promise<void> {
+    this.entries.delete(key);
+  }
 }
 
 @Injectable()
 export class RiskThrottleService {
-  private readonly entries = new Map<string, RiskThrottleEntry>();
+  constructor(
+    @Optional()
+    @Inject(RISK_THROTTLE_STORE)
+    private readonly store: RiskThrottleStore = new InMemoryRiskThrottleStore()
+  ) {}
 
-  assertAllowed(key: string, options: RiskThrottleOptions): void {
+  async assertAllowed(key: string, options: RiskThrottleOptions): Promise<void> {
     const normalizedKey = this.normalizeKey(key);
-    const entry = this.entries.get(normalizedKey);
+    const entry = await this.store.get(normalizedKey);
     const now = Date.now();
 
     if (!entry) {
       return;
     }
 
-    if (entry.lockedUntil && entry.lockedUntil > now) {
+    if (entry.lockedUntil && entry.lockedUntil.getTime() > now) {
       throw new HttpException("Too many failed attempts. Please try again later.", HttpStatus.TOO_MANY_REQUESTS);
     }
 
-    if (entry.lockedUntil || now - entry.firstAttemptAt > options.windowMs) {
-      this.entries.delete(normalizedKey);
+    if (entry.lockedUntil || now - entry.firstAttemptAt.getTime() > options.windowMs) {
+      await this.store.delete(normalizedKey);
     }
   }
 
-  recordFailure(key: string, options: RiskThrottleOptions): void {
+  async recordFailure(key: string, options: RiskThrottleOptions): Promise<void> {
     const normalizedKey = this.normalizeKey(key);
     const now = Date.now();
-    const current = this.entries.get(normalizedKey);
+    const current = await this.store.get(normalizedKey);
     const entry =
-      current && now - current.firstAttemptAt <= options.windowMs
+      current && now - current.firstAttemptAt.getTime() <= options.windowMs
         ? current
         : {
             attempts: 0,
-            firstAttemptAt: now
+            firstAttemptAt: new Date(now)
           };
 
     entry.attempts += 1;
 
     if (entry.attempts >= options.maxAttempts) {
-      entry.lockedUntil = now + options.lockMs;
+      entry.lockedUntil = new Date(now + options.lockMs);
     }
 
-    this.entries.set(normalizedKey, entry);
+    await this.store.set(normalizedKey, entry);
   }
 
-  recordSuccess(key: string): void {
-    this.entries.delete(this.normalizeKey(key));
+  async recordSuccess(key: string): Promise<void> {
+    await this.store.delete(this.normalizeKey(key));
   }
 
   private normalizeKey(key: string): string {

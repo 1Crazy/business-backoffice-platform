@@ -12,6 +12,7 @@ import { AttachmentBusinessType, AuditActionType } from "@prisma/client";
 import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { DataScopeService } from "@/common/data-scope/data-scope.service";
 import { mapAttachment } from "@/common/mappers/entity.mapper";
+import { TenantQuotaExceededException, TenantQuotaService } from "@/common/tenant/tenant-quota.service";
 import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { SystemGovernanceService } from "../system-governance/system-governance.service";
@@ -40,6 +41,7 @@ export class UploadsService {
     private readonly auditLogsService: AuditLogsService,
     private readonly dataScopeService: DataScopeService,
     private readonly systemGovernanceService: SystemGovernanceService,
+    private readonly tenantQuotaService: TenantQuotaService,
     @Inject(ATTACHMENT_STORAGE_DRIVER)
     private readonly storageDriver: AttachmentStorageDriver
   ) {}
@@ -59,6 +61,8 @@ export class UploadsService {
   async create(input: UploadInput, actor: AuthUser) {
     this.validateFile(input.file);
     await this.assertBusinessAccessible(input.businessType, input.businessId, actor);
+    const tenantId = requireTenantId(actor);
+    await this.assertStorageQuotaAvailable(tenantId, input.file.size, actor, input.businessType, input.businessId);
     const normalizedFile = {
       ...input.file,
       originalname: this.normalizeOriginalName(input.file.originalname)
@@ -67,7 +71,7 @@ export class UploadsService {
 
     try {
       const attachment = await this.uploadsRepository.createAttachment({
-        tenantId: requireTenantId(actor),
+        tenantId,
         businessType: input.businessType,
         businessId: input.businessId,
         fileName: storedFile.fileName,
@@ -91,6 +95,40 @@ export class UploadsService {
     } catch (error) {
       // 先落存储、再写数据库时，任何仓储失败都必须回滚物理文件，避免产生孤儿附件。
       await this.storageDriver.delete(storedFile.storageKey);
+      throw error;
+    }
+  }
+
+  private async assertStorageQuotaAvailable(
+    tenantId: string,
+    incomingBytes: number,
+    actor: AuthUser,
+    businessType: AttachmentBusinessType,
+    businessId: string
+  ): Promise<void> {
+    try {
+      await this.tenantQuotaService.assertStorageQuotaAvailable(tenantId, incomingBytes);
+    } catch (error) {
+      if (error instanceof TenantQuotaExceededException) {
+        await this.auditLogsService.create({
+          actorId: actor.id,
+          actorName: actor.displayName,
+          actionType: AuditActionType.ACCESS_DENIED,
+          targetType: "tenant-quota",
+          targetId: tenantId,
+          detail: {
+            attemptedOperation: "attachment.upload",
+            quotaType: error.quota.type,
+            limit: error.quota.limit,
+            used: error.quota.used,
+            requested: error.quota.requested,
+            businessType,
+            businessId,
+            reason: error.quota.message
+          }
+        });
+      }
+
       throw error;
     }
   }

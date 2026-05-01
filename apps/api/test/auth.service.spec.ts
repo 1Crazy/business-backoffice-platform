@@ -122,7 +122,7 @@ describe("AuthService", () => {
         revokedAt: null,
         user: buildAuthUserRecord()
       }),
-      touchSession: jest.fn().mockResolvedValue(undefined)
+      rotateSessionRefreshToken: jest.fn().mockResolvedValue(undefined)
     } as any;
     const jwtService = {
       signAsync: jest.fn().mockResolvedValue("token-456")
@@ -140,9 +140,45 @@ describe("AuthService", () => {
     });
 
     expect(authRepository.findSessionByRefreshTokenHash).toHaveBeenCalledWith(expectedHash);
-    expect(authRepository.touchSession).toHaveBeenCalledWith("session-1");
+    expect(authRepository.rotateSessionRefreshToken).toHaveBeenCalledWith("session-1", expect.any(String));
     expect(result.accessToken).toBe("token-456");
+    expect(result.refreshToken).toBeTruthy();
+    expect(result.refreshToken).not.toBe(refreshToken);
     expect(result.user.roleCodes).toEqual(["super-admin"]);
+  });
+
+  it("rejects replayed refresh tokens after rotation", async () => {
+    const refreshToken = "a".repeat(96);
+    const rotatedTokenHash = require("crypto").createHash("sha256").update(refreshToken).digest("hex");
+    const authRepository = {
+      findSessionByRefreshTokenHash: jest
+        .fn()
+        .mockResolvedValueOnce({
+          id: "session-1",
+          tenantId: "tenant-default",
+          userId: "user-1",
+          expiresAt: new Date(Date.now() + 60_000),
+          revokedAt: null,
+          user: buildAuthUserRecord()
+        })
+        .mockResolvedValueOnce(null),
+      rotateSessionRefreshToken: jest.fn().mockResolvedValue(undefined)
+    } as any;
+    const service = new AuthService(
+      authRepository,
+      {
+        signAsync: jest.fn().mockResolvedValue("token-456")
+      } as any,
+      {
+        create: jest.fn().mockResolvedValue(undefined)
+      } as any
+    );
+
+    await service.refresh({ refreshToken });
+    await expect(service.refresh({ refreshToken })).rejects.toBeInstanceOf(UnauthorizedException);
+
+    expect(authRepository.findSessionByRefreshTokenHash).toHaveBeenCalledWith(rotatedTokenHash);
+    expect(authRepository.rotateSessionRefreshToken).toHaveBeenCalledTimes(1);
   });
 
   it("rejects revoked sessions during payload validation", async () => {

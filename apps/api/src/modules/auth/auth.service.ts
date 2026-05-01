@@ -45,13 +45,13 @@ export class AuthService {
 
   async login(dto: LoginDto) {
     const loginThrottleKey = this.buildThrottleKey("auth:login", dto.username);
-    this.riskThrottleService?.assertAllowed(loginThrottleKey, LOGIN_THROTTLE);
+    await this.riskThrottleService?.assertAllowed(loginThrottleKey, LOGIN_THROTTLE);
     const user = await this.authRepository.findUserByUsername(dto.username);
     const isTenantUnavailable = !user?.tenant || user.tenant.status !== RecordStatus.ACTIVE || Boolean(user.tenant.archivedAt);
     const isUserUnavailable = !user || user.status !== UserStatus.ACTIVE;
 
     if (!user || isUserUnavailable || isTenantUnavailable) {
-      this.riskThrottleService?.recordFailure(loginThrottleKey, LOGIN_THROTTLE);
+      await this.riskThrottleService?.recordFailure(loginThrottleKey, LOGIN_THROTTLE);
       await this.auditLogsService.create({
         actorId: user?.id,
         actorName: user?.displayName ?? dto.username,
@@ -69,7 +69,7 @@ export class AuthService {
     const isValidPassword = await bcrypt.compare(dto.password, user.passwordHash);
 
     if (!isValidPassword) {
-      this.riskThrottleService?.recordFailure(loginThrottleKey, LOGIN_THROTTLE);
+      await this.riskThrottleService?.recordFailure(loginThrottleKey, LOGIN_THROTTLE);
       await this.auditLogsService.create({
         actorId: user.id,
         actorName: user.displayName,
@@ -91,7 +91,7 @@ export class AuthService {
         loginType: "password"
       }
     });
-    this.riskThrottleService?.recordSuccess(loginThrottleKey);
+    await this.riskThrottleService?.recordSuccess(loginThrottleKey);
 
     return result;
   }
@@ -111,7 +111,7 @@ export class AuthService {
 
     const refreshTokenHash = this.hashRefreshToken(dto.refreshToken);
     const refreshThrottleKey = this.buildThrottleKey("auth:refresh", refreshTokenHash);
-    this.riskThrottleService?.assertAllowed(refreshThrottleKey, REFRESH_THROTTLE);
+    await this.riskThrottleService?.assertAllowed(refreshThrottleKey, REFRESH_THROTTLE);
     const session = await this.authRepository.findSessionByRefreshTokenHash(refreshTokenHash);
 
     if (
@@ -123,7 +123,15 @@ export class AuthService {
       Boolean(session.user.tenant.archivedAt) ||
       session.user.tenantId !== session.tenantId
     ) {
-      this.riskThrottleService?.recordFailure(refreshThrottleKey, REFRESH_THROTTLE);
+      await this.riskThrottleService?.recordFailure(refreshThrottleKey, REFRESH_THROTTLE);
+      await this.auditLogsService.create({
+        actionType: AuditActionType.SIGN_IN_FAILED,
+        targetType: "auth-session",
+        targetId: session?.id,
+        detail: {
+          reason: !session ? "invalid_refresh_token" : "unavailable_session"
+        }
+      });
       throw new UnauthorizedException("Session is invalid.");
     }
 
@@ -131,13 +139,14 @@ export class AuthService {
       ...mapAuthUser(session.user),
       sessionId: session.id
     };
+    const nextRefreshToken = this.generateRefreshToken();
 
-    await this.authRepository.touchSession(session.id);
-    this.riskThrottleService?.recordSuccess(refreshThrottleKey);
+    await this.authRepository.rotateSessionRefreshToken(session.id, this.hashRefreshToken(nextRefreshToken));
+    await this.riskThrottleService?.recordSuccess(refreshThrottleKey);
 
     return {
       accessToken: await this.signAccessToken(authUser),
-      refreshToken: dto.refreshToken,
+      refreshToken: nextRefreshToken,
       sessionExpiresAt: session.expiresAt.toISOString(),
       user: mapAuthUser(session.user)
     };
@@ -212,7 +221,7 @@ export class AuthService {
   }
 
   private async createUserSession(userId: string, tenantId: string) {
-    const refreshToken = randomBytes(REFRESH_TOKEN_BYTES).toString("hex");
+    const refreshToken = this.generateRefreshToken();
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_MS);
 
     const session = await this.authRepository.createUserSession(
@@ -231,6 +240,10 @@ export class AuthService {
 
   private hashRefreshToken(refreshToken: string): string {
     return createHash("sha256").update(refreshToken).digest("hex");
+  }
+
+  private generateRefreshToken(): string {
+    return randomBytes(REFRESH_TOKEN_BYTES).toString("hex");
   }
 
   private buildThrottleKey(scope: string, value: string): string {

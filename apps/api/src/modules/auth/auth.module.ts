@@ -5,8 +5,7 @@ import { JwtModule } from "@nestjs/jwt";
 import { PassportModule } from "@nestjs/passport";
 
 import { JwtStrategy } from "@/common/auth/jwt.strategy";
-import { getRequiredJwtSecret } from "@/common/security/security-config.util";
-import { RiskThrottleService } from "@/common/security/risk-throttle.service";
+import { getJwtAccessTokenTtl, getRequiredJwtSecret } from "@/common/security/security-config.util";
 import { AuthController } from "./auth.controller";
 import { AuthRepository } from "./repositories/auth.repository";
 import { AuthService } from "./auth.service";
@@ -20,13 +19,13 @@ import { AuthService } from "./auth.service";
       useFactory: (configService: ConfigService) => ({
         secret: getRequiredJwtSecret(configService),
         signOptions: {
-          expiresIn: "12h"
+          expiresIn: getJwtAccessTokenTtl(configService)
         }
       })
     })
   ],
   controllers: [AuthController],
-  providers: [AuthService, AuthRepository, JwtStrategy, RiskThrottleService],
+  providers: [AuthService, AuthRepository, JwtStrategy],
   exports: [AuthService]
 })
 export class AuthModule {}

@@ -356,7 +356,7 @@ export class OpenIntegrationService {
 
   async loginWithIdentityConnector(connectorId: string, dto: ConnectorLoginDto) {
     const throttleKey = this.buildThrottleKey("connector-login", connectorId, dto.email ?? dto.username ?? dto.subject ?? "anonymous");
-    this.riskThrottleService?.assertAllowed(throttleKey, CONNECTOR_LOGIN_THROTTLE);
+    await this.riskThrottleService?.assertAllowed(throttleKey, CONNECTOR_LOGIN_THROTTLE);
     const connector = await this.openIntegrationRepository.findIdentityConnectorById(connectorId);
     const tenantId = connector.tenantId;
 
@@ -371,7 +371,7 @@ export class OpenIntegrationService {
           reason: "connector_disabled"
         }
       });
-      this.riskThrottleService?.recordFailure(throttleKey, CONNECTOR_LOGIN_THROTTLE);
+      await this.riskThrottleService?.recordFailure(throttleKey, CONNECTOR_LOGIN_THROTTLE);
       throw new UnauthorizedException("Identity connector is disabled.");
     }
 
@@ -379,7 +379,7 @@ export class OpenIntegrationService {
       this.assertConnectorLoginProof(connector, dto);
     } catch (error) {
       await this.handleConnectorLoginFailure(connector, dto, "invalid_login_proof");
-      this.riskThrottleService?.recordFailure(throttleKey, CONNECTOR_LOGIN_THROTTLE);
+      await this.riskThrottleService?.recordFailure(throttleKey, CONNECTOR_LOGIN_THROTTLE);
       throw error;
     }
 
@@ -389,7 +389,7 @@ export class OpenIntegrationService {
       this.assertEmailDomainAllowed(connector, normalizedEmail);
     } catch (error) {
       await this.handleConnectorLoginFailure(connector, dto, "domain_not_allowed");
-      this.riskThrottleService?.recordFailure(throttleKey, CONNECTOR_LOGIN_THROTTLE);
+      await this.riskThrottleService?.recordFailure(throttleKey, CONNECTOR_LOGIN_THROTTLE);
       throw error;
     }
 
@@ -410,7 +410,7 @@ export class OpenIntegrationService {
 
     if (!user) {
       await this.handleConnectorLoginFailure(connector, dto, "user_not_found");
-      this.riskThrottleService?.recordFailure(throttleKey, CONNECTOR_LOGIN_THROTTLE);
+      await this.riskThrottleService?.recordFailure(throttleKey, CONNECTOR_LOGIN_THROTTLE);
       throw new UnauthorizedException("The identity cannot be mapped to a tenant user.");
     }
 
@@ -441,7 +441,7 @@ export class OpenIntegrationService {
         username: this.normalizeText(dto.username)
       }
     });
-    this.riskThrottleService?.recordSuccess(throttleKey);
+    await this.riskThrottleService?.recordSuccess(throttleKey);
 
     return result;
   }
@@ -520,12 +520,12 @@ export class OpenIntegrationService {
 
     const normalizedAccessKey = accessKey.trim();
     const throttleKey = this.buildThrottleKey("open-api", normalizedAccessKey);
-    this.riskThrottleService?.assertAllowed(throttleKey, OPEN_API_THROTTLE);
+    await this.riskThrottleService?.assertAllowed(throttleKey, OPEN_API_THROTTLE);
     const credential = await this.openIntegrationRepository.findOpenApiCredentialByAccessKey(normalizedAccessKey);
     const secretHash = this.hashValue(secret.trim());
 
     if (!credential || !this.isHashEqual(credential.secretHash, secretHash)) {
-      this.riskThrottleService?.recordFailure(throttleKey, OPEN_API_THROTTLE);
+      await this.riskThrottleService?.recordFailure(throttleKey, OPEN_API_THROTTLE);
       await this.auditLogsService.create({
         actorName: accessKey,
         actionType: AuditActionType.ACCESS_DENIED,
@@ -543,7 +543,7 @@ export class OpenIntegrationService {
       credential.revokedAt ||
       (credential.expiresAt && credential.expiresAt <= new Date())
     ) {
-      this.riskThrottleService?.recordFailure(throttleKey, OPEN_API_THROTTLE);
+      await this.riskThrottleService?.recordFailure(throttleKey, OPEN_API_THROTTLE);
       await this.auditLogsService.create({
         tenantId: credential.tenantId,
         actorName: credential.name,
@@ -577,7 +577,7 @@ export class OpenIntegrationService {
       throw new ForbiddenException("Open API credential scope is insufficient.");
     }
 
-    this.riskThrottleService?.recordSuccess(throttleKey);
+    await this.riskThrottleService?.recordSuccess(throttleKey);
     await this.openIntegrationRepository.updateOpenApiCredential(credential.id, credential.tenantId, {
       lastUsedAt: new Date()
     });
@@ -956,6 +956,8 @@ export class OpenIntegrationService {
       throw new BadRequestException("真实 Webhook 测试不允许投递到 localhost。");
     }
 
+    this.assertWebhookDomainAllowed(endpoint.hostname);
+
     const records = await lookup(endpoint.hostname, {
       all: true,
       verbatim: true
@@ -970,6 +972,33 @@ export class OpenIntegrationService {
     }
 
     return endpoint;
+  }
+
+  private assertWebhookDomainAllowed(hostname: string): void {
+    const allowedDomains = this.configService
+      ?.get<string>("WEBHOOK_ALLOWED_DOMAINS")
+      ?.split(",")
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean);
+
+    if (!allowedDomains?.length) {
+      return;
+    }
+
+    const normalizedHostname = hostname.toLowerCase();
+    const isAllowed = allowedDomains.some((domain) => {
+      const normalizedDomain = domain.startsWith("*.") ? domain.slice(2) : domain;
+
+      if (normalizedHostname === normalizedDomain) {
+        return true;
+      }
+
+      return domain.startsWith("*.") && normalizedHostname.endsWith(`.${normalizedDomain}`);
+    });
+
+    if (!isAllowed) {
+      throw new BadRequestException("Webhook 目标域名不在允许名单内。");
+    }
   }
 
   private assertPublicIpAddress(address: string): void {

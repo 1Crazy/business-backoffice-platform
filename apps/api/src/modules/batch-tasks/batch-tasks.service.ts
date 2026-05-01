@@ -17,6 +17,7 @@ import {
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { DataScopeService } from "@/common/data-scope/data-scope.service";
+import { TenantQuotaExceededException, TenantQuotaService } from "@/common/tenant/tenant-quota.service";
 import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { ATTACHMENT_STORAGE_DRIVER, type AttachmentStorageDriver } from "../uploads/storage/attachment-storage.driver";
@@ -43,6 +44,7 @@ export class BatchTasksService {
     private readonly batchTasksRepository: BatchTasksRepository,
     private readonly dataScopeService: DataScopeService,
     private readonly auditLogsService: AuditLogsService,
+    private readonly tenantQuotaService: TenantQuotaService,
     @Inject(ATTACHMENT_STORAGE_DRIVER)
     private readonly storageDriver: AttachmentStorageDriver
   ) {}
@@ -70,8 +72,10 @@ export class BatchTasksService {
 
   async createCustomerExportTask(dto: CreateCustomerExportTaskDto, actor: AuthUser) {
     this.assertPermission(actor, "customer:read", "You do not have permission to export customers.");
+    const tenantId = requireTenantId(actor);
+    await this.assertMonthlyTaskQuotaAvailable(tenantId, actor, "batch-task.customer-export");
     const task = await this.batchTasksRepository.createTask({
-      tenantId: requireTenantId(actor),
+      tenantId,
       category: BatchTaskCategory.EXPORT,
       resourceType: "CUSTOMER",
       label: "客户导出",
@@ -113,8 +117,10 @@ export class BatchTasksService {
       throw new BadRequestException("Only CSV import files are supported.");
     }
 
+    const tenantId = requireTenantId(actor);
+    await this.assertMonthlyTaskQuotaAvailable(tenantId, actor, "batch-task.customer-import");
     const task = await this.batchTasksRepository.createTask({
-      tenantId: requireTenantId(actor),
+      tenantId,
       category: BatchTaskCategory.IMPORT,
       resourceType: "CUSTOMER",
       label: "客户导入",
@@ -483,5 +489,35 @@ export class BatchTasksService {
 
   private toJsonValue(value: Record<string, unknown>) {
     return value as Prisma.InputJsonValue;
+  }
+
+  private async assertMonthlyTaskQuotaAvailable(
+    tenantId: string,
+    actor: AuthUser,
+    attemptedOperation: string
+  ): Promise<void> {
+    try {
+      await this.tenantQuotaService.assertMonthlyTaskQuotaAvailable(tenantId);
+    } catch (error) {
+      if (error instanceof TenantQuotaExceededException) {
+        await this.auditLogsService.create({
+          actorId: actor.id,
+          actorName: actor.displayName,
+          actionType: AuditActionType.ACCESS_DENIED,
+          targetType: "tenant-quota",
+          targetId: tenantId,
+          detail: {
+            attemptedOperation,
+            quotaType: error.quota.type,
+            limit: error.quota.limit,
+            used: error.quota.used,
+            requested: error.quota.requested,
+            reason: error.quota.message
+          }
+        });
+      }
+
+      throw error;
+    }
   }
 }

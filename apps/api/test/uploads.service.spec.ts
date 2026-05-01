@@ -1,12 +1,16 @@
 import { AttachmentBusinessType } from "@prisma/client";
 import { Readable } from "stream";
 
+import { TenantQuotaExceededException } from "../src/common/tenant/tenant-quota.service";
 import { MAX_ATTACHMENT_SIZE_BYTES } from "../src/modules/uploads/uploads.constants";
 import { UploadsService } from "../src/modules/uploads/uploads.service";
 
 describe("UploadsService", () => {
   const governanceService = {
     assertStoragePreviewAllowed: jest.fn().mockResolvedValue(undefined)
+  } as any;
+  const tenantQuotaService = {
+    assertStorageQuotaAvailable: jest.fn().mockResolvedValue(undefined)
   } as any;
 
   beforeEach(() => {
@@ -46,6 +50,7 @@ describe("UploadsService", () => {
       } as any,
       dataScopeService,
       governanceService,
+      tenantQuotaService,
       storageDriver
     );
     const actor = {
@@ -100,6 +105,7 @@ describe("UploadsService", () => {
         assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
       } as any,
       governanceService,
+      tenantQuotaService,
       storageDriver
     );
 
@@ -145,6 +151,7 @@ describe("UploadsService", () => {
         assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
       } as any,
       governanceService,
+      tenantQuotaService,
       storageDriver
     );
 
@@ -209,6 +216,7 @@ describe("UploadsService", () => {
       auditLogsService,
       dataScopeService,
       governanceService,
+      tenantQuotaService,
       storageDriver
     );
     const actor = {
@@ -267,6 +275,7 @@ describe("UploadsService", () => {
         assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
       } as any,
       governanceService,
+      tenantQuotaService,
       storageDriver
     );
 
@@ -315,7 +324,14 @@ describe("UploadsService", () => {
       }),
       delete: jest.fn()
     } as any;
-    const service = new UploadsService(uploadsRepository, auditLogsService, dataScopeService, governanceService, storageDriver);
+    const service = new UploadsService(
+      uploadsRepository,
+      auditLogsService,
+      dataScopeService,
+      governanceService,
+      tenantQuotaService,
+      storageDriver
+    );
 
     const result = await service.preview("attachment-2", {
       id: "user-1",
@@ -369,7 +385,14 @@ describe("UploadsService", () => {
       openReadStream: jest.fn(),
       delete: jest.fn()
     } as any;
-    const service = new UploadsService(uploadsRepository, auditLogsService, dataScopeService, governanceService, storageDriver);
+    const service = new UploadsService(
+      uploadsRepository,
+      auditLogsService,
+      dataScopeService,
+      governanceService,
+      tenantQuotaService,
+      storageDriver
+    );
 
     await expect(
       service.preview("attachment-3", {
@@ -421,6 +444,7 @@ describe("UploadsService", () => {
       auditLogsService,
       dataScopeService,
       previewBlockedGovernanceService,
+      tenantQuotaService,
       storageDriver
     );
 
@@ -455,6 +479,7 @@ describe("UploadsService", () => {
         assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
       } as any,
       governanceService,
+      tenantQuotaService,
       storageDriver
     );
 
@@ -515,6 +540,7 @@ describe("UploadsService", () => {
       } as any,
       dataScopeService,
       governanceService,
+      tenantQuotaService,
       storageDriver
     );
 
@@ -544,6 +570,83 @@ describe("UploadsService", () => {
     expect(uploadsRepository.createAttachment).toHaveBeenCalledWith(
       expect.objectContaining({
         originalName: ".._contract.pdf"
+      })
+    );
+  });
+
+  it("rejects uploads that would exceed storageQuotaMb before storing files or metadata", async () => {
+    const uploadsRepository = {
+      findCustomerOwnerById: jest.fn().mockResolvedValue({
+        ownerId: "owner-1"
+      }),
+      createAttachment: jest.fn()
+    } as any;
+    const dataScopeService = {
+      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+    } as any;
+    const auditLogsService = {
+      create: jest.fn().mockResolvedValue(undefined)
+    } as any;
+    const quotaService = {
+      assertStorageQuotaAvailable: jest.fn().mockRejectedValue(
+        new TenantQuotaExceededException({
+          type: "storage",
+          limit: 1024,
+          used: 900,
+          requested: 200,
+          message: "租户存储配额不足。"
+        })
+      )
+    } as any;
+    const storageDriver = {
+      store: jest.fn(),
+      openReadStream: jest.fn(),
+      delete: jest.fn()
+    } as any;
+    const service = new UploadsService(
+      uploadsRepository,
+      auditLogsService,
+      dataScopeService,
+      governanceService,
+      quotaService,
+      storageDriver
+    );
+
+    await expect(
+      service.create(
+        {
+          businessType: AttachmentBusinessType.CUSTOMER,
+          businessId: "customer-1",
+          file: {
+            originalname: "contract.pdf",
+            mimetype: "application/pdf",
+            size: 200,
+            buffer: Buffer.from("%PDF-1.7")
+          } as Express.Multer.File
+        },
+        {
+          id: "user-1",
+          tenantId: "tenant-default",
+          tenantCode: "default",
+          username: "sales",
+          displayName: "销售",
+          roleCodes: ["sales-member"],
+          permissions: ["upload:write", "customer:read"]
+        }
+      )
+    ).rejects.toThrow("租户存储配额不足。");
+
+    expect(quotaService.assertStorageQuotaAvailable).toHaveBeenCalledWith("tenant-default", 200);
+    expect(storageDriver.store).not.toHaveBeenCalled();
+    expect(uploadsRepository.createAttachment).not.toHaveBeenCalled();
+    expect(auditLogsService.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionType: "ACCESS_DENIED",
+        targetType: "tenant-quota",
+        detail: expect.objectContaining({
+          quotaType: "storage",
+          attemptedOperation: "attachment.upload"
+        })
       })
     );
   });

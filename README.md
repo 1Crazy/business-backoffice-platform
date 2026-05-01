@@ -93,11 +93,12 @@ pnpm install
 - [`apps/oa-web/.env.example`](./apps/oa-web/.env.example)
 - [`apps/scrm-web/.env.example`](./apps/scrm-web/.env.example)
 - [`docs/development.md`](./docs/development.md)
+- [`docs/operations.md`](./docs/operations.md)
 
 核心变量说明：
 
-- 根目录 `.env`：`POSTGRES_DB`、`POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_PORT`、`JWT_SECRET`
-- `apps/api/.env`：`PORT`、`JWT_SECRET`、`DATABASE_URL`、`CORS_ALLOWED_ORIGINS`、`SWAGGER_ENABLED`、`ALLOW_MOCK_CONNECTOR_LOGIN`、`WEBHOOK_TEST_MODE`
+- 根目录 `.env`：`POSTGRES_DB`、`POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_PORT`、`JWT_SECRET`、`JWT_ACCESS_TOKEN_TTL`、`CORS_ALLOWED_ORIGINS`、`RISK_THROTTLE_STORE`
+- `apps/api/.env`：`PORT`、`JWT_SECRET`、`JWT_ACCESS_TOKEN_TTL`、`DATABASE_URL`、`CORS_ALLOWED_ORIGINS`、`RISK_THROTTLE_STORE`、`SWAGGER_ENABLED`、`ALLOW_MOCK_CONNECTOR_LOGIN`、`WEBHOOK_TEST_MODE`、`WEBHOOK_ALLOWED_DOMAINS`、`ATTACHMENT_STORAGE_DRIVER`
 - `apps/main-web/.env`：`VITE_API_BASE_URL`、`VITE_OA_ENTRY`、`VITE_SCRM_ENTRY`
 - `apps/oa-web/.env`：`VITE_API_BASE_URL`
 - `apps/scrm-web/.env`：`VITE_API_BASE_URL`
@@ -105,11 +106,14 @@ pnpm install
 安全配置要求：
 
 - `JWT_SECRET` 必须替换为至少 32 位随机字符串；后端启动时会拒绝空值、模板默认值或弱密钥。
+- `JWT_ACCESS_TOKEN_TTL` 默认 `30m`，启动期会拒绝超过 30 分钟的配置。
 - 非本地/测试环境必须显式配置 `CORS_ALLOWED_ORIGINS`，多个来源用英文逗号分隔；本地环境未配置时才允许开发态宽松 CORS。
+- 非本地/测试环境必须使用 `RISK_THROTTLE_STORE=database`，避免多实例下使用进程内限流。
 - `SWAGGER_ENABLED` 未配置时只在本地/测试环境默认开启；生产环境需要显式配置才会暴露 `/docs`。
 - `ALLOW_MOCK_CONNECTOR_LOGIN` 仅用于本地或测试环境的身份连接器联调，生产环境即使配置也不会允许 mock 登录。
 - `WEBHOOK_TEST_MODE` 默认使用 `REAL` 真实 HTTP 投递测试；如需旧的字符串模拟联调，可在本地或测试环境显式设为 `SIMULATION`，页面会标记为“模拟测试”。
-- 当前 refresh token 仍沿用主应用与子应用共享的浏览器存储；安全加固的过渡策略是先收紧刷新入口限流与审计，再迁移到 `HttpOnly; Secure; SameSite` cookie 并验证 qiankun 联调兼容。
+- `WEBHOOK_ALLOWED_DOMAINS` 用于真实 Webhook 目标域名 allowlist，支持精确域名和 `*.example.com` 通配子域。
+- refresh token 只通过 `HttpOnly` cookie 下发和刷新，前端只保存 access token，并会清理旧的 `platform-refresh-token` localStorage key。
 
 默认模板口径：
 
@@ -172,6 +176,7 @@ openspec validate <change-name>
 
 - `pnpm dev:full` 会并行启动 `platform-api`、`main-web`、`oa-web` 和 `scrm-web`
 - 主应用通过 `qiankun` 从 OA 与 SCRM 开发服务加载业务内容
+- 本地浏览器联调请使用 `localhost` 地址，不要混用 `127.0.0.1` 与 `localhost`，避免 `HttpOnly` refresh cookie 因站点不一致而无法保存。
 - 日常开发优先使用本地热更新链路，而不是每次都重建容器镜像
 
 ## Docker 联调
@@ -180,6 +185,8 @@ openspec validate <change-name>
 
 - `postgres`
 - `api`
+- `main-web`
+- `oa-web`
 - `scrm-web`
 
 执行命令：
@@ -202,15 +209,17 @@ pnpm docker:logs
 
 当前 Docker 默认地址：
 
-- Docker 前端：`http://localhost:8080`
+- Docker 主应用：`http://localhost:8080`
+- Docker OA 子应用：`http://localhost:8081`
+- Docker SCRM 子应用：`http://localhost:8082`
 - Docker API：`http://localhost:3000/api`
 - Docker Swagger：`http://localhost:3000/docs`
 - Docker 健康检查：`http://localhost:3000/api/health`
 
 说明：
 
-- 现有 Docker 编排主要用于 PostgreSQL、API 与 `scrm-web` 的容器化联调
-- `main-web` 与 `oa-web` 当前仍以本地开发服务联调为主
+- Docker 编排用于近生产联调，主应用通过 qiankun 加载 `oa-web` 和 `scrm-web` 静态容器
+- 数据库备份恢复、上传文件一致性和生产变量说明见 [`docs/operations.md`](./docs/operations.md)
 
 ## Prisma 与种子数据
 

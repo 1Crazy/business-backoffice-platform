@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { mapUser } from "@/common/mappers/access-control.mapper";
+import { TenantQuotaExceededException, TenantQuotaService } from "@/common/tenant/tenant-quota.service";
 import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { UsersRepository } from "./repositories/users.repository";
@@ -15,7 +16,8 @@ import { UpdateUserDto } from "./dto/update-user.dto";
 export class UsersService {
   constructor(
     private readonly usersRepository: UsersRepository,
-    private readonly auditLogsService: AuditLogsService
+    private readonly auditLogsService: AuditLogsService,
+    private readonly tenantQuotaService: TenantQuotaService
   ) {}
 
   async list(actor: AuthUser) {
@@ -27,6 +29,7 @@ export class UsersService {
   async create(dto: CreateUserDto, actor: AuthUser) {
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const tenantId = requireTenantId(actor);
+    await this.assertUserQuotaAvailable(tenantId, actor, "user.create");
     const user = await this.usersRepository.createUser({
       tenantId,
       username: dto.username,
@@ -72,7 +75,13 @@ export class UsersService {
   }
 
   async toggle(id: string, status: UserStatus, actor: AuthUser) {
-    const user = await this.usersRepository.updateStatus(id, requireTenantId(actor), status);
+    const tenantId = requireTenantId(actor);
+
+    if (status === UserStatus.ACTIVE) {
+      await this.assertUserQuotaAvailable(tenantId, actor, "user.enable", id);
+    }
+
+    const user = await this.usersRepository.updateStatus(id, tenantId, status);
 
     await this.auditLogsService.create({
       actorId: actor.id,
@@ -83,5 +92,45 @@ export class UsersService {
     });
 
     return mapUser(user);
+  }
+
+  private async assertUserQuotaAvailable(
+    tenantId: string,
+    actor: AuthUser,
+    attemptedOperation: string,
+    targetId?: string
+  ): Promise<void> {
+    try {
+      await this.tenantQuotaService.assertUserQuotaAvailable(tenantId);
+    } catch (error) {
+      if (error instanceof TenantQuotaExceededException) {
+        await this.auditQuotaRejection(actor, attemptedOperation, error, targetId);
+      }
+
+      throw error;
+    }
+  }
+
+  private auditQuotaRejection(
+    actor: AuthUser,
+    attemptedOperation: string,
+    error: TenantQuotaExceededException,
+    targetId?: string
+  ) {
+    return this.auditLogsService.create({
+      actorId: actor.id,
+      actorName: actor.displayName,
+      actionType: AuditActionType.ACCESS_DENIED,
+      targetType: "tenant-quota",
+      targetId: targetId ?? requireTenantId(actor),
+      detail: {
+        attemptedOperation,
+        quotaType: error.quota.type,
+        limit: error.quota.limit,
+        used: error.quota.used,
+        requested: error.quota.requested,
+        reason: error.quota.message
+      }
+    });
   }
 }

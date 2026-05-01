@@ -19,7 +19,6 @@ export interface LoginFormModel extends LoginPayload {}
 
 export interface LoginResponse {
   accessToken: string;
-  refreshToken: string;
   sessionExpiresAt: string;
   success?: boolean;
   user: CurrentUser;

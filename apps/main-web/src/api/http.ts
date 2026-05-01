@@ -45,15 +45,8 @@ http.interceptors.response.use(
       throw error;
     }
 
-    const { refreshToken } = getStoredSession();
-
-    if (!refreshToken) {
-      clearStoredSession();
-      throw error;
-    }
-
     originalRequest._retry = true;
-    const nextAccessToken = await refreshAccessToken(refreshToken);
+    const nextAccessToken = await refreshAccessToken();
 
     if (!nextAccessToken) {
       clearStoredSession();
@@ -67,10 +60,10 @@ http.interceptors.response.use(
   }
 );
 
-async function refreshAccessToken(refreshToken: string): Promise<string | null> {
+async function refreshAccessToken(): Promise<string | null> {
   if (!refreshPromise) {
     refreshPromise = refreshHttp
-      .post<LoginResponse>("/auth/refresh", { refreshToken })
+      .post<LoginResponse>("/auth/refresh")
       .then(({ data }) => {
         updateAccessToken(data.accessToken, data.sessionExpiresAt);
         return data.accessToken;

@@ -1,5 +1,5 @@
 /** 根模块：负责聚合全局基础设施与各业务模块，为应用启动提供统一装配入口。 */
-import { Module } from "@nestjs/common";
+import { MiddlewareConsumer, Module, NestModule } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
 
@@ -7,7 +7,11 @@ import { AppController } from "./app.controller";
 import { DataScopeModule } from "./common/data-scope/data-scope.module";
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
 import { PermissionsGuard } from "./common/guards/permissions.guard";
+import { ObservabilityModule } from "./common/observability/observability.module";
+import { RequestObservabilityMiddleware } from "./common/observability/request-observability.middleware";
 import { PrismaModule } from "./common/prisma/prisma.module";
+import { RiskThrottleModule } from "./common/security/risk-throttle.module";
+import { TenantQuotaModule } from "./common/tenant/tenant-quota.module";
 import { AuditLogsModule } from "./modules/audit-logs/audit-logs.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { BatchTasksModule } from "./modules/batch-tasks/batch-tasks.module";
@@ -37,6 +41,9 @@ import { WorkflowModule } from "./modules/workflow/workflow.module";
       envFilePath: [".env", ".env.local"]
     }),
     PrismaModule,
+    ObservabilityModule,
+    RiskThrottleModule,
+    TenantQuotaModule,
     DataScopeModule,
     AuditLogsModule,
     AuthModule,
@@ -72,4 +79,8 @@ import { WorkflowModule } from "./modules/workflow/workflow.module";
     }
   ]
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer): void {
+    consumer.apply(RequestObservabilityMiddleware).forRoutes("*");
+  }
+}

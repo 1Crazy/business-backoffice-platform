@@ -9,7 +9,6 @@ import type { CurrentUser } from "@/types/auth";
 export const useAuthStore = defineStore("auth", () => {
   const initialSession = getStoredSession();
   const token = ref<string | null>(initialSession.accessToken);
-  const refreshToken = ref<string | null>(initialSession.refreshToken);
   const currentUser = ref<CurrentUser | null>(null);
 
   const isAuthenticated = computed(() => Boolean(token.value));
@@ -18,9 +17,8 @@ export const useAuthStore = defineStore("auth", () => {
     const data = await loginByPassword({ username, password });
 
     token.value = data.accessToken;
-    refreshToken.value = data.refreshToken;
     currentUser.value = data.user;
-    storeSession(data.accessToken, data.refreshToken, data.sessionExpiresAt);
+    storeSession(data.accessToken, data.sessionExpiresAt);
   }
 
   async function fetchProfile(): Promise<void> {
@@ -42,7 +40,6 @@ export const useAuthStore = defineStore("auth", () => {
     }
 
     token.value = null;
-    refreshToken.value = null;
     currentUser.value = null;
     clearStoredSession();
   }
@@ -54,7 +51,6 @@ export const useAuthStore = defineStore("auth", () => {
 
   return {
     token,
-    refreshToken,
     currentUser,
     isAuthenticated,
     login,

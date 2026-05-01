@@ -19,6 +19,7 @@ async function bootstrap(): Promise<void> {
   const configService = app.get(ConfigService);
   const port = configService.get<number>("PORT", 3000);
   assertRuntimeSecurityConfig(configService);
+  app.enableShutdownHooks();
 
   app.enableCors({
     origin: getAllowedCorsOrigins(configService),

@@ -9,7 +9,7 @@ import {
 } from "@prisma/client";
 
 import { PaginatedResponseDto } from "@/common/pagination/paginated-response.dto";
-import { LoginResponseVo } from "../../auth/vo/auth.vo";
+import { LoginResponseVo } from "@/modules/auth/vo/auth.vo";
 
 export class OpenApiCredentialVo {
   @ApiProperty()

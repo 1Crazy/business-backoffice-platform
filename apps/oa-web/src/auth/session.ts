@@ -5,21 +5,20 @@ const SESSION_EXPIRES_AT_KEY = "platform-session-expires-at";
 
 export interface StoredSession {
   accessToken: string | null;
-  refreshToken: string | null;
   sessionExpiresAt: string | null;
 }
 
 export function getStoredSession(): StoredSession {
   return {
     accessToken: window.localStorage.getItem(ACCESS_TOKEN_KEY),
-    refreshToken: window.localStorage.getItem(REFRESH_TOKEN_KEY),
     sessionExpiresAt: window.localStorage.getItem(SESSION_EXPIRES_AT_KEY)
   };
 }
 
-export function storeSession(accessToken: string, refreshToken: string, sessionExpiresAt?: string): void {
+export function storeSession(accessToken: string, sessionExpiresAt?: string): void {
   window.localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-  window.localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  // refresh token 只允许存在于 HttpOnly cookie；这里清理历史版本遗留的浏览器可读 token。
+  window.localStorage.removeItem(REFRESH_TOKEN_KEY);
 
   if (sessionExpiresAt) {
     window.localStorage.setItem(SESSION_EXPIRES_AT_KEY, sessionExpiresAt);

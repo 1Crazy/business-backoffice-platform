@@ -28,8 +28,12 @@ services:
         condition: service_healthy
     environment:
       PORT: 3000
-      JWT_SECRET: ${JWT_SECRET:-dev-secret-for-scrm-local}
+      JWT_SECRET: ${JWT_SECRET:-dev-local-secret-change-me-32chars-minimum}
+      JWT_ACCESS_TOKEN_TTL: ${JWT_ACCESS_TOKEN_TTL:-30m}
       DATABASE_URL: postgresql://${POSTGRES_USER:-scrm}:${POSTGRES_PASSWORD:-scrm}@postgres:5432/${POSTGRES_DB:-scrm}?schema=public
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8080,http://localhost:8081,http://localhost:8082}
+      RISK_THROTTLE_STORE: ${RISK_THROTTLE_STORE:-database}
+      WEBHOOK_ALLOWED_DOMAINS: ${WEBHOOK_ALLOWED_DOMAINS:-}
     ports:
       - "3000:3000"
     volumes:
@@ -47,6 +51,34 @@ services:
       retries: 10
       start_period: 60s
 
+  main-web:
+    build:
+      context: .
+      dockerfile: apps/main-web/Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+        VITE_OA_ENTRY: ${VITE_OA_ENTRY:-http://localhost:8081}
+        VITE_SCRM_ENTRY: ${VITE_SCRM_ENTRY:-http://localhost:8082}
+    container_name: main-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8080:80"
+
+  oa-web:
+    build:
+      context: .
+      dockerfile: apps/oa-web/Dockerfile
+      args:
+        VITE_API_BASE_URL: /api
+    container_name: oa-web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8081:80"
+
   scrm-web:
     build:
       context: .
@@ -58,7 +90,7 @@ services:
     depends_on:
       - api
     ports:
-      - "8080:80"
+      - "8082:80"
 
 volumes:
   postgres-data:
