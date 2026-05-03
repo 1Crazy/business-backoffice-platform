@@ -22,7 +22,7 @@ import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { CurrentUser } from "@/common/decorators/current-user.decorator";
 import { Permissions } from "@/common/decorators/permissions.decorator";
 import { Public } from "@/common/decorators/public.decorator";
-import { setRefreshTokenCookie, toClientLoginResponse } from "../auth/auth-cookie.util";
+import { setAuthCookies, toClientLoginResponse } from "../auth/auth-cookie.util";
 import {
   ConnectorLoginResponseVo,
   IdentityConnectorVo,
@@ -230,7 +230,9 @@ export class OpenIntegrationController {
     @Res({ passthrough: true }) response: Response
   ) {
     const loginResponse = await this.openIntegrationService.loginWithIdentityConnector(id, dto);
-    setRefreshTokenCookie(response, loginResponse.refreshToken);
+    if (loginResponse.success) {
+      setAuthCookies(response, loginResponse.accessToken, loginResponse.refreshToken);
+    }
     return toClientLoginResponse(loginResponse);
   }
 }

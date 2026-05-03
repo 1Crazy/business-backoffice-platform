@@ -1,15 +1,16 @@
 import { DataScopeService } from "../src/common/data-scope/data-scope.service";
+import { RuntimeCacheService } from "../src/common/cache/runtime-cache.service";
 
 describe("DataScopeService", () => {
   it("resolves subtree scope to all descendant owners", async () => {
     const prisma = {
-      $queryRaw: jest.fn().mockResolvedValue([{ id: "dept-1" }, { id: "dept-2" }, { id: "dept-3" }]),
+      $queryRaw: vi.fn().mockResolvedValue([{ id: "dept-1" }, { id: "dept-2" }, { id: "dept-3" }]),
       user: {
-        findMany: jest.fn().mockResolvedValue([{ id: "user-1" }, { id: "user-2" }, { id: "user-3" }])
+        findMany: vi.fn().mockResolvedValue([{ id: "user-1" }, { id: "user-2" }, { id: "user-3" }])
       }
     } as any;
 
-    const service = new DataScopeService(prisma);
+    const service = new DataScopeService(prisma, new RuntimeCacheService());
     const result = await service.resolveDataScope({
       id: "manager-1",
       tenantId: "tenant-default",
@@ -29,11 +30,11 @@ describe("DataScopeService", () => {
   it("limits self scope to the current actor", async () => {
     const prisma = {
       userRole: {
-        findMany: jest.fn().mockResolvedValue([])
+        findMany: vi.fn().mockResolvedValue([])
       }
     } as any;
 
-    const service = new DataScopeService(prisma);
+    const service = new DataScopeService(prisma, new RuntimeCacheService());
     const result = await service.resolveDataScope({
       id: "user-1",
       tenantId: "tenant-default",
@@ -52,17 +53,17 @@ describe("DataScopeService", () => {
   it("expands scoped access with matched customer pool tags", async () => {
     const prisma = {
       customerTag: {
-        findMany: jest.fn().mockResolvedValue([{ id: "tag-1" }])
+        findMany: vi.fn().mockResolvedValue([{ id: "tag-1" }])
       },
       customer: {
-        findMany: jest.fn().mockResolvedValue([{ ownerId: "owner-9" }])
+        findMany: vi.fn().mockResolvedValue([{ ownerId: "owner-9" }])
       },
       userRole: {
-        findMany: jest.fn().mockResolvedValue([])
+        findMany: vi.fn().mockResolvedValue([])
       }
     } as any;
 
-    const service = new DataScopeService(prisma);
+    const service = new DataScopeService(prisma, new RuntimeCacheService());
     const result = await service.resolveDataScope({
       id: "user-1",
       tenantId: "tenant-default",
@@ -83,5 +84,29 @@ describe("DataScopeService", () => {
     expect(result.primaryScope).toBe("SELF");
     expect(result.ownerIds).toEqual(["user-1", "owner-9"]);
     expect(result.customerPoolTagIds).toEqual(["tag-1"]);
+  });
+
+  it("caches resolved data scope per tenant user", async () => {
+    const prisma = {
+      userRole: {
+        findMany: vi.fn().mockResolvedValue([])
+      }
+    } as any;
+    const service = new DataScopeService(prisma, new RuntimeCacheService());
+    const actor = {
+      id: "user-1",
+      tenantId: "tenant-default",
+      username: "member",
+      displayName: "销售成员",
+      departmentId: null,
+      roleCodes: ["sales-member"],
+      permissions: ["customer:read"],
+      dataScopes: []
+    } as any;
+
+    await service.resolveDataScope(actor);
+    await service.resolveDataScope(actor);
+
+    expect(prisma.userRole.findMany).toHaveBeenCalledTimes(1);
   });
 });

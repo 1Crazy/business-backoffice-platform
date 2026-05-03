@@ -7,6 +7,7 @@ import { ExtractJwt, Strategy } from "passport-jwt";
 import type { AuthUser } from "./auth-user.interface";
 import { AuthService } from "@/modules/auth/auth.service";
 import { getRequiredJwtSecret } from "@/common/security/security-config.util";
+import { readAccessTokenCookie } from "@/modules/auth/auth-cookie.util";
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -15,7 +16,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     private readonly authService: AuthService
   ) {
     super({
-      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      jwtFromRequest: ExtractJwt.fromExtractors([
+        ExtractJwt.fromAuthHeaderAsBearerToken(),
+        (request) => readAccessTokenCookie(request?.headers?.cookie) ?? null
+      ]),
       ignoreExpiration: false,
       secretOrKey: getRequiredJwtSecret(configService)
     });

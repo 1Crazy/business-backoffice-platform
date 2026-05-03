@@ -3,6 +3,7 @@ import { Module } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 
 import { SystemGovernanceModule } from "../system-governance/system-governance.module";
+import { AttachmentScanService } from "./attachment-scan.service";
 import { LocalAttachmentStorageDriver } from "./storage/local-attachment-storage.driver";
 import { ObjectStorageAttachmentStorageDriver } from "./storage/object-storage-attachment-storage.driver";
 import { UploadsRepository } from "./repositories/uploads.repository";
@@ -17,6 +18,7 @@ import { UploadsService } from "./uploads.service";
   providers: [
     UploadsService,
     UploadsRepository,
+    AttachmentScanService,
     LocalAttachmentStorageDriver,
     ObjectStorageAttachmentStorageDriver,
     {

@@ -6,12 +6,13 @@ import {
   getJwtAccessTokenTtl,
   getRiskThrottleStoreMode,
   getRequiredJwtSecret,
+  getSwaggerBasicAuth,
   shouldEnableSwagger
 } from "../src/common/security/security-config.util";
 
 function config(values: Record<string, string | undefined>) {
   return {
-    get: jest.fn((key: string, fallback?: string) => values[key] ?? fallback)
+    get: vi.fn((key: string, fallback?: string) => values[key] ?? fallback)
   } as unknown as ConfigService;
 }
 
@@ -39,6 +40,25 @@ describe("security config", () => {
 
   it("disables swagger by default outside local runtime", () => {
     expect(shouldEnableSwagger(config({ NODE_ENV: "production" }))).toBe(false);
+  });
+
+  it("requires swagger basic auth outside local runtime when swagger is enabled", () => {
+    expect(() => getSwaggerBasicAuth(config({ NODE_ENV: "production", SWAGGER_ENABLED: "true" }))).toThrow(
+      "SWAGGER_BASIC_AUTH_USERNAME and SWAGGER_BASIC_AUTH_PASSWORD"
+    );
+    expect(
+      getSwaggerBasicAuth(
+        config({
+          NODE_ENV: "production",
+          SWAGGER_ENABLED: "true",
+          SWAGGER_BASIC_AUTH_USERNAME: "docs-user",
+          SWAGGER_BASIC_AUTH_PASSWORD: "docs-password"
+        })
+      )
+    ).toEqual({
+      username: "docs-user",
+      password: "docs-password"
+    });
   });
 
   it("uses a short access token ttl by default", () => {

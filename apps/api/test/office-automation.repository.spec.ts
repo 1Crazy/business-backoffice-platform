@@ -11,18 +11,18 @@ describe("OfficeAutomationRepository", () => {
   it("scopes leave approval updates by request id and tenant id", async () => {
     const tx = {
       leaveRequest: {
-        updateMany: jest.fn().mockResolvedValue({ count: 1 })
+        updateMany: vi.fn().mockResolvedValue({ count: 1 })
       },
       leaveApprovalAction: {
-        create: jest.fn().mockResolvedValue(undefined)
+        create: vi.fn().mockResolvedValue(undefined)
       }
     };
     const prisma = {
-      $transaction: jest.fn().mockImplementation(async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx))
+      $transaction: vi.fn().mockImplementation(async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx))
     } as any;
     const repository = new OfficeAutomationRepository(prisma);
 
-    jest.spyOn(repository, "findLeaveRequestById").mockResolvedValue({ id: "leave-1" } as any);
+    vi.spyOn(repository, "findLeaveRequestById").mockResolvedValue({ id: "leave-1" } as any);
 
     await repository.applyApprovalDecision({
       tenantId: "tenant-1",
@@ -55,7 +55,7 @@ describe("OfficeAutomationRepository", () => {
   it("reads announcements only from the current tenant", async () => {
     const prisma = {
       announcement: {
-        findFirstOrThrow: jest.fn().mockResolvedValue({ id: "announcement-1" })
+        findFirstOrThrow: vi.fn().mockResolvedValue({ id: "announcement-1" })
       }
     } as any;
     const repository = new OfficeAutomationRepository(prisma);
@@ -75,7 +75,7 @@ describe("OfficeAutomationRepository", () => {
   it("reads directory members only from the current tenant and department", async () => {
     const prisma = {
       user: {
-        findMany: jest.fn().mockResolvedValue([])
+        findMany: vi.fn().mockResolvedValue([])
       }
     } as any;
     const repository = new OfficeAutomationRepository(prisma);

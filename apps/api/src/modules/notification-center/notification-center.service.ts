@@ -1,7 +1,8 @@
 /** 通知中心 service：负责消息列表、偏好管理和多渠道路由编排。 */
-import { Inject, Injectable } from "@nestjs/common";
+import { BadRequestException, Inject, Injectable, OnModuleInit } from "@nestjs/common";
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { JobQueueService, type BackgroundJobHandler } from "@/common/job-queue/job-queue.service";
 import { toIsoString } from "@/common/mappers/date-time.mapper";
 import { ListNotificationRecordsDto } from "./dto/list-notification-records.dto";
 import { UpsertNotificationPreferencesDto } from "./dto/upsert-notification-preferences.dto";
@@ -45,11 +46,13 @@ type ResolvedPreference = {
 };
 
 type RoutedChannelPlan = {
-  channel: "IN_APP" | "EMAIL";
+  channel: "IN_APP" | "EMAIL" | "ENTERPRISE_IM";
   adapterCode?: string;
   provider?: string;
   payload?: Record<string, unknown>;
 };
+
+const NOTIFICATION_DELIVERY_JOB_TYPE = "notification.delivery";
 
 const DEFAULT_PREFERENCE_TEMPLATES = [
   { domain: "OA" as const, eventType: "WORKFLOW_PENDING" },
@@ -61,12 +64,17 @@ const DEFAULT_PREFERENCE_TEMPLATES = [
 ] as const;
 
 @Injectable()
-export class NotificationCenterService {
+export class NotificationCenterService implements OnModuleInit {
   constructor(
     private readonly notificationCenterRepository: NotificationCenterRepository,
     @Inject(NOTIFICATION_CHANNEL_ADAPTERS)
-    private readonly channelAdapters: NotificationChannelAdapter[]
+    private readonly channelAdapters: NotificationChannelAdapter[],
+    private readonly jobQueueService?: JobQueueService
   ) {}
+
+  onModuleInit(): void {
+    this.jobQueueService?.registerHandler(NOTIFICATION_DELIVERY_JOB_TYPE, this.handleNotificationDeliveryJob as BackgroundJobHandler);
+  }
 
   async listNotifications(query: ListNotificationRecordsDto, actor: AuthUser) {
     const records = await this.notificationCenterRepository.listNotificationRecords({
@@ -134,6 +142,7 @@ export class NotificationCenterService {
     const recipientProfileMap = new Map(recipientProfiles.map((item) => [item.id, item]));
     const preferenceMap = new Map(storedPreferences.map((item) => [item.userId, item]));
     const emailChannelConfig = channelConfigs.find((item) => item.channel === "EMAIL") ?? null;
+    const enterpriseImChannelConfig = channelConfigs.find((item) => item.channel === "ENTERPRISE_IM") ?? null;
     const now = new Date();
     const recordDrafts: NotificationRecordDraft[] = [];
     const routePlans: Array<{
@@ -156,10 +165,14 @@ export class NotificationCenterService {
       }
 
       const channels = this.resolveRoutedChannels({
-        event,
+        event: {
+          ...event,
+          requiredChannels: input.event.requiredChannels
+        },
         recipient,
         preference,
         emailChannelConfig,
+        enterpriseImChannelConfig,
         nudgeBaseAt: input.nudgeBaseAt
       });
 
@@ -246,47 +259,55 @@ export class NotificationCenterService {
           });
         }
 
-        const adapter = this.findChannelAdapter(delivery.channel, delivery.adapterCode);
-        const attemptAt = new Date();
-
-        if (!adapter) {
-          return this.notificationCenterRepository.updateDeliveryResult(delivery.id, {
-            status: "SKIPPED",
-            errorMessage: `未找到 ${delivery.channel} 渠道适配器。`,
-            attemptCount: 1,
-            lastAttemptedAt: attemptAt
+        if (!this.jobQueueService) {
+          return this.executeNotificationDeliveryJob({
+            deliveryId: delivery.id,
+            notificationId: executionPlan.record.id,
+            eventType: executionPlan.record.eventType,
+            domain: executionPlan.record.domain,
+            title: executionPlan.record.title,
+            summary: executionPlan.record.summary,
+            priority: executionPlan.record.priority,
+            targetPath: executionPlan.record.targetPath,
+            targetLabel: executionPlan.record.targetLabel,
+            recipientId: executionPlan.routePlan.recipient.id,
+            recipientDisplayName: executionPlan.routePlan.recipient.displayName,
+            recipientEmail: executionPlan.routePlan.recipient.email,
+            channel: delivery.channel,
+            adapterCode: delivery.adapterCode,
+            provider: delivery.provider,
+            payload: executionPlan.payload ?? null,
+            attempts: 1
           });
         }
 
-        const result = await adapter.send({
-          notificationId: executionPlan.record.id,
-          eventType: executionPlan.record.eventType,
-          domain: executionPlan.record.domain,
-          title: executionPlan.record.title,
-          summary: executionPlan.record.summary,
-          priority: executionPlan.record.priority,
-          targetPath: executionPlan.record.targetPath,
-          targetLabel: executionPlan.record.targetLabel,
-          recipientId: executionPlan.routePlan.recipient.id,
-          recipientDisplayName: executionPlan.routePlan.recipient.displayName,
-          recipientEmail: executionPlan.routePlan.recipient.email,
-          adapterCode: delivery.adapterCode,
-          provider: delivery.provider,
-          payload: executionPlan.payload ?? null
+        await this.jobQueueService.enqueue({
+          type: NOTIFICATION_DELIVERY_JOB_TYPE,
+          payload: {
+            deliveryId: delivery.id,
+            notificationId: executionPlan.record.id,
+            eventType: executionPlan.record.eventType,
+            domain: executionPlan.record.domain,
+            title: executionPlan.record.title,
+            summary: executionPlan.record.summary,
+            priority: executionPlan.record.priority,
+            targetPath: executionPlan.record.targetPath,
+            targetLabel: executionPlan.record.targetLabel,
+            recipientId: executionPlan.routePlan.recipient.id,
+            recipientDisplayName: executionPlan.routePlan.recipient.displayName,
+            recipientEmail: executionPlan.routePlan.recipient.email,
+            channel: delivery.channel,
+            adapterCode: delivery.adapterCode,
+            provider: delivery.provider,
+            payload: executionPlan.payload ?? null
+          },
+          correlationId: delivery.id
         });
 
-        return this.notificationCenterRepository.updateDeliveryResult(delivery.id, {
-          status: result.status,
-          externalMessageId: result.externalMessageId ?? null,
-          response: result.response ?? null,
-          errorMessage: result.errorMessage ?? null,
-          attemptCount: 1,
-          lastAttemptedAt: attemptAt,
-          sentAt: result.status === "SENT" ? attemptAt : null,
-          failedAt: result.status === "FAILED" ? attemptAt : null
-        });
+        return delivery;
       })
     );
+    this.jobQueueService?.scheduleRun([NOTIFICATION_DELIVERY_JOB_TYPE]);
 
     await this.notificationCenterRepository.updateEventStatus(event.id, "ROUTED");
     const notifications = await this.notificationCenterRepository.findNotificationRecordsByIds(
@@ -354,6 +375,7 @@ export class NotificationCenterService {
   private resolveRoutedChannels(input: {
     event: {
       priority?: NotificationPriorityValue;
+      requiredChannels?: Array<"IN_APP" | "EMAIL" | "ENTERPRISE_IM">;
       title: string;
       summary?: string | null;
       targetPath?: string | null;
@@ -362,6 +384,7 @@ export class NotificationCenterService {
     recipient: NotificationRecipientProfile;
     preference: ResolvedPreference;
     emailChannelConfig: NotificationChannelConfigRecord | null;
+    enterpriseImChannelConfig: NotificationChannelConfigRecord | null;
     nudgeBaseAt?: Date | null;
   }): RoutedChannelPlan[] {
     const channels: RoutedChannelPlan[] = [
@@ -373,9 +396,10 @@ export class NotificationCenterService {
         }
       }
     ];
+    const requiredChannels = new Set(input.event.requiredChannels ?? []);
 
     if (
-      input.preference.emailEnabled &&
+      (input.preference.emailEnabled || requiredChannels.has("EMAIL")) &&
       input.emailChannelConfig &&
       this.shouldEscalateToExternal(input.event.priority ?? "MEDIUM", input.preference, input.nudgeBaseAt)
     ) {
@@ -388,6 +412,24 @@ export class NotificationCenterService {
           title: input.event.title,
           summary: input.event.summary ?? null,
           targetPath: input.event.targetPath ?? null,
+          targetLabel: input.event.targetLabel ?? null
+        }
+      });
+    }
+
+    if (
+      (input.preference.enterpriseImEnabled || requiredChannels.has("ENTERPRISE_IM")) &&
+      input.enterpriseImChannelConfig &&
+      this.shouldEscalateToExternal(input.event.priority ?? "MEDIUM", input.preference, input.nudgeBaseAt)
+    ) {
+      channels.push({
+        channel: "ENTERPRISE_IM",
+        adapterCode: input.enterpriseImChannelConfig.adapterCode,
+        provider: input.enterpriseImChannelConfig.provider,
+        payload: {
+          targetUrl: input.event.targetPath ?? null,
+          title: input.event.title,
+          summary: input.event.summary ?? null,
           targetLabel: input.event.targetLabel ?? null
         }
       });
@@ -414,6 +456,119 @@ export class NotificationCenterService {
 
   private findChannelAdapter(channel: string, adapterCode?: string | null) {
     return this.channelAdapters.find((item) => item.channel === channel && item.adapterCode === adapterCode) ?? null;
+  }
+
+  private handleNotificationDeliveryJob = async (job: Parameters<BackgroundJobHandler>[0]) => {
+    const payload = this.readJobPayload(job.payload);
+    return this.executeNotificationDeliveryJob({
+      deliveryId: this.readRequiredPayloadString(payload, "deliveryId"),
+      notificationId: this.readRequiredPayloadString(payload, "notificationId"),
+      eventType: this.readRequiredPayloadString(payload, "eventType"),
+      domain: this.readRequiredPayloadString(payload, "domain") as NotificationPreferenceRecord["domain"],
+      title: this.readRequiredPayloadString(payload, "title"),
+      summary: this.readOptionalPayloadString(payload, "summary") ?? null,
+      priority: this.readRequiredPayloadString(payload, "priority") as NotificationPriorityValue,
+      targetPath: this.readOptionalPayloadString(payload, "targetPath") ?? null,
+      targetLabel: this.readOptionalPayloadString(payload, "targetLabel") ?? null,
+      recipientId: this.readRequiredPayloadString(payload, "recipientId"),
+      recipientDisplayName: this.readRequiredPayloadString(payload, "recipientDisplayName"),
+      recipientEmail: this.readOptionalPayloadString(payload, "recipientEmail") ?? null,
+      channel: this.readRequiredPayloadString(payload, "channel"),
+      adapterCode: this.readOptionalPayloadString(payload, "adapterCode"),
+      provider: this.readOptionalPayloadString(payload, "provider") ?? null,
+      payload: this.readRecordObject(payload.payload),
+      attempts: job.attempts
+    });
+  };
+
+  private async executeNotificationDeliveryJob(input: {
+    deliveryId: string;
+    notificationId: string;
+    eventType: string;
+    domain: NotificationPreferenceRecord["domain"];
+    title: string;
+    summary: string | null;
+    priority: NotificationPriorityValue;
+    targetPath: string | null;
+    targetLabel: string | null;
+    recipientId: string;
+    recipientDisplayName: string;
+    recipientEmail: string | null;
+    channel: string;
+    adapterCode?: string | null;
+    provider?: string | null;
+    payload?: Record<string, unknown> | null;
+    attempts: number;
+  }) {
+    const adapter = this.findChannelAdapter(input.channel, input.adapterCode);
+    const attemptAt = new Date();
+
+    if (!adapter) {
+      await this.notificationCenterRepository.updateDeliveryResult(input.deliveryId, {
+        status: "SKIPPED",
+        errorMessage: `未找到 ${input.channel} 渠道适配器。`,
+        attemptCount: input.attempts,
+        lastAttemptedAt: attemptAt
+      });
+
+      return {
+        deliveryId: input.deliveryId,
+        status: "SKIPPED"
+      };
+    }
+
+    const result = await adapter.send({
+      notificationId: input.notificationId,
+      eventType: input.eventType,
+      domain: input.domain,
+      title: input.title,
+      summary: input.summary,
+      priority: input.priority,
+      targetPath: input.targetPath,
+      targetLabel: input.targetLabel,
+      recipientId: input.recipientId,
+      recipientDisplayName: input.recipientDisplayName,
+      recipientEmail: input.recipientEmail,
+      adapterCode: input.adapterCode,
+      provider: input.provider,
+      payload: input.payload ?? null
+    });
+
+    await this.notificationCenterRepository.updateDeliveryResult(input.deliveryId, {
+      status: result.status,
+      externalMessageId: result.externalMessageId ?? null,
+      response: result.response ?? null,
+      errorMessage: result.errorMessage ?? null,
+      attemptCount: input.attempts,
+      lastAttemptedAt: attemptAt,
+      sentAt: result.status === "SENT" ? attemptAt : null,
+      failedAt: result.status === "FAILED" ? attemptAt : null
+    });
+
+    return {
+      deliveryId: input.deliveryId,
+      status: result.status
+    };
+  }
+
+  private readJobPayload(value: unknown): Record<string, unknown> {
+    return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  }
+
+  private readRequiredPayloadString(payload: Record<string, unknown>, key: string): string {
+    const value = payload[key];
+
+    if (typeof value !== "string" || !value) {
+      throw new BadRequestException(`Background job payload is missing ${key}.`);
+    }
+
+    return value;
+  }
+
+  private readOptionalPayloadString(payload: Record<string, unknown>, key: string): string | undefined {
+    const value = payload[key];
+
+    return typeof value === "string" && value ? value : undefined;
   }
 
   private readRecordObject(value: unknown): Record<string, unknown> | null {

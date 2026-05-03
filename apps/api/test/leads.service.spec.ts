@@ -38,7 +38,7 @@ function buildReminderRecord(overrides: Record<string, unknown> = {}) {
 describe("LeadsService", () => {
   it("converts an unconverted lead into a customer", async () => {
     const leadsRepository = {
-      findSnapshotById: jest.fn().mockResolvedValue({
+      findSnapshotById: vi.fn().mockResolvedValue({
         id: "lead-1",
         tenantId: "tenant-default",
         name: "Acme 潜客",
@@ -50,21 +50,21 @@ describe("LeadsService", () => {
         status: "NEW",
         convertedCustomerId: null
       }),
-      convertLeadToCustomer: jest.fn().mockResolvedValue({ id: "customer-1" })
+      convertLeadToCustomer: vi.fn().mockResolvedValue({ id: "customer-1" })
     } as any;
     const auditLogsService = {
-      create: jest.fn().mockResolvedValue(undefined)
+      create: vi.fn().mockResolvedValue(undefined)
     } as any;
     const dataScopeService = {
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined),
-      buildScopedOwnerFilter: jest.fn().mockResolvedValue({})
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined),
+      buildScopedOwnerFilter: vi.fn().mockResolvedValue({})
     } as any;
     const accessPolicyService = {
-      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
-      assertWritableFields: jest.fn()
+      sanitizeReadFields: vi.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: vi.fn()
     } as any;
     const notificationCenterService = {
-      publishEvent: jest.fn().mockResolvedValue(undefined)
+      publishEvent: vi.fn().mockResolvedValue(undefined)
     } as any;
 
     const service = new LeadsService(
@@ -74,7 +74,7 @@ describe("LeadsService", () => {
       accessPolicyService,
       notificationCenterService
     );
-    jest.spyOn(service, "detail").mockResolvedValue({
+    vi.spyOn(service, "detail").mockResolvedValue({
       id: "lead-1",
       convertedCustomerId: "customer-1"
     } as any);
@@ -96,7 +96,7 @@ describe("LeadsService", () => {
 
   it("prevents repeated lead conversion", async () => {
     const leadsRepository = {
-      findSnapshotById: jest.fn().mockResolvedValue({
+      findSnapshotById: vi.fn().mockResolvedValue({
         id: "lead-1",
         tenantId: "tenant-default",
         ownerId: "user-1",
@@ -105,23 +105,23 @@ describe("LeadsService", () => {
       })
     } as any;
     const dataScopeService = {
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined),
-      buildScopedOwnerFilter: jest.fn().mockResolvedValue({})
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined),
+      buildScopedOwnerFilter: vi.fn().mockResolvedValue({})
     } as any;
     const accessPolicyService = {
-      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
-      assertWritableFields: jest.fn()
+      sanitizeReadFields: vi.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: vi.fn()
     } as any;
 
     const service = new LeadsService(
       leadsRepository,
       {
-        create: jest.fn()
+        create: vi.fn()
       } as any,
       dataScopeService,
       accessPolicyService,
       {
-        publishEvent: jest.fn().mockResolvedValue(undefined)
+        publishEvent: vi.fn().mockResolvedValue(undefined)
       } as any
     );
 
@@ -139,32 +139,32 @@ describe("LeadsService", () => {
 
   it("returns paginated reminders scoped by the shared data scope service", async () => {
     const leadsRepository = {
-      listPendingReminders: jest.fn().mockResolvedValue({
+      listPendingReminders: vi.fn().mockResolvedValue({
         items: [buildReminderRecord()],
         total: 6
       })
     } as any;
     const dataScopeService = {
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined),
-      buildScopedOwnerFilter: jest.fn().mockResolvedValue({
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined),
+      buildScopedOwnerFilter: vi.fn().mockResolvedValue({
         ownerId: {
           in: ["user-1", "user-2"]
         }
       })
     } as any;
     const accessPolicyService = {
-      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
-      assertWritableFields: jest.fn()
+      sanitizeReadFields: vi.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: vi.fn()
     } as any;
     const service = new LeadsService(
       leadsRepository,
       {
-        create: jest.fn().mockResolvedValue(undefined)
+        create: vi.fn().mockResolvedValue(undefined)
       } as any,
       dataScopeService,
       accessPolicyService,
       {
-        publishEvent: jest.fn().mockResolvedValue(undefined)
+        publishEvent: vi.fn().mockResolvedValue(undefined)
       } as any
     );
     const actor = {

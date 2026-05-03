@@ -6,11 +6,13 @@ import { allNavigationItems, resolveFirstAccessiblePath } from "@/config/navigat
 import { useAuthStore } from "@/stores/auth";
 
 const AppLayout = () => import("@/layout/AppLayout.vue");
+const ForgotPasswordPage = () => import("@/pages/forgot-password/ForgotPasswordPage.vue");
 const LoginPage = () => import("@/pages/login/LoginPage.vue");
 const MicroAppPage = () => import("@/pages/micro-app/MicroAppPage.vue");
 const NoAccessPage = () => import("@/pages/no-access/NoAccessPage.vue");
 const PlatformGovernancePage = () => import("@/pages/platform-governance/PlatformGovernancePage.vue");
 const ProductConfigurationPage = () => import("@/pages/product-configuration/ProductConfigurationPage.vue");
+const ResetPasswordPage = () => import("@/pages/reset-password/ResetPasswordPage.vue");
 const TenantOperationsPage = () => import("@/pages/tenant-operations/TenantOperationsPage.vue");
 const WorkfeedPage = () => import("@/pages/workfeed/WorkfeedPage.vue");
 
@@ -96,6 +98,24 @@ const routes: RouteRecordRaw[] = [
     }
   },
   {
+    path: "/forgot-password",
+    name: "forgot-password",
+    component: ForgotPasswordPage,
+    meta: {
+      title: "找回密码",
+      hidden: true
+    }
+  },
+  {
+    path: "/auth/password-reset",
+    name: "reset-password",
+    component: ResetPasswordPage,
+    meta: {
+      title: "重置密码",
+      hidden: true
+    }
+  },
+  {
     path: "/no-access",
     name: "no-access",
     component: NoAccessPage,
@@ -131,7 +151,7 @@ router.beforeEach(async (to) => {
   const authStore = useAuthStore();
 
   if (to.path === "/login") {
-    if (!authStore.token) {
+    if (!authStore.sessionExpiresAt) {
       return true;
     }
 
@@ -148,7 +168,7 @@ router.beforeEach(async (to) => {
     return resolveFirstAccessiblePath(authStore.currentUser?.permissions ?? []) ?? "/no-access";
   }
 
-  if (!authStore.token) {
+  if (!authStore.sessionExpiresAt) {
     return "/login";
   }
 

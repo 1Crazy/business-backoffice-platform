@@ -9,7 +9,7 @@
     "isolatedModules": true,
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
-    "types": ["node", "jest"],
+    "types": ["node", "vitest/globals"],
     "paths": {
       "@/*": ["src/*"]
     }

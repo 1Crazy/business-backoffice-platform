@@ -6,6 +6,7 @@ import { PassportModule } from "@nestjs/passport";
 
 import { JwtStrategy } from "@/common/auth/jwt.strategy";
 import { getJwtAccessTokenTtl, getRequiredJwtSecret } from "@/common/security/security-config.util";
+import { NotificationCenterModule } from "../notification-center/notification-center.module";
 import { AuthController } from "./auth.controller";
 import { AuthRepository } from "./repositories/auth.repository";
 import { AuthService } from "./auth.service";
@@ -13,6 +14,7 @@ import { AuthService } from "./auth.service";
 @Module({
   imports: [
     ConfigModule,
+    NotificationCenterModule,
     PassportModule.register({ defaultStrategy: "jwt" }),
     JwtModule.registerAsync({
       inject: [ConfigService],

@@ -170,6 +170,42 @@
   width: 100%;
 }
 
+.secondary-button {
+  margin-top: -6px;
+}
+
+.link-button {
+  justify-self: flex-end;
+  margin-top: -4px;
+  padding-right: 0;
+}
+
+.mfa-panel {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #f7faff;
+  border: 1px solid rgba(59, 130, 246, 0.14);
+}
+
+.mfa-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--app-text-primary);
+}
+
+.mfa-copy {
+  color: var(--app-text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.recovery-card strong {
+  line-height: 1.7;
+  word-break: break-word;
+}
+
 .hint {
   color: var(--app-text-secondary);
   font-size: 12px;

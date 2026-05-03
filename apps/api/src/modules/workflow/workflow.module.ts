@@ -2,12 +2,13 @@
 import { Module } from "@nestjs/common";
 
 import { AuditLogsModule } from "../audit-logs/audit-logs.module";
+import { OpenIntegrationModule } from "../open-integration/open-integration.module";
 import { WorkflowRepository } from "./repositories/workflow.repository";
 import { WorkflowController } from "./workflow.controller";
 import { WorkflowService } from "./workflow.service";
 
 @Module({
-  imports: [AuditLogsModule],
+  imports: [AuditLogsModule, OpenIntegrationModule],
   controllers: [WorkflowController],
   providers: [WorkflowService, WorkflowRepository],
   exports: [WorkflowService]

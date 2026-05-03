@@ -60,7 +60,7 @@ async function flushAsyncWork() {
 
 describe("BatchTasksService", () => {
   afterEach(() => {
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it("creates and completes a customer export task asynchronously", async () => {
@@ -80,44 +80,51 @@ describe("BatchTasksService", () => {
       }
     ];
     const batchTasksRepository = {
-      createTask: jest.fn().mockResolvedValue(buildTaskRecord()),
-      updateTask: jest.fn().mockResolvedValue(undefined),
-      findTaskById: jest.fn(),
-      listTasks: jest.fn(),
-      listFailures: jest.fn(),
-      replaceFailures: jest.fn(),
-      listCustomersForExport: jest.fn().mockResolvedValue(exportCustomers)
+      createTask: vi.fn().mockResolvedValue(buildTaskRecord()),
+      updateTask: vi.fn().mockResolvedValue(undefined),
+      findTaskById: vi.fn(),
+      listTasks: vi.fn(),
+      listFailures: vi.fn(),
+      replaceFailures: vi.fn(),
+      listCustomersForExport: vi.fn().mockResolvedValue(exportCustomers)
     } as any;
     const dataScopeService = {
-      buildScopedCustomerFilter: jest.fn().mockResolvedValue({
+      buildScopedCustomerFilter: vi.fn().mockResolvedValue({
         ownerId: {
           in: ["owner-1"]
         }
       }),
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
     } as any;
     const auditLogsService = {
-      create: jest.fn().mockResolvedValue(undefined)
+      create: vi.fn().mockResolvedValue(undefined)
     } as any;
     const storageDriver = {
-      store: jest.fn().mockResolvedValue({
+      store: vi.fn().mockResolvedValue({
         storageProvider: AttachmentStorageProvider.OBJECT_STORAGE,
         storageKey: "batch-task/customers-export-task-1.csv",
         fileName: "customers-export-task-1.csv"
       }),
-      openReadStream: jest.fn(),
-      delete: jest.fn()
+      openReadStream: vi.fn(),
+      delete: vi.fn()
     } as any;
     const tenantQuotaService = {
-      assertMonthlyTaskQuotaAvailable: jest.fn().mockResolvedValue(undefined)
+      assertMonthlyTaskQuotaAvailable: vi.fn().mockResolvedValue(undefined)
+    } as any;
+    const jobQueueService = {
+      registerHandler: vi.fn(),
+      enqueue: vi.fn().mockResolvedValue({}),
+      scheduleRun: vi.fn()
     } as any;
     const service = new BatchTasksService(
       batchTasksRepository,
       dataScopeService,
       auditLogsService,
       tenantQuotaService,
-      storageDriver
+      storageDriver,
+      jobQueueService
     );
+    service.onModuleInit();
     const actor = buildActor();
 
     const result = await service.createCustomerExportTask(
@@ -128,17 +135,41 @@ describe("BatchTasksService", () => {
       },
       actor
     );
-    await flushAsyncWork();
 
     expect(batchTasksRepository.createTask).toHaveBeenCalledWith(
       expect.objectContaining({
         category: BatchTaskCategory.EXPORT,
         resourceType: "CUSTOMER",
-      operatorId: actor.id
+        operatorId: actor.id
       })
     );
+    expect(jobQueueService.registerHandler).toHaveBeenCalledWith("batch-task.customer-export", expect.any(Function));
+    expect(jobQueueService.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "batch-task.customer-export",
+        correlationId: "task-1"
+      })
+    );
+    expect(jobQueueService.scheduleRun).toHaveBeenCalledWith(["batch-task.customer-export"]);
+
+    const exportHandler = jobQueueService.registerHandler.mock.calls.find(
+      ([type]: [string]) => type === "batch-task.customer-export"
+    )?.[1];
+    expect(exportHandler).toBeDefined();
+    await exportHandler({
+      payload: jobQueueService.enqueue.mock.calls[0][0].payload
+    });
+
     expect(tenantQuotaService.assertMonthlyTaskQuotaAvailable).toHaveBeenCalledWith("tenant-default");
-    expect(dataScopeService.buildScopedCustomerFilter).toHaveBeenCalledWith(actor, "owner-1");
+    expect(dataScopeService.buildScopedCustomerFilter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: actor.id,
+        tenantId: actor.tenantId,
+        username: actor.username,
+        displayName: actor.displayName
+      }),
+      "owner-1"
+    );
     expect(batchTasksRepository.listCustomersForExport).toHaveBeenCalledWith(
       expect.objectContaining({
         ownerId: {
@@ -184,7 +215,7 @@ describe("BatchTasksService", () => {
 
   it("captures row failures and writes a failure file for customer import tasks", async () => {
     const batchTasksRepository = {
-      createTask: jest.fn().mockResolvedValue(
+      createTask: vi.fn().mockResolvedValue(
         buildTaskRecord({
           id: "task-import-1",
           category: BatchTaskCategory.IMPORT,
@@ -192,41 +223,48 @@ describe("BatchTasksService", () => {
           inputFileName: "customers.csv"
         })
       ),
-      updateTask: jest.fn().mockResolvedValue(undefined),
-      findTaskById: jest.fn(),
-      listTasks: jest.fn(),
-      listFailures: jest.fn(),
-      replaceFailures: jest.fn().mockResolvedValue(undefined),
-      createCustomer: jest.fn().mockResolvedValue({
+      updateTask: vi.fn().mockResolvedValue(undefined),
+      findTaskById: vi.fn(),
+      listTasks: vi.fn(),
+      listFailures: vi.fn(),
+      replaceFailures: vi.fn().mockResolvedValue(undefined),
+      createCustomer: vi.fn().mockResolvedValue({
         id: "customer-1"
       })
     } as any;
     const dataScopeService = {
-      buildScopedCustomerFilter: jest.fn(),
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+      buildScopedCustomerFilter: vi.fn(),
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
     } as any;
     const auditLogsService = {
-      create: jest.fn().mockResolvedValue(undefined)
+      create: vi.fn().mockResolvedValue(undefined)
     } as any;
     const storageDriver = {
-      store: jest.fn().mockResolvedValue({
+      store: vi.fn().mockResolvedValue({
         storageProvider: AttachmentStorageProvider.LOCAL,
         storageKey: "batch-task/customers-import-failures-task-import-1.csv",
         fileName: "customers-import-failures-task-import-1.csv"
       }),
-      openReadStream: jest.fn(),
-      delete: jest.fn()
+      openReadStream: vi.fn(),
+      delete: vi.fn()
     } as any;
     const tenantQuotaService = {
-      assertMonthlyTaskQuotaAvailable: jest.fn().mockResolvedValue(undefined)
+      assertMonthlyTaskQuotaAvailable: vi.fn().mockResolvedValue(undefined)
+    } as any;
+    const jobQueueService = {
+      registerHandler: vi.fn(),
+      enqueue: vi.fn().mockResolvedValue({}),
+      scheduleRun: vi.fn()
     } as any;
     const service = new BatchTasksService(
       batchTasksRepository,
       dataScopeService,
       auditLogsService,
       tenantQuotaService,
-      storageDriver
+      storageDriver,
+      jobQueueService
     );
+    service.onModuleInit();
     const actor = buildActor();
 
     const result = await service.createCustomerImportTask(
@@ -243,7 +281,21 @@ describe("BatchTasksService", () => {
       undefined,
       actor
     );
-    await flushAsyncWork();
+
+    expect(jobQueueService.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "batch-task.customer-import",
+        correlationId: "task-import-1"
+      })
+    );
+    expect(jobQueueService.scheduleRun).toHaveBeenCalledWith(["batch-task.customer-import"]);
+    const importHandler = jobQueueService.registerHandler.mock.calls.find(
+      ([type]: [string]) => type === "batch-task.customer-import"
+    )?.[1];
+    expect(importHandler).toBeDefined();
+    await importHandler({
+      payload: jobQueueService.enqueue.mock.calls[0][0].payload
+    });
 
     expect(batchTasksRepository.createCustomer).toHaveBeenCalledTimes(1);
     expect(dataScopeService.assertOwnerAccessible).not.toHaveBeenCalled();
@@ -285,32 +337,32 @@ describe("BatchTasksService", () => {
   it("downloads result files and records audit logs", async () => {
     const stream = Readable.from(["csv-data"]);
     const batchTasksRepository = {
-      createTask: jest.fn(),
-      updateTask: jest.fn(),
-      findTaskById: jest.fn().mockResolvedValue(
+      createTask: vi.fn(),
+      updateTask: vi.fn(),
+      findTaskById: vi.fn().mockResolvedValue(
         buildTaskRecord({
           resultFileName: "customers-export-task-1.csv",
           resultMimeType: "text/csv",
           resultStorageKey: "batch-task/customers-export-task-1.csv"
         })
       ),
-      listTasks: jest.fn(),
-      listFailures: jest.fn(),
-      replaceFailures: jest.fn()
+      listTasks: vi.fn(),
+      listFailures: vi.fn(),
+      replaceFailures: vi.fn()
     } as any;
     const storageDriver = {
-      store: jest.fn(),
-      openReadStream: jest.fn().mockResolvedValue({
+      store: vi.fn(),
+      openReadStream: vi.fn().mockResolvedValue({
         stream,
         size: 8
       }),
-      delete: jest.fn()
+      delete: vi.fn()
     } as any;
     const auditLogsService = {
-      create: jest.fn().mockResolvedValue(undefined)
+      create: vi.fn().mockResolvedValue(undefined)
     } as any;
     const tenantQuotaService = {
-      assertMonthlyTaskQuotaAvailable: jest.fn().mockResolvedValue(undefined)
+      assertMonthlyTaskQuotaAvailable: vi.fn().mockResolvedValue(undefined)
     } as any;
     const service = new BatchTasksService(
       batchTasksRepository,
@@ -343,13 +395,13 @@ describe("BatchTasksService", () => {
 
   it("rejects customer export tasks when monthlyTaskQuota is exhausted", async () => {
     const batchTasksRepository = {
-      createTask: jest.fn()
+      createTask: vi.fn()
     } as any;
     const auditLogsService = {
-      create: jest.fn().mockResolvedValue(undefined)
+      create: vi.fn().mockResolvedValue(undefined)
     } as any;
     const tenantQuotaService = {
-      assertMonthlyTaskQuotaAvailable: jest.fn().mockRejectedValue(
+      assertMonthlyTaskQuotaAvailable: vi.fn().mockRejectedValue(
         new TenantQuotaExceededException({
           type: "monthlyTasks",
           limit: 3,
@@ -365,9 +417,9 @@ describe("BatchTasksService", () => {
       auditLogsService,
       tenantQuotaService,
       {
-        store: jest.fn(),
-        openReadStream: jest.fn(),
-        delete: jest.fn()
+        store: vi.fn(),
+        openReadStream: vi.fn(),
+        delete: vi.fn()
       } as any
     );
 
@@ -382,6 +434,42 @@ describe("BatchTasksService", () => {
           quotaType: "monthlyTasks",
           attemptedOperation: "batch-task.customer-export"
         })
+      })
+    );
+  });
+
+  it("keeps queueMicrotask fallback when job queue is unavailable", async () => {
+    const batchTasksRepository = {
+      createTask: vi.fn().mockResolvedValue(buildTaskRecord()),
+      updateTask: vi.fn().mockResolvedValue(undefined),
+      listCustomersForExport: vi.fn().mockResolvedValue([])
+    } as any;
+    const service = new BatchTasksService(
+      batchTasksRepository,
+      {
+        buildScopedCustomerFilter: vi.fn().mockResolvedValue({})
+      } as any,
+      {
+        create: vi.fn().mockResolvedValue(undefined)
+      } as any,
+      {
+        assertMonthlyTaskQuotaAvailable: vi.fn().mockResolvedValue(undefined)
+      } as any,
+      {
+        store: vi.fn().mockResolvedValue({
+          storageProvider: AttachmentStorageProvider.LOCAL,
+          storageKey: "batch-task/customers-export-task-1.csv"
+        })
+      } as any
+    );
+
+    await service.createCustomerExportTask({}, buildActor());
+    await flushAsyncWork();
+
+    expect(batchTasksRepository.updateTask).toHaveBeenCalledWith(
+      "task-1",
+      expect.objectContaining({
+        status: BatchTaskStatus.RUNNING
       })
     );
   });

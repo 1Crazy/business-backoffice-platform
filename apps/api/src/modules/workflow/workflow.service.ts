@@ -13,6 +13,7 @@ import {
 import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
+import { OpenIntegrationService } from "../open-integration/open-integration.service";
 import { mapWorkflowInstance, mapWorkflowPendingTask, mapWorkflowTemplate } from "./mappers/workflow.mapper";
 import { AddSignWorkflowTaskDto } from "./dto/add-sign-workflow-task.dto";
 import { CreateWorkflowCcDto } from "./dto/create-workflow-cc.dto";
@@ -44,7 +45,8 @@ type WorkflowBranchRule = {
 export class WorkflowService {
   constructor(
     private readonly workflowRepository: WorkflowRepository,
-    private readonly auditLogsService: AuditLogsService
+    private readonly auditLogsService: AuditLogsService,
+    private readonly openIntegrationService: OpenIntegrationService
   ) {}
 
   async listTemplates(actor: AuthUser, status?: WorkflowTemplateStatus) {
@@ -314,6 +316,28 @@ export class WorkflowService {
       }
     });
 
+    if (
+      (instance.status === WorkflowInstanceStatus.APPROVED || instance.status === WorkflowInstanceStatus.REJECTED) &&
+      !instance.currentNodeKey
+    ) {
+      await this.openIntegrationService.dispatchBusinessWebhookEvent({
+        tenantId,
+        eventType: "WORKFLOW_INSTANCE_COMPLETED",
+        sourceType: "workflow-instance",
+        sourceId: instance.id,
+        payload: {
+          instanceId: instance.id,
+          templateId: instance.template.id,
+          templateKey: instance.template.key,
+          title: instance.title,
+          status: instance.status
+        },
+        actorId: actor.id,
+        actorName: actor.displayName,
+        occurredAt: instance.completedAt ?? new Date()
+      });
+    }
+
     return mapWorkflowInstance(instance);
   }
 
@@ -353,6 +377,28 @@ export class WorkflowService {
         decision: "REJECTED"
       }
     });
+
+    if (
+      (instance.status === WorkflowInstanceStatus.APPROVED || instance.status === WorkflowInstanceStatus.REJECTED) &&
+      !instance.currentNodeKey
+    ) {
+      await this.openIntegrationService.dispatchBusinessWebhookEvent({
+        tenantId,
+        eventType: "WORKFLOW_INSTANCE_COMPLETED",
+        sourceType: "workflow-instance",
+        sourceId: instance.id,
+        payload: {
+          instanceId: instance.id,
+          templateId: instance.template.id,
+          templateKey: instance.template.key,
+          title: instance.title,
+          status: instance.status
+        },
+        actorId: actor.id,
+        actorName: actor.displayName,
+        occurredAt: instance.completedAt ?? new Date()
+      });
+    }
 
     return mapWorkflowInstance(instance);
   }

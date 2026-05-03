@@ -12,10 +12,12 @@ const AppLayout = () => import("@/layout/AppLayout.vue");
 const AccessControlPage = () => import("@/pages/access-control/AccessControlPage.vue");
 const DashboardPage = () => import("@/pages/dashboard/DashboardPage.vue");
 const CustomersPage = () => import("@/pages/customers/CustomersPage.vue");
+const ForgotPasswordPage = () => import("@/pages/forgot-password/ForgotPasswordPage.vue");
 const LeadsPage = () => import("@/pages/leads/LeadsPage.vue");
 const LoginPage = () => import("@/pages/login/LoginPage.vue");
 const NoAccessPage = () => import("@/pages/no-access/NoAccessPage.vue");
 const OpportunitiesPage = () => import("@/pages/opportunities/OpportunitiesPage.vue");
+const ResetPasswordPage = () => import("@/pages/reset-password/ResetPasswordPage.vue");
 const RevenueOperationsPage = () => import("@/pages/revenue-operations/RevenueOperationsWorkspacePage.vue");
 const SystemAdminPage = () => import("@/pages/system-administration/SystemAdminPage.vue");
 
@@ -26,6 +28,24 @@ const routes: RouteRecordRaw[] = [
     component: LoginPage,
     meta: {
       title: "登录"
+    }
+  },
+  {
+    path: "/forgot-password",
+    name: "forgot-password",
+    component: ForgotPasswordPage,
+    meta: {
+      title: "找回密码",
+      hideInMenu: true
+    }
+  },
+  {
+    path: "/auth/password-reset",
+    name: "reset-password",
+    component: ResetPasswordPage,
+    meta: {
+      title: "重置密码",
+      hideInMenu: true
     }
   },
   {
@@ -118,7 +138,7 @@ router.beforeEach(async (to) => {
   const authStore = useAuthStore();
 
   if (to.path === "/login") {
-    if (!authStore.token) {
+    if (!authStore.sessionExpiresAt) {
       return redirectToLoginFromGuard({ allowStandaloneLogin: true });
     }
 
@@ -135,7 +155,7 @@ router.beforeEach(async (to) => {
     return resolveFirstAccessiblePath(authStore.currentUser?.permissions ?? []) ?? "/no-access";
   }
 
-  if (!authStore.token) {
+  if (!authStore.sessionExpiresAt) {
     return redirectToLoginFromGuard();
   }
 

@@ -5,7 +5,7 @@ import { AuditLogsService } from "../src/modules/audit-logs/audit-logs.service";
 describe("AuditLogsService", () => {
   it("returns paginated audit logs with filters and date range", async () => {
     const auditLogsRepository = {
-      list: jest.fn().mockResolvedValue({
+      list: vi.fn().mockResolvedValue({
         items: [
           {
             id: "audit-2",

@@ -5,12 +5,14 @@ import { ValidationPipe } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
 import { NestFactory } from "@nestjs/core";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
+import type { NextFunction, Request, Response } from "express";
 
 import { AppModule } from "./app.module";
 import { PrismaClientExceptionFilter } from "./common/filters/prisma-client-exception.filter";
 import {
   assertRuntimeSecurityConfig,
   getAllowedCorsOrigins,
+  getSwaggerBasicAuth,
   shouldEnableSwagger
 } from "./common/security/security-config.util";
 
@@ -45,6 +47,22 @@ async function bootstrap(): Promise<void> {
       .build();
 
     const document = SwaggerModule.createDocument(app, swaggerConfig);
+    const swaggerBasicAuth = getSwaggerBasicAuth(configService);
+    if (swaggerBasicAuth) {
+      // 非本地环境即使显式开启 Swagger，也必须先经过反向代理前的最小访问控制。
+      app.use(["/docs", "/docs-json"], (request: Request, response: Response, next: NextFunction) => {
+        const authorization = request.headers.authorization;
+        const expected = `Basic ${Buffer.from(`${swaggerBasicAuth.username}:${swaggerBasicAuth.password}`).toString("base64")}`;
+
+        if (authorization === expected) {
+          next();
+          return;
+        }
+
+        response.setHeader("WWW-Authenticate", "Basic realm=\"Swagger\"");
+        response.status(401).send("Authentication required.");
+      });
+    }
     SwaggerModule.setup("docs", app, document);
   }
 

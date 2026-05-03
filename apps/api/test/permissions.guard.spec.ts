@@ -4,15 +4,15 @@ import { PermissionsGuard } from "../src/common/guards/permissions.guard";
 describe("PermissionsGuard", () => {
   it("allows access when all permissions are present", () => {
     const reflector = {
-      getAllAndOverride: jest
+      getAllAndOverride: vi
         .fn()
         .mockReturnValueOnce(false)
         .mockReturnValueOnce(["customer:read"])
     } as any;
 
     const context = {
-      getHandler: jest.fn(),
-      getClass: jest.fn(),
+      getHandler: vi.fn(),
+      getClass: vi.fn(),
       switchToHttp: () => ({
         getRequest: () => ({
           user: {
@@ -25,7 +25,7 @@ describe("PermissionsGuard", () => {
     const guard = new PermissionsGuard(
       reflector,
       {
-        assertActionAllowed: jest.fn()
+        assertActionAllowed: vi.fn()
       } as any
     );
     expect(guard.canActivate(context)).toBe(true);
@@ -33,15 +33,15 @@ describe("PermissionsGuard", () => {
 
   it("allows platform governance permissions to pass through the same guard", () => {
     const reflector = {
-      getAllAndOverride: jest
+      getAllAndOverride: vi
         .fn()
         .mockReturnValueOnce(false)
         .mockReturnValueOnce(["department:read"])
     } as any;
 
     const context = {
-      getHandler: jest.fn(),
-      getClass: jest.fn(),
+      getHandler: vi.fn(),
+      getClass: vi.fn(),
       switchToHttp: () => ({
         getRequest: () => ({
           user: {
@@ -54,7 +54,7 @@ describe("PermissionsGuard", () => {
     const guard = new PermissionsGuard(
       reflector,
       {
-        assertActionAllowed: jest.fn()
+        assertActionAllowed: vi.fn()
       } as any
     );
     expect(guard.canActivate(context)).toBe(true);
@@ -62,15 +62,15 @@ describe("PermissionsGuard", () => {
 
   it("rejects access when permissions are missing", () => {
     const reflector = {
-      getAllAndOverride: jest
+      getAllAndOverride: vi
         .fn()
         .mockReturnValueOnce(false)
         .mockReturnValueOnce(["customer:assign"])
     } as any;
 
     const context = {
-      getHandler: jest.fn(),
-      getClass: jest.fn(),
+      getHandler: vi.fn(),
+      getClass: vi.fn(),
       switchToHttp: () => ({
         getRequest: () => ({
           user: {
@@ -83,18 +83,18 @@ describe("PermissionsGuard", () => {
     const guard = new PermissionsGuard(
       reflector,
       {
-        assertActionAllowed: jest.fn()
+        assertActionAllowed: vi.fn()
       } as any
     );
     expect(() => guard.canActivate(context)).toThrow(ForbiddenException);
   });
 
   it("applies action-level restrictions after the coarse permission check", () => {
-    const assertActionAllowed = jest.fn().mockImplementation(() => {
+    const assertActionAllowed = vi.fn().mockImplementation(() => {
       throw new ForbiddenException("denied by policy");
     });
     const reflector = {
-      getAllAndOverride: jest
+      getAllAndOverride: vi
         .fn()
         .mockReturnValueOnce(false)
         .mockReturnValueOnce(["customer:assign"])
@@ -105,8 +105,8 @@ describe("PermissionsGuard", () => {
     } as any;
 
     const context = {
-      getHandler: jest.fn(),
-      getClass: jest.fn(),
+      getHandler: vi.fn(),
+      getClass: vi.fn(),
       switchToHttp: () => ({
         getRequest: () => ({
           user: {

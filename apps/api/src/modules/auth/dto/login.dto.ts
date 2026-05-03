@@ -10,12 +10,13 @@ export class LoginDto {
   username!: string;
 
   @ApiProperty({
-    description: "登录密码，至少 8 位且包含字母和数字。"
+    description: "登录密码，至少 12 位且包含大小写字母、数字和符号。"
   })
   @IsString()
-  @MinLength(8)
-  @Matches(/^(?=.*[A-Za-z])(?=.*\d).+$/, {
-    message: "password must contain letters and numbers"
+  @MinLength(12)
+  @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/, {
+    message: "password must contain uppercase, lowercase, number, and symbol"
   })
   password!: string;
+
 }

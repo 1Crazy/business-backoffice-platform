@@ -16,6 +16,7 @@
 - `apps/api`：共享后端服务，工作区包名为 `platform-api`
 - `apps/api/prisma`：数据库 schema、迁移与种子脚本
 - `docs/development.md`：开发与验证约定
+- `docs/api-versioning.md`：API 契约分级与版本化策略
 - `openspec/specs`：当前主规格
 - `openspec/changes/archive`：已归档的 OpenSpec 变更记录
 
@@ -93,12 +94,13 @@ pnpm install
 - [`apps/oa-web/.env.example`](./apps/oa-web/.env.example)
 - [`apps/scrm-web/.env.example`](./apps/scrm-web/.env.example)
 - [`docs/development.md`](./docs/development.md)
+- [`docs/api-versioning.md`](./docs/api-versioning.md)
 - [`docs/operations.md`](./docs/operations.md)
 
 核心变量说明：
 
-- 根目录 `.env`：`POSTGRES_DB`、`POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_PORT`、`JWT_SECRET`、`JWT_ACCESS_TOKEN_TTL`、`CORS_ALLOWED_ORIGINS`、`RISK_THROTTLE_STORE`
-- `apps/api/.env`：`PORT`、`JWT_SECRET`、`JWT_ACCESS_TOKEN_TTL`、`DATABASE_URL`、`CORS_ALLOWED_ORIGINS`、`RISK_THROTTLE_STORE`、`SWAGGER_ENABLED`、`ALLOW_MOCK_CONNECTOR_LOGIN`、`WEBHOOK_TEST_MODE`、`WEBHOOK_ALLOWED_DOMAINS`、`ATTACHMENT_STORAGE_DRIVER`
+- 根目录 `.env`：`POSTGRES_DB`、`POSTGRES_USER`、`POSTGRES_PASSWORD`、`POSTGRES_PORT`、`JWT_SECRET`、`JWT_ACCESS_TOKEN_TTL`、`CORS_ALLOWED_ORIGINS`、`RISK_THROTTLE_STORE`、`OPEN_INTEGRATION_SECRET_PEPPER`、`OPEN_INTEGRATION_SECRET_ENCRYPTION_KEY`
+- `apps/api/.env`：`PORT`、`JWT_SECRET`、`JWT_ACCESS_TOKEN_TTL`、`DATABASE_URL`、`CORS_ALLOWED_ORIGINS`、`RISK_THROTTLE_STORE`、`SWAGGER_ENABLED`、`SWAGGER_BASIC_AUTH_USERNAME`、`SWAGGER_BASIC_AUTH_PASSWORD`、`ALLOW_MOCK_CONNECTOR_LOGIN`、`WEBHOOK_TEST_MODE`、`WEBHOOK_ALLOWED_DOMAINS`、`OPEN_INTEGRATION_SECRET_PEPPER`、`OPEN_INTEGRATION_SECRET_ENCRYPTION_KEY`、`ATTACHMENT_STORAGE_DRIVER`
 - `apps/main-web/.env`：`VITE_API_BASE_URL`、`VITE_OA_ENTRY`、`VITE_SCRM_ENTRY`
 - `apps/oa-web/.env`：`VITE_API_BASE_URL`
 - `apps/scrm-web/.env`：`VITE_API_BASE_URL`

@@ -25,7 +25,7 @@ describe("NotificationCenterRepository", () => {
     };
     const prisma = {
       notificationEvent: {
-        create: jest.fn().mockResolvedValue(createdEvent)
+        create: vi.fn().mockResolvedValue(createdEvent)
       }
     } as any;
     const repository = new NotificationCenterRepository(prisma);
@@ -61,7 +61,7 @@ describe("NotificationCenterRepository", () => {
   it("creates notification records in a single transaction", async () => {
     const prisma = {
       notificationRecord: {
-        create: jest
+        create: vi
           .fn()
           .mockResolvedValueOnce({
             id: "record-1",
@@ -78,7 +78,7 @@ describe("NotificationCenterRepository", () => {
             eventType: "WORKFLOW_APPROVED"
           })
       },
-      $transaction: jest.fn().mockImplementation(async (operations: Array<Promise<unknown>>) => Promise.all(operations))
+      $transaction: vi.fn().mockImplementation(async (operations: Array<Promise<unknown>>) => Promise.all(operations))
     } as any;
     const repository = new NotificationCenterRepository(prisma);
 
@@ -150,7 +150,7 @@ describe("NotificationCenterRepository", () => {
     };
     const prisma = {
       notificationPreference: {
-        upsert: jest.fn().mockResolvedValue(updatedPreference)
+        upsert: vi.fn().mockResolvedValue(updatedPreference)
       }
     } as any;
     const repository = new NotificationCenterRepository(prisma);
@@ -197,7 +197,7 @@ describe("NotificationCenterRepository", () => {
   it("lists only enabled external channel configs in stable order", async () => {
     const prisma = {
       notificationChannelConfig: {
-        findMany: jest.fn().mockResolvedValue([
+        findMany: vi.fn().mockResolvedValue([
           {
             id: "config-1",
             channel: "EMAIL",

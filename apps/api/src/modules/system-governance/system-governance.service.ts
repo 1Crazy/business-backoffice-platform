@@ -3,7 +3,9 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
-  InternalServerErrorException
+  InternalServerErrorException,
+  OnModuleDestroy,
+  OnModuleInit
 } from "@nestjs/common";
 import {
   AttachmentStorageProvider,
@@ -16,8 +18,10 @@ import {
 } from "@prisma/client";
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { JobQueueService, type BackgroundJobHandler } from "@/common/job-queue/job-queue.service";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { NotificationCenterService } from "../notification-center/notification-center.service";
+import { OpenIntegrationService } from "../open-integration/open-integration.service";
 import { UpdateNotificationChannelConfigDto } from "./dto/update-notification-channel-config.dto";
 import { UpdateSchedulerJobDto } from "./dto/update-scheduler-job.dto";
 import { UpdateStorageConfigDto } from "./dto/update-storage-config.dto";
@@ -29,13 +33,32 @@ import {
 } from "./mappers/system-governance.mapper";
 import { SystemGovernanceRepository } from "./repositories/system-governance.repository";
 
+const SCHEDULER_JOB_RUN_TYPE = "system-governance.scheduler-run";
+const SCHEDULER_POLL_INTERVAL_MS = 60_000;
+
 @Injectable()
-export class SystemGovernanceService {
+export class SystemGovernanceService implements OnModuleInit, OnModuleDestroy {
+  private schedulerPollTimer: NodeJS.Timeout | null = null;
+
   constructor(
     private readonly systemGovernanceRepository: SystemGovernanceRepository,
     private readonly auditLogsService: AuditLogsService,
-    private readonly notificationCenterService: NotificationCenterService
+    private readonly notificationCenterService: NotificationCenterService,
+    private readonly openIntegrationService: OpenIntegrationService,
+    private readonly jobQueueService?: JobQueueService
   ) {}
+
+  onModuleInit(): void {
+    this.jobQueueService?.registerHandler(SCHEDULER_JOB_RUN_TYPE, this.handleSchedulerJobRun as BackgroundJobHandler);
+    this.startSchedulerPoller();
+  }
+
+  onModuleDestroy(): void {
+    if (this.schedulerPollTimer) {
+      clearInterval(this.schedulerPollTimer);
+      this.schedulerPollTimer = null;
+    }
+  }
 
   async listNotificationChannels() {
     await this.ensureNotificationChannelDefaults();
@@ -164,51 +187,181 @@ export class SystemGovernanceService {
       startedAt
     });
 
+    if (!this.jobQueueService) {
+      const completed = await this.executeSchedulerJobRun({
+        code,
+        executionId: execution.id,
+        actorId: actor.id,
+        actorName: actor.displayName,
+        startedAt
+      });
+
+      return mapSchedulerJobExecution(completed);
+    }
+
+    await this.jobQueueService.enqueue({
+      type: SCHEDULER_JOB_RUN_TYPE,
+      payload: {
+        code,
+        jobId: job.id,
+        executionId: execution.id,
+        actorId: actor.id,
+        actorName: actor.displayName
+      },
+      correlationId: execution.id
+    });
+    this.jobQueueService.scheduleRun([SCHEDULER_JOB_RUN_TYPE]);
+
+    return mapSchedulerJobExecution(execution);
+  }
+
+  async exportPersonalData(userId: string, actor: AuthUser) {
+    const payload = await this.systemGovernanceRepository.exportPersonalData(userId);
+
+    await this.auditLogsService.create({
+      tenantId: actor.tenantId,
+      actorId: actor.id,
+      actorName: actor.displayName,
+      actionType: AuditActionType.ACCESS,
+      targetType: "personal-data-export",
+      targetId: userId,
+      detail: {
+        exportedBy: actor.id
+      }
+    });
+
+    return {
+      user: payload.user,
+      exportMeta: {
+        customers: payload.customers.length,
+        leads: payload.leads.length,
+        notifications: payload.notifications.length,
+        auditLogs: payload.auditLogs.length,
+        exportedAt: new Date().toISOString()
+      }
+    };
+  }
+
+  async anonymizePersonalData(userId: string, actor: AuthUser) {
+    const result = await this.systemGovernanceRepository.anonymizeUser(userId, actor.id);
+
+    await this.auditLogsService.create({
+      tenantId: actor.tenantId,
+      actorId: actor.id,
+      actorName: actor.displayName,
+      actionType: AuditActionType.UPDATE,
+      targetType: "personal-data-anonymization",
+      targetId: userId,
+      detail: {
+        anonymizedAt: result.anonymizedAt.toISOString()
+      }
+    });
+
+    return {
+      userId: result.userId,
+      anonymizedAt: result.anonymizedAt.toISOString()
+    };
+  }
+
+  async enqueueDueSchedulerJobs() {
+    await this.ensureSchedulerJobDefaults();
+    const jobs = await this.systemGovernanceRepository.listDueSchedulerJobs(new Date());
+
+    for (const job of jobs) {
+      const execution = await this.systemGovernanceRepository.createSchedulerJobExecution({
+        jobId: job.id,
+        status: SchedulerExecutionStatus.RUNNING,
+        startedAt: new Date()
+      });
+      await this.jobQueueService?.enqueue({
+        type: SCHEDULER_JOB_RUN_TYPE,
+        payload: {
+          code: job.code,
+          jobId: job.id,
+          executionId: execution.id
+        },
+        correlationId: execution.id
+      });
+    }
+
+    this.jobQueueService?.scheduleRun([SCHEDULER_JOB_RUN_TYPE]);
+
+    return {
+      enqueued: jobs.length
+    };
+  }
+
+  private handleSchedulerJobRun = async (backgroundJob: Parameters<BackgroundJobHandler>[0]) => {
+    const payload = this.readJobPayload(backgroundJob.payload);
+    const completed = await this.executeSchedulerJobRun({
+      code: this.readRequiredPayloadString(payload, "code"),
+      executionId: this.readRequiredPayloadString(payload, "executionId"),
+      actorId: this.readOptionalPayloadString(payload, "actorId") ?? "system",
+      actorName: this.readOptionalPayloadString(payload, "actorName") ?? "system",
+      startedAt: backgroundJob.startedAt ?? undefined
+    });
+
+    return {
+      executionId: completed.id,
+      status: completed.status
+    };
+  };
+
+  private async executeSchedulerJobRun(input: {
+    code: string;
+    executionId: string;
+    actorId: string;
+    actorName: string;
+    startedAt?: Date;
+  }) {
+    const job = await this.systemGovernanceRepository.findSchedulerJobByCode(input.code);
+
     try {
       const summary = await this.executeSchedulerJob(job.code);
       const finishedAt = new Date();
-      const durationMs = finishedAt.getTime() - startedAt.getTime();
-      const completedExecution = await this.systemGovernanceRepository.updateSchedulerJobExecution(execution.id, {
+      const durationMs = finishedAt.getTime() - (input.startedAt ?? finishedAt).getTime();
+      const completedExecution = await this.systemGovernanceRepository.updateSchedulerJobExecution(input.executionId, {
         status: SchedulerExecutionStatus.SUCCEEDED,
         summary,
         finishedAt,
         durationMs
       });
 
-      await this.systemGovernanceRepository.updateSchedulerJob(code, {
+      await this.systemGovernanceRepository.updateSchedulerJob(input.code, {
         lastRunAt: finishedAt,
         lastExecutionStatus: SchedulerExecutionStatus.SUCCEEDED,
         lastErrorMessage: null,
         nextRunAt: this.computeNextRunAt(job.cronExpression, finishedAt)
       });
 
-      await this.createAuditLog(actor, AuditActionType.CREATE, "governance-scheduler-execution", completedExecution.id, {
-        code,
+      await this.createAuditLog(this.buildSystemActor(input.actorId, input.actorName), AuditActionType.CREATE, "governance-scheduler-execution", completedExecution.id, {
+        code: input.code,
         status: SchedulerExecutionStatus.SUCCEEDED,
         summary
       });
 
-      return mapSchedulerJobExecution(completedExecution);
+      return completedExecution;
     } catch (error) {
       const finishedAt = new Date();
-      const durationMs = finishedAt.getTime() - startedAt.getTime();
+      const durationMs = finishedAt.getTime() - (input.startedAt ?? finishedAt).getTime();
       const message = error instanceof Error ? error.message : "Scheduler job execution failed.";
-      const failedExecution = await this.systemGovernanceRepository.updateSchedulerJobExecution(execution.id, {
+      const failedExecution = await this.systemGovernanceRepository.updateSchedulerJobExecution(input.executionId, {
         status: SchedulerExecutionStatus.FAILED,
         errorMessage: message,
         finishedAt,
         durationMs
       });
 
-      await this.systemGovernanceRepository.updateSchedulerJob(code, {
+      await this.systemGovernanceRepository.updateSchedulerJob(input.code, {
         lastRunAt: finishedAt,
         lastExecutionStatus: SchedulerExecutionStatus.FAILED,
         lastErrorMessage: message,
         nextRunAt: this.computeNextRunAt(job.cronExpression, finishedAt)
       });
 
+      const actor = this.buildSystemActor(input.actorId, input.actorName);
       await this.createAuditLog(actor, AuditActionType.CREATE, "governance-scheduler-execution", failedExecution.id, {
-        code,
+        code: input.code,
         status: SchedulerExecutionStatus.FAILED,
         errorMessage: message
       });
@@ -238,6 +391,20 @@ export class SystemGovernanceService {
       return `识别出 ${count} 条可归档批处理记录。`;
     }
 
+    if (code === "data-retention-cleanup") {
+      const retentionDays = this.readRetentionDays();
+      const now = new Date();
+      const summary = await this.systemGovernanceRepository.purgeRetentionData({
+        auditLogsBefore: new Date(now.getTime() - retentionDays.auditLogs * 24 * 60 * 60 * 1000),
+        notificationsBefore: new Date(now.getTime() - retentionDays.notifications * 24 * 60 * 60 * 1000),
+        webhookDeliveriesBefore: new Date(now.getTime() - retentionDays.webhookDeliveries * 24 * 60 * 60 * 1000),
+        revokedSessionsBefore: new Date(now.getTime() - retentionDays.revokedSessions * 24 * 60 * 60 * 1000),
+        batchFailuresBefore: new Date(now.getTime() - retentionDays.batchTaskFailures * 24 * 60 * 60 * 1000)
+      });
+
+      return `清理审计日志 ${summary.auditLogsDeleted} 条，通知 ${summary.notificationsDeleted} 条，Webhook 投递 ${summary.webhookDeliveriesDeleted} 条，已撤销会话 ${summary.revokedSessionsDeleted} 条，失败明细 ${summary.batchTaskFailuresDeleted} 条。`;
+    }
+
     throw new BadRequestException("Unsupported scheduler job code.");
   }
 
@@ -261,6 +428,20 @@ export class SystemGovernanceService {
         occurredAt: new Date()
       },
       recipientIds: [actor.id]
+    });
+
+    await this.openIntegrationService.dispatchBusinessWebhookEvent({
+      tenantId: actor.tenantId ?? "system",
+      eventType: "GOVERNANCE_ALERT",
+      sourceType: "scheduler-job",
+      sourceId: jobName,
+      payload: {
+        jobName,
+        errorMessage: message
+      },
+      actorId: actor.id,
+      actorName: actor.displayName,
+      occurredAt: new Date()
     });
   }
 
@@ -375,6 +556,15 @@ export class SystemGovernanceService {
         status: SchedulerJobStatus.PAUSED,
         ownerName: "平台治理",
         nextRunAt: null
+      },
+      {
+        code: "data-retention-cleanup",
+        displayName: "数据保留清理",
+        description: "按保留策略清理审计日志、通知、Webhook 投递、会话和失败明细。",
+        cronExpression: "0 3 * * *",
+        status: SchedulerJobStatus.RUNNING,
+        ownerName: "平台治理",
+        nextRunAt: this.computeNextRunAt("0 3 * * *", now)
       }
     ]);
   }
@@ -402,6 +592,36 @@ export class SystemGovernanceService {
       targetId,
       detail: detail as Prisma.InputJsonObject
     });
+  }
+
+  private buildSystemActor(actorId: string, actorName: string): AuthUser {
+    return {
+      id: actorId,
+      username: actorName,
+      displayName: actorName,
+      roleCodes: [],
+      permissions: []
+    };
+  }
+
+  private readJobPayload(value: unknown): Record<string, unknown> {
+    return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  }
+
+  private readRequiredPayloadString(payload: Record<string, unknown>, key: string): string {
+    const value = payload[key];
+
+    if (typeof value !== "string" || !value) {
+      throw new BadRequestException(`Background job payload is missing ${key}.`);
+    }
+
+    return value;
+  }
+
+  private readOptionalPayloadString(payload: Record<string, unknown>, key: string): string | undefined {
+    const value = payload[key];
+
+    return typeof value === "string" && value ? value : undefined;
   }
 
   private computeNextRunAt(cronExpression: string, referenceAt = new Date()) {
@@ -457,5 +677,30 @@ export class SystemGovernanceService {
     }
 
     return nextRun;
+  }
+
+  private startSchedulerPoller(): void {
+    if (!this.jobQueueService || this.schedulerPollTimer) {
+      return;
+    }
+
+    // 轻量 poller 负责把到期任务放入 PostgreSQL-backed 队列；真正执行仍由 job queue handler 完成。
+    this.schedulerPollTimer = setInterval(() => {
+      void this.enqueueDueSchedulerJobs().catch(() => {
+        // 调度探测失败不会中断进程，错误会通过执行记录和治理告警补充暴露。
+      });
+    }, SCHEDULER_POLL_INTERVAL_MS);
+
+    this.schedulerPollTimer.unref?.();
+  }
+
+  private readRetentionDays() {
+    return {
+      auditLogs: Number(process.env.RETENTION_AUDIT_LOG_DAYS ?? "180"),
+      notifications: Number(process.env.RETENTION_NOTIFICATION_DAYS ?? "90"),
+      webhookDeliveries: Number(process.env.RETENTION_WEBHOOK_DELIVERY_DAYS ?? "30"),
+      revokedSessions: Number(process.env.RETENTION_REVOKED_SESSION_DAYS ?? "30"),
+      batchTaskFailures: Number(process.env.RETENTION_BATCH_TASK_FAILURE_DAYS ?? "30")
+    };
   }
 }

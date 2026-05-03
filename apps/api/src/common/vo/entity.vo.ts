@@ -1,6 +1,6 @@
 /** 共享 VO：负责多个业务模块复用的接口返回契约定义。 */
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { AttachmentBusinessType, ReminderStatus } from "@prisma/client";
+import { AttachmentBusinessType, AttachmentScanStatus, ReminderStatus } from "@prisma/client";
 
 import { UserSummaryVo } from "./access-control.vo";
 
@@ -40,6 +40,31 @@ export class AttachmentVo {
     description: "文件大小，单位字节。"
   })
   size!: number;
+
+  @ApiProperty({
+    description: "附件扫描状态。",
+    enum: AttachmentScanStatus
+  })
+  scanStatus!: AttachmentScanStatus;
+
+  @ApiPropertyOptional({
+    description: "扫描器提供方。",
+    nullable: true
+  })
+  scanProvider?: string | null;
+
+  @ApiPropertyOptional({
+    description: "扫描结果摘要。",
+    nullable: true
+  })
+  scanMessage?: string | null;
+
+  @ApiPropertyOptional({
+    description: "扫描完成时间。",
+    format: "date-time",
+    nullable: true
+  })
+  scannedAt?: string | null;
 
   @ApiProperty({
     description: "创建时间。",

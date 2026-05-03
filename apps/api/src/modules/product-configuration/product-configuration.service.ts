@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from "@nestjs/common";
 import { AuditActionType, ProductConfigLayer, ProductConfigScope } from "@prisma/client";
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { RuntimeCacheService } from "@/common/cache/runtime-cache.service";
 import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { UpsertTenantConfigOverrideDto } from "./dto/upsert-tenant-config-override.dto";
@@ -151,36 +152,42 @@ const PRODUCT_CONFIG_SEEDS: ConfigSeed[] = [
 export class ProductConfigurationService {
   constructor(
     private readonly productConfigurationRepository: ProductConfigurationRepository,
-    private readonly auditLogsService: AuditLogsService
+    private readonly auditLogsService: AuditLogsService,
+    private readonly runtimeCacheService: RuntimeCacheService
   ) {}
 
   async getRuntimeConfig(actor: AuthUser) {
-    const entries = await this.resolveEntries(actor);
-    const theme = entries.find((item) => item.scope === ProductConfigScope.THEME && item.configKey === "brand-kit");
-    const menuEntries = entries.filter((item) => item.scope === ProductConfigScope.MENU);
-    const themeValue = theme?.effectiveValue ?? {};
-    const hiddenNavigationKeys = menuEntries
-      .filter((item) => item.effectiveValue.visible === false)
-      .map((item) => item.configKey);
-    const navigationLabels = Object.fromEntries(
-      menuEntries
-        .map((item) => [item.configKey, typeof item.effectiveValue.label === "string" ? item.effectiveValue.label : null])
-        .filter((item): item is [string, string] => typeof item[1] === "string" && item[1].length > 0)
-    );
+    const tenantId = requireTenantId(actor);
 
-    return mapRuntimeConfig({
-      brandName: readString(themeValue.brandName) ?? "Business Backoffice",
-      primaryColor: readString(themeValue.primaryColor) ?? "#2563eb",
-      accentColor: readString(themeValue.accentColor) ?? "#0f172a",
-      surfaceTint: readString(themeValue.surfaceTint) ?? "#eff6ff",
-      navigationMode: readString(themeValue.navigationMode) ?? "compact",
-      hiddenNavigationKeys,
-      navigationLabels
+    return this.runtimeCacheService.getOrSet(`product-config:runtime:${tenantId}`, 60_000, async () => {
+      const entries = await this.resolveEntries(actor);
+      const theme = entries.find((item) => item.scope === ProductConfigScope.THEME && item.configKey === "brand-kit");
+      const menuEntries = entries.filter((item) => item.scope === ProductConfigScope.MENU);
+      const themeValue = theme?.effectiveValue ?? {};
+      const hiddenNavigationKeys = menuEntries
+        .filter((item) => item.effectiveValue.visible === false)
+        .map((item) => item.configKey);
+      const navigationLabels = Object.fromEntries(
+        menuEntries
+          .map((item) => [item.configKey, typeof item.effectiveValue.label === "string" ? item.effectiveValue.label : null])
+          .filter((item): item is [string, string] => typeof item[1] === "string" && item[1].length > 0)
+      );
+
+      return mapRuntimeConfig({
+        brandName: readString(themeValue.brandName) ?? "Business Backoffice",
+        primaryColor: readString(themeValue.primaryColor) ?? "#2563eb",
+        accentColor: readString(themeValue.accentColor) ?? "#0f172a",
+        surfaceTint: readString(themeValue.surfaceTint) ?? "#eff6ff",
+        navigationMode: readString(themeValue.navigationMode) ?? "compact",
+        hiddenNavigationKeys,
+        navigationLabels
+      });
     });
   }
 
   async listResolvedEntries(actor: AuthUser) {
-    return this.resolveEntries(actor);
+    const tenantId = requireTenantId(actor);
+    return this.runtimeCacheService.getOrSet(`product-config:entries:${tenantId}`, 60_000, () => this.resolveEntries(actor));
   }
 
   async upsertTenantOverride(scope: ProductConfigScope, configKey: string, dto: UpsertTenantConfigOverrideDto, actor: AuthUser) {
@@ -214,6 +221,9 @@ export class ProductConfigurationService {
         configKey
       }
     });
+
+    this.runtimeCacheService.invalidatePrefix(`product-config:entries:${tenantId}`);
+    this.runtimeCacheService.invalidatePrefix(`product-config:runtime:${tenantId}`);
 
     const nextEntries = await this.resolveEntries(actor);
     return nextEntries.find((item) => item.scope === scope && item.configKey === configKey);

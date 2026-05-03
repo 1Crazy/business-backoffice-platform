@@ -3,7 +3,7 @@ import { DashboardService } from "../src/modules/dashboard/dashboard.service";
 describe("DashboardService", () => {
   it("aggregates upgraded dashboard metrics and honors owner filters", async () => {
     const dashboardRepository = {
-      listScopeOptions: jest.fn().mockResolvedValue({
+      listScopeOptions: vi.fn().mockResolvedValue({
         departments: [
           { id: "dept-1", name: "华东团队" },
           { id: "dept-2", name: "华南团队" }
@@ -23,7 +23,7 @@ describe("DashboardService", () => {
           }
         ]
       }),
-      getOverviewCounts: jest.fn().mockResolvedValue({
+      getOverviewCounts: vi.fn().mockResolvedValue({
         newCustomers: 12,
         followUpCount: 36,
         convertedLeads: 6,
@@ -35,7 +35,7 @@ describe("DashboardService", () => {
         wonAmount: 132000,
         lostOpportunities: 3
       }),
-      getFunnelBreakdown: jest.fn().mockResolvedValue({
+      getFunnelBreakdown: vi.fn().mockResolvedValue({
         totalLeads: 20,
         convertedLeads: 6,
         stages: [
@@ -51,7 +51,7 @@ describe("DashboardService", () => {
           }
         ]
       }),
-      getOwnerPerformanceSnapshot: jest.fn().mockResolvedValue([
+      getOwnerPerformanceSnapshot: vi.fn().mockResolvedValue([
         {
           ownerId: "user-1",
           wonAmount: 132000,
@@ -60,7 +60,7 @@ describe("DashboardService", () => {
           wonOpportunities: 5
         }
       ]),
-      findPaymentPlansForForecast: jest.fn().mockResolvedValue([
+      findPaymentPlansForForecast: vi.fn().mockResolvedValue([
         {
           plannedAmount: 160000,
           receivedAmount: 98000,
@@ -68,7 +68,7 @@ describe("DashboardService", () => {
           status: "PARTIAL"
         }
       ]),
-      getApprovalTimeliness: jest.fn().mockResolvedValue({
+      getApprovalTimeliness: vi.fn().mockResolvedValue({
         completedLeaveRequests: [
           {
             createdAt: new Date("2026-04-01T00:00:00.000Z"),
@@ -86,7 +86,7 @@ describe("DashboardService", () => {
       })
     } as any;
     const dataScopeService = {
-      resolveDataScope: jest.fn().mockResolvedValue({
+      resolveDataScope: vi.fn().mockResolvedValue({
         primaryScope: "DEPARTMENT",
         scopes: ["DEPARTMENT"],
         isGlobal: false,

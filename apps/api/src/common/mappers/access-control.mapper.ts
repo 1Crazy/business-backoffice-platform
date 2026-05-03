@@ -69,6 +69,10 @@ interface UserSummaryRecord {
 interface UserRecord extends UserSummaryRecord {
   department?: DepartmentParentRecord | null;
   roles?: UserRoleRelationRecord[];
+  lockedAt?: Date | null;
+  securityLockStatus?: "NONE" | "REVIEW_REQUIRED" | "LOCKED";
+  securityLockReason?: string | null;
+  securityLockReviewedAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -144,6 +148,10 @@ export function mapUser(record: UserRecord) {
     roles: (record.roles ?? []).map((relation) => ({
       role: mapRole(relation.role)
     })),
+    lockedAt: toIsoString(record.lockedAt),
+    securityLockStatus: record.securityLockStatus ?? "NONE",
+    securityLockReason: record.securityLockReason ?? null,
+    securityLockReviewedAt: toIsoString(record.securityLockReviewedAt),
     createdAt: toIsoString(record.createdAt)!,
     updatedAt: toIsoString(record.updatedAt)!
   };

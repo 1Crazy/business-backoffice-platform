@@ -41,6 +41,7 @@ const openApiCredentialSelect = Prisma.validator<Prisma.OpenApiCredentialSelect>
   name: true,
   accessKey: true,
   secretHash: true,
+  secretHashVersion: true,
   scopes: true,
   status: true,
   expiresAt: true,
@@ -60,6 +61,8 @@ const webhookSubscriptionSelect = Prisma.validator<Prisma.WebhookSubscriptionSel
   eventTypes: true,
   status: true,
   signingSecret: true,
+  signingSecretCiphertext: true,
+  signingSecretVersion: true,
   signingSecretHint: true,
   maxAttempts: true,
   timeoutSeconds: true,
@@ -105,6 +108,7 @@ const identityConnectorSelect = Prisma.validator<Prisma.IdentityConnectorSelect>
   directoryUrl: true,
   clientId: true,
   clientSecretHash: true,
+  clientSecretHashVersion: true,
   clientSecretHint: true,
   allowedDomains: true,
   config: true,
@@ -209,6 +213,7 @@ export class OpenIntegrationRepository {
     name: string;
     accessKey: string;
     secretHash: string;
+    secretHashVersion: string;
     scopes: string[];
     expiresAt?: Date;
     createdByName?: string;
@@ -219,6 +224,7 @@ export class OpenIntegrationRepository {
         name: data.name,
         accessKey: data.accessKey,
         secretHash: data.secretHash,
+        secretHashVersion: data.secretHashVersion,
         scopes: data.scopes,
         expiresAt: data.expiresAt,
         createdByName: data.createdByName
@@ -232,6 +238,7 @@ export class OpenIntegrationRepository {
     tenantId: string,
     data: {
       secretHash?: string;
+      secretHashVersion?: string;
       status?: OpenApiCredentialRecord["status"];
       rotatedAt?: Date | null;
       revokedAt?: Date | null;
@@ -276,6 +283,8 @@ export class OpenIntegrationRepository {
     eventTypes: string[];
     status: WebhookSubscriptionRecord["status"];
     signingSecret: string;
+    signingSecretCiphertext?: string | null;
+    signingSecretVersion: string;
     signingSecretHint: string;
     maxAttempts: number;
     timeoutSeconds: number;
@@ -290,6 +299,8 @@ export class OpenIntegrationRepository {
         eventTypes: data.eventTypes,
         status: data.status,
         signingSecret: data.signingSecret,
+        signingSecretCiphertext: data.signingSecretCiphertext,
+        signingSecretVersion: data.signingSecretVersion,
         signingSecretHint: data.signingSecretHint,
         maxAttempts: data.maxAttempts,
         timeoutSeconds: data.timeoutSeconds,
@@ -309,6 +320,8 @@ export class OpenIntegrationRepository {
       eventTypes?: string[];
       status?: WebhookSubscriptionRecord["status"];
       signingSecret?: string;
+      signingSecretCiphertext?: string | null;
+      signingSecretVersion?: string;
       signingSecretHint?: string;
       maxAttempts?: number;
       timeoutSeconds?: number;
@@ -366,6 +379,41 @@ export class OpenIntegrationRepository {
     });
   }
 
+  updateWebhookDelivery(
+    id: string,
+    tenantId: string,
+    data: {
+      payload?: Record<string, unknown>;
+      signature?: string;
+      status?: WebhookDeliveryRecord["status"];
+      attemptCount?: number;
+      responseStatusCode?: number | null;
+      responseBody?: string | null;
+      errorMessage?: string | null;
+      nextRetryAt?: Date | null;
+      deliveredAt?: Date | null;
+    }
+  ): Promise<WebhookDeliveryRecord> {
+    return this.prisma.webhookDelivery.update({
+      where: {
+        id,
+        tenantId
+      },
+      data: {
+        payload: data.payload ? (data.payload as Prisma.InputJsonObject) : undefined,
+        signature: data.signature,
+        status: data.status,
+        attemptCount: data.attemptCount,
+        responseStatusCode: data.responseStatusCode,
+        responseBody: data.responseBody,
+        errorMessage: data.errorMessage,
+        nextRetryAt: data.nextRetryAt,
+        deliveredAt: data.deliveredAt
+      },
+      select: webhookDeliverySelect
+    });
+  }
+
   listWebhookDeliveries(tenantId: string, subscriptionId: string): Promise<WebhookDeliveryRecord[]> {
     return this.prisma.webhookDelivery.findMany({
       where: {
@@ -410,6 +458,7 @@ export class OpenIntegrationRepository {
     directoryUrl?: string | null;
     clientId?: string | null;
     clientSecretHash?: string | null;
+    clientSecretHashVersion?: string | null;
     clientSecretHint?: string | null;
     allowedDomains?: string[];
     config?: Record<string, unknown>;
@@ -429,6 +478,7 @@ export class OpenIntegrationRepository {
         directoryUrl: data.directoryUrl,
         clientId: data.clientId,
         clientSecretHash: data.clientSecretHash,
+        clientSecretHashVersion: data.clientSecretHashVersion,
         clientSecretHint: data.clientSecretHint,
         allowedDomains: data.allowedDomains,
         config: toOptionalJsonObject(data.config),
@@ -453,6 +503,7 @@ export class OpenIntegrationRepository {
       directoryUrl?: string | null;
       clientId?: string | null;
       clientSecretHash?: string | null;
+      clientSecretHashVersion?: string | null;
       clientSecretHint?: string | null;
       allowedDomains?: string[];
       config?: Record<string, unknown>;

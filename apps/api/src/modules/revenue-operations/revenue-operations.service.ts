@@ -7,6 +7,7 @@ import { DataScopeService } from "@/common/data-scope/data-scope.service";
 import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { NotificationCenterService } from "../notification-center/notification-center.service";
+import { OpenIntegrationService } from "../open-integration/open-integration.service";
 import { CreateContractDto } from "./dto/create-contract.dto";
 import { CreatePaymentPlanDto } from "./dto/create-payment-plan.dto";
 import { CreatePaymentRecordDto } from "./dto/create-payment-record.dto";
@@ -30,7 +31,8 @@ export class RevenueOperationsService {
     private readonly dataScopeService: DataScopeService,
     private readonly auditLogsService: AuditLogsService,
     private readonly accessPolicyService: AccessPolicyService,
-    private readonly notificationCenterService: NotificationCenterService
+    private readonly notificationCenterService: NotificationCenterService,
+    private readonly openIntegrationService: OpenIntegrationService
   ) {}
 
   async getOpportunityOverview(opportunityId: string, actor: AuthUser) {
@@ -173,6 +175,24 @@ export class RevenueOperationsService {
     await this.createAuditLog(actor, "revenue-payment-record", record.id, {
       paymentPlanId: dto.paymentPlanId,
       opportunityId: paymentPlan.opportunityId
+    });
+
+    await this.openIntegrationService.dispatchBusinessWebhookEvent({
+      tenantId: requireTenantId(actor),
+      eventType: "REVENUE_PAYMENT_RECEIVED",
+      sourceType: "payment-record",
+      sourceId: record.id,
+      payload: {
+        paymentRecordId: record.id,
+        paymentPlanId: paymentPlan.id,
+        opportunityId: paymentPlan.opportunityId,
+        customerId: paymentPlan.customerId,
+        amount: dto.amount,
+        nextStatus
+      },
+      actorId: actor.id,
+      actorName: actor.displayName,
+      occurredAt: new Date(dto.receivedAt)
     });
 
     return this.accessPolicyService.sanitizeReadFields(actor, "payment-record", mapPaymentRecord(record));

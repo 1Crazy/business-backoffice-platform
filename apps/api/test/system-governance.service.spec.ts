@@ -21,39 +21,64 @@ function buildActor(overrides: Record<string, unknown> = {}) {
 
 describe("SystemGovernanceService", () => {
   const repository = {
-    ensureNotificationChannelConfigs: jest.fn(),
-    listNotificationChannelConfigs: jest.fn(),
-    countRecentNotificationFailures: jest.fn(),
-    updateNotificationChannelConfig: jest.fn(),
-    ensureStorageConfigs: jest.fn(),
-    listStorageConfigs: jest.fn(),
-    findStorageConfigByCode: jest.fn(),
-    findStorageConfigByProvider: jest.fn(),
-    updateStorageConfig: jest.fn(),
-    ensureSchedulerJobs: jest.fn(),
-    listSchedulerJobs: jest.fn(),
-    findSchedulerJobByCode: jest.fn(),
-    updateSchedulerJob: jest.fn(),
-    createSchedulerJobExecution: jest.fn(),
-    updateSchedulerJobExecution: jest.fn(),
-    listSchedulerJobExecutions: jest.fn(),
-    countPendingRenewalReminders: jest.fn(),
-    countOverduePaymentPlans: jest.fn(),
-    countArchivableBatchTasks: jest.fn()
+    ensureNotificationChannelConfigs: vi.fn(),
+    listNotificationChannelConfigs: vi.fn(),
+    countRecentNotificationFailures: vi.fn(),
+    updateNotificationChannelConfig: vi.fn(),
+    ensureStorageConfigs: vi.fn(),
+    listStorageConfigs: vi.fn(),
+    findStorageConfigByCode: vi.fn(),
+    findStorageConfigByProvider: vi.fn(),
+    updateStorageConfig: vi.fn(),
+    ensureSchedulerJobs: vi.fn(),
+    listSchedulerJobs: vi.fn(),
+    listDueSchedulerJobs: vi.fn(),
+    findSchedulerJobByCode: vi.fn(),
+    updateSchedulerJob: vi.fn(),
+    createSchedulerJobExecution: vi.fn(),
+    updateSchedulerJobExecution: vi.fn(),
+    listSchedulerJobExecutions: vi.fn(),
+    countPendingRenewalReminders: vi.fn(),
+    countOverduePaymentPlans: vi.fn(),
+    countArchivableBatchTasks: vi.fn(),
+    purgeRetentionData: vi.fn(),
+    exportPersonalData: vi.fn(),
+    anonymizeUser: vi.fn()
   };
   const auditLogsService = {
-    create: jest.fn().mockResolvedValue(undefined)
+    create: vi.fn().mockResolvedValue(undefined)
   };
   const notificationCenterService = {
-    publishEvent: jest.fn().mockResolvedValue(undefined)
+    publishEvent: vi.fn().mockResolvedValue(undefined)
   };
-  const service = new SystemGovernanceService(repository as any, auditLogsService as any, notificationCenterService as any);
+  const openIntegrationService = {
+    dispatchBusinessWebhookEvent: vi.fn().mockResolvedValue(undefined)
+  };
+  const jobQueueService = {
+    registerHandler: vi.fn(),
+    enqueue: vi.fn().mockResolvedValue({}),
+    scheduleRun: vi.fn()
+  };
+  const service = new SystemGovernanceService(
+    repository as any,
+    auditLogsService as any,
+    notificationCenterService as any,
+    openIntegrationService as any,
+    jobQueueService as any
+  );
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
+    vi.useFakeTimers();
     repository.ensureNotificationChannelConfigs.mockResolvedValue([]);
     repository.ensureStorageConfigs.mockResolvedValue([]);
     repository.ensureSchedulerJobs.mockResolvedValue([]);
+    service.onModuleInit();
+  });
+
+  afterEach(() => {
+    service.onModuleDestroy();
+    vi.useRealTimers();
   });
 
   it("lists notification channel governance items with recent failure counts", async () => {
@@ -253,6 +278,25 @@ describe("SystemGovernanceService", () => {
 
     const result = await service.runSchedulerJob("renewal-reminder-push", buildActor());
 
+    expect(jobQueueService.registerHandler).toHaveBeenCalledWith("system-governance.scheduler-run", expect.any(Function));
+    expect(jobQueueService.enqueue).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: "system-governance.scheduler-run",
+        correlationId: "execution-1"
+      })
+    );
+    expect(jobQueueService.scheduleRun).toHaveBeenCalledWith(["system-governance.scheduler-run"]);
+
+    const handler = jobQueueService.registerHandler.mock.calls.find((call) => call[0] === "system-governance.scheduler-run")?.[1];
+    expect(result).toMatchObject({
+      id: "execution-1",
+      status: SchedulerExecutionStatus.RUNNING
+    });
+    await handler({
+      payload: jobQueueService.enqueue.mock.calls[0][0].payload,
+      startedAt: new Date("2026-04-16T08:30:00.000Z")
+    });
+
     expect(repository.countPendingRenewalReminders).toHaveBeenCalled();
     expect(repository.updateSchedulerJobExecution).toHaveBeenCalledWith(
       "execution-1",
@@ -267,10 +311,90 @@ describe("SystemGovernanceService", () => {
         targetType: "governance-scheduler-execution"
       })
     );
-    expect(result).toMatchObject({
-      id: "execution-1",
-      status: SchedulerExecutionStatus.SUCCEEDED
+  });
+
+  it("runs data retention cleanup and stores execution summary", async () => {
+    repository.findSchedulerJobByCode.mockResolvedValue({
+      id: "job-retention",
+      code: "data-retention-cleanup",
+      displayName: "数据保留清理",
+      description: "清理过期记录",
+      cronExpression: "0 3 * * *",
+      status: SchedulerJobStatus.RUNNING,
+      ownerName: "平台治理",
+      nextRunAt: new Date("2026-04-17T03:00:00.000Z"),
+      lastRunAt: null,
+      lastExecutionStatus: null,
+      lastErrorMessage: null,
+      createdAt: new Date("2026-04-16T08:00:00.000Z"),
+      updatedAt: new Date("2026-04-16T08:00:00.000Z")
     });
+    repository.createSchedulerJobExecution.mockResolvedValue({
+      id: "execution-retention-1",
+      jobId: "job-retention",
+      status: SchedulerExecutionStatus.RUNNING,
+      summary: null,
+      errorMessage: null,
+      startedAt: new Date("2026-04-16T03:00:00.000Z"),
+      finishedAt: null,
+      durationMs: null,
+      createdAt: new Date("2026-04-16T03:00:00.000Z")
+    });
+    repository.purgeRetentionData.mockResolvedValue({
+      auditLogsDeleted: 10,
+      notificationsDeleted: 5,
+      webhookDeliveriesDeleted: 3,
+      revokedSessionsDeleted: 2,
+      batchTaskFailuresDeleted: 1
+    });
+    repository.updateSchedulerJobExecution.mockResolvedValue({
+      id: "execution-retention-1",
+      jobId: "job-retention",
+      status: SchedulerExecutionStatus.SUCCEEDED,
+      summary: "清理审计日志 10 条，通知 5 条，Webhook 投递 3 条，已撤销会话 2 条，失败明细 1 条。",
+      errorMessage: null,
+      startedAt: new Date("2026-04-16T03:00:00.000Z"),
+      finishedAt: new Date("2026-04-16T03:00:02.000Z"),
+      durationMs: 2000,
+      createdAt: new Date("2026-04-16T03:00:00.000Z")
+    });
+    repository.updateSchedulerJob.mockResolvedValue(undefined);
+
+    const result = await service.runSchedulerJob("data-retention-cleanup", buildActor());
+    const handler = jobQueueService.registerHandler.mock.calls.find((call) => call[0] === "system-governance.scheduler-run")?.[1];
+    await handler({
+      payload: jobQueueService.enqueue.mock.calls[0][0].payload,
+      startedAt: new Date("2026-04-16T03:00:00.000Z")
+    });
+
+    expect(repository.purgeRetentionData).toHaveBeenCalled();
+    expect(result).toMatchObject({
+      id: "execution-retention-1",
+      status: SchedulerExecutionStatus.RUNNING
+    });
+    expect(repository.updateSchedulerJobExecution).toHaveBeenCalledWith(
+      "execution-retention-1",
+      expect.objectContaining({
+        status: SchedulerExecutionStatus.SUCCEEDED,
+        summary: expect.stringContaining("清理审计日志 10 条")
+      })
+    );
+  });
+
+  it("registers data retention cleanup as a default scheduler job", async () => {
+    repository.listSchedulerJobs.mockResolvedValue([]);
+
+    await service.listSchedulerJobs();
+
+    expect(repository.ensureSchedulerJobs).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: "data-retention-cleanup",
+          cronExpression: "0 3 * * *",
+          status: SchedulerJobStatus.RUNNING
+        })
+      ])
+    );
   });
 
   it("publishes governance alerts when scheduler job execution fails", async () => {
@@ -314,7 +438,14 @@ describe("SystemGovernanceService", () => {
     });
     repository.updateSchedulerJob.mockResolvedValue(undefined);
 
-    await expect(service.runSchedulerJob("overdue-payment-scan", buildActor())).rejects.toThrow("Database timeout");
+    await service.runSchedulerJob("overdue-payment-scan", buildActor());
+    const handler = jobQueueService.registerHandler.mock.calls.find((call) => call[0] === "system-governance.scheduler-run")?.[1];
+    await expect(
+      handler({
+        payload: jobQueueService.enqueue.mock.calls[0][0].payload,
+        startedAt: new Date("2026-04-16T09:00:00.000Z")
+      })
+    ).rejects.toThrow("Database timeout");
 
     expect(notificationCenterService.publishEvent).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -325,6 +456,13 @@ describe("SystemGovernanceService", () => {
         recipientIds: ["user-1"]
       })
     );
+    expect(openIntegrationService.dispatchBusinessWebhookEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "GOVERNANCE_ALERT",
+        sourceType: "scheduler-job",
+        sourceId: "逾期回款扫描"
+      })
+    );
     expect(repository.updateSchedulerJobExecution).toHaveBeenCalledWith(
       "execution-2",
       expect.objectContaining({
@@ -332,5 +470,119 @@ describe("SystemGovernanceService", () => {
         errorMessage: "Database timeout"
       })
     );
+  });
+
+  it("enqueues due scheduler jobs for the worker runner", async () => {
+    repository.listDueSchedulerJobs = vi.fn().mockResolvedValue([
+      {
+        id: "job-renewal",
+        code: "renewal-reminder-push"
+      },
+      {
+        id: "job-overdue",
+        code: "overdue-payment-scan"
+      }
+    ]);
+    repository.createSchedulerJobExecution
+      .mockResolvedValueOnce({
+        id: "execution-10",
+        jobId: "job-renewal",
+        status: SchedulerExecutionStatus.RUNNING,
+        startedAt: new Date("2026-04-16T10:00:00.000Z")
+      })
+      .mockResolvedValueOnce({
+        id: "execution-11",
+        jobId: "job-overdue",
+        status: SchedulerExecutionStatus.RUNNING,
+        startedAt: new Date("2026-04-16T10:00:00.000Z")
+      });
+
+    const result = await service.enqueueDueSchedulerJobs();
+
+    expect(repository.listDueSchedulerJobs).toHaveBeenCalled();
+    expect(jobQueueService.enqueue).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        type: "system-governance.scheduler-run",
+        correlationId: "execution-10"
+      })
+    );
+    expect(jobQueueService.enqueue).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        type: "system-governance.scheduler-run",
+        correlationId: "execution-11"
+      })
+    );
+    expect(jobQueueService.scheduleRun).toHaveBeenCalledWith(["system-governance.scheduler-run"]);
+    expect(result).toEqual({ enqueued: 2 });
+  });
+
+  it("starts a scheduler poller that periodically enqueues due jobs", async () => {
+    repository.listDueSchedulerJobs.mockResolvedValue([]);
+
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    expect(repository.listDueSchedulerJobs).toHaveBeenCalled();
+  });
+
+  it("exports personal data with audited metadata", async () => {
+    repository.exportPersonalData.mockResolvedValue({
+      user: {
+        id: "user-2",
+        tenantId: "tenant-1",
+        username: "bob",
+        displayName: "Bob",
+        email: "bob@example.com",
+        phone: "13800000000",
+        status: "ACTIVE",
+        departmentId: "dept-1",
+        createdAt: new Date("2026-04-16T08:00:00.000Z"),
+        updatedAt: new Date("2026-04-16T08:00:00.000Z")
+      },
+      customers: [{ id: "customer-1" }],
+      leads: [{ id: "lead-1" }],
+      notifications: [{ id: "notification-1" }],
+      auditLogs: [{ id: "audit-1" }]
+    });
+
+    const result = await service.exportPersonalData("user-2", buildActor({ tenantId: "tenant-1" }));
+
+    expect(repository.exportPersonalData).toHaveBeenCalledWith("user-2");
+    expect(auditLogsService.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetType: "personal-data-export",
+        targetId: "user-2"
+      })
+    );
+    expect(result.exportMeta).toEqual(
+      expect.objectContaining({
+        customers: 1,
+        leads: 1,
+        notifications: 1,
+        auditLogs: 1
+      })
+    );
+  });
+
+  it("anonymizes personal data with audit trail", async () => {
+    repository.anonymizeUser.mockResolvedValue({
+      userId: "user-2",
+      anonymizedAt: new Date("2026-04-16T08:30:00.000Z")
+    });
+
+    const result = await service.anonymizePersonalData("user-2", buildActor({ tenantId: "tenant-1" }));
+
+    expect(repository.anonymizeUser).toHaveBeenCalledWith("user-2", "user-1");
+    expect(auditLogsService.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        targetType: "personal-data-anonymization",
+        targetId: "user-2"
+      })
+    );
+    expect(result).toEqual({
+      userId: "user-2",
+      anonymizedAt: "2026-04-16T08:30:00.000Z"
+    });
   });
 });

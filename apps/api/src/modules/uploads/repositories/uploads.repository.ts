@@ -31,6 +31,10 @@ export class UploadsRepository {
     originalName: string;
     mimeType: string;
     size: number;
+    scanStatus: AttachmentRecord["scanStatus"];
+    scanProvider?: string | null;
+    scanMessage?: string | null;
+    scannedAt?: Date | null;
     storageProvider: AttachmentRecord["storageProvider"];
     storageKey: string;
     uploadedById: string;
@@ -44,6 +48,10 @@ export class UploadsRepository {
         originalName: input.originalName,
         mimeType: input.mimeType,
         size: input.size,
+        scanStatus: input.scanStatus,
+        scanProvider: input.scanProvider ?? undefined,
+        scanMessage: input.scanMessage ?? undefined,
+        scannedAt: input.scannedAt ?? undefined,
         storageProvider: input.storageProvider,
         storageKey: input.storageKey,
         uploadedById: input.uploadedById,

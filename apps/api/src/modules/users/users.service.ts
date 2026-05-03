@@ -1,9 +1,10 @@
 /** users 模块 service：负责业务编排、副作用协同和权限相关流程，数据库访问统一下沉到 repository。 */
-import { Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable } from "@nestjs/common";
 import { AuditActionType, UserStatus } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { assertStrongPassword } from "@/common/security/password-policy.util";
 import { mapUser } from "@/common/mappers/access-control.mapper";
 import { TenantQuotaExceededException, TenantQuotaService } from "@/common/tenant/tenant-quota.service";
 import { requireTenantId } from "@/common/tenant/tenant.util";
@@ -11,6 +12,8 @@ import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { UsersRepository } from "./repositories/users.repository";
 import { CreateUserDto } from "./dto/create-user.dto";
 import { UpdateUserDto } from "./dto/update-user.dto";
+
+const PASSWORD_HISTORY_LIMIT = 3;
 
 @Injectable()
 export class UsersService {
@@ -27,6 +30,7 @@ export class UsersService {
   }
 
   async create(dto: CreateUserDto, actor: AuthUser) {
+    assertStrongPassword(dto.password);
     const passwordHash = await bcrypt.hash(dto.password, 10);
     const tenantId = requireTenantId(actor);
     await this.assertUserQuotaAvailable(tenantId, actor, "user.create");
@@ -40,6 +44,7 @@ export class UsersService {
       departmentId: dto.departmentId,
       roleIds: dto.roleIds
     });
+    await this.usersRepository.createPasswordHistory(user.id, passwordHash);
 
     await this.auditLogsService.create({
       actorId: actor.id,
@@ -54,12 +59,21 @@ export class UsersService {
 
   async update(id: string, dto: UpdateUserDto, actor: AuthUser) {
     const tenantId = requireTenantId(actor);
+    let passwordHash: string | undefined;
+
+    if (dto.password) {
+      assertStrongPassword(dto.password);
+      const user = await this.usersRepository.findById(id, tenantId);
+      await this.assertPasswordHistory(user.id, user.passwordHash, dto.password);
+      passwordHash = await bcrypt.hash(dto.password, 10);
+    }
+
     const user = await this.usersRepository.updateUser(id, tenantId, {
       displayName: dto.displayName,
       email: dto.email === undefined ? undefined : dto.email,
       phone: dto.phone === undefined ? undefined : dto.phone,
       departmentId: dto.departmentId === undefined ? undefined : dto.departmentId,
-      passwordHash: dto.password ? await bcrypt.hash(dto.password, 10) : undefined,
+      passwordHash,
       roleIds: dto.roleIds
     });
 
@@ -89,6 +103,24 @@ export class UsersService {
       actionType: status === UserStatus.ACTIVE ? AuditActionType.ENABLE : AuditActionType.DISABLE,
       targetType: "user",
       targetId: user.id
+    });
+
+    return mapUser(user);
+  }
+
+  async unlock(id: string, actor: AuthUser) {
+    const tenantId = requireTenantId(actor);
+    const user = await this.usersRepository.unlockUser(id, tenantId);
+
+    await this.auditLogsService.create({
+      actorId: actor.id,
+      actorName: actor.displayName,
+      actionType: AuditActionType.ENABLE,
+      targetType: "user-lock",
+      targetId: user.id,
+      detail: {
+        action: "security-review-clear"
+      }
     });
 
     return mapUser(user);
@@ -132,5 +164,19 @@ export class UsersService {
         reason: error.quota.message
       }
     });
+  }
+
+  private async assertPasswordHistory(userId: string, currentPasswordHash: string, nextPassword: string) {
+    if (await bcrypt.compare(nextPassword, currentPasswordHash)) {
+      throw new BadRequestException("Password must not match a recently used password.");
+    }
+
+    const history = await this.usersRepository.listPasswordHistory(userId, PASSWORD_HISTORY_LIMIT);
+
+    for (const item of history) {
+      if (await bcrypt.compare(nextPassword, item.passwordHash)) {
+        throw new BadRequestException("Password must not match a recently used password.");
+      }
+    }
   }
 }

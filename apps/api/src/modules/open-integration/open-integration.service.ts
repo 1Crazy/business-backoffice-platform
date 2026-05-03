@@ -1,4 +1,4 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
+import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes, timingSafeEqual } from "crypto";
 import { lookup } from "dns/promises";
 import { isIP } from "net";
 
@@ -6,6 +6,7 @@ import {
   BadRequestException,
   ForbiddenException,
   Injectable,
+  OnModuleInit,
   UnauthorizedException
 } from "@nestjs/common";
 import { ConfigService } from "@nestjs/config";
@@ -20,6 +21,7 @@ import {
 } from "@prisma/client";
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
+import { JobQueueService, type BackgroundJobHandler } from "@/common/job-queue/job-queue.service";
 import { isLocalRuntime } from "@/common/security/security-config.util";
 import { RiskThrottleService } from "@/common/security/risk-throttle.service";
 import {
@@ -67,8 +69,17 @@ const CONNECTOR_LOGIN_THROTTLE = {
 };
 const WEBHOOK_RESPONSE_BODY_LIMIT = 2048;
 const WEBHOOK_TEST_MODE_OPTIONS = ["REAL", "SIMULATION"] as const;
+const SECRET_HASH_VERSION_SHA256 = "sha256";
+const SECRET_HASH_VERSION_HMAC_SHA256_V1 = "hmac-sha256-v1";
+const SECRET_CIPHER_VERSION_PLAIN = "plain";
+const SECRET_CIPHER_VERSION_AES_256_GCM_V1 = "aes-256-gcm-v1";
+const SECRET_ENCRYPTION_KEY_BYTES = 32;
+const SECRET_ENCRYPTION_IV_BYTES = 12;
+const WEBHOOK_TEST_JOB_TYPE = "open-integration.webhook-test";
+const WEBHOOK_EVENT_DELIVERY_JOB_TYPE = "open-integration.webhook-event-delivery";
 
 type WebhookTestMode = (typeof WEBHOOK_TEST_MODE_OPTIONS)[number];
+type WebhookEventType = (typeof WEBHOOK_EVENT_OPTIONS)[number];
 
 interface WebhookDeliveryResult {
   status: WebhookDeliveryStatus;
@@ -83,14 +94,23 @@ interface WebhookDeliveryResult {
 }
 
 @Injectable()
-export class OpenIntegrationService {
+export class OpenIntegrationService implements OnModuleInit {
   constructor(
     private readonly openIntegrationRepository: OpenIntegrationRepository,
     private readonly auditLogsService: AuditLogsService,
     private readonly authService: AuthService,
     private readonly configService?: ConfigService,
-    private readonly riskThrottleService?: RiskThrottleService
+    private readonly riskThrottleService?: RiskThrottleService,
+    private readonly jobQueueService?: JobQueueService
   ) {}
+
+  onModuleInit(): void {
+    this.jobQueueService?.registerHandler(WEBHOOK_TEST_JOB_TYPE, this.handleWebhookTestJob as BackgroundJobHandler);
+    this.jobQueueService?.registerHandler(
+      WEBHOOK_EVENT_DELIVERY_JOB_TYPE,
+      this.handleWebhookEventDeliveryJob as BackgroundJobHandler
+    );
+  }
 
   async listOpenApiCredentials(actor: AuthUser) {
     const credentials = await this.openIntegrationRepository.listOpenApiCredentials(requireTenantId(actor));
@@ -104,7 +124,8 @@ export class OpenIntegrationService {
       tenantId,
       name: dto.name.trim(),
       accessKey: this.generateAccessKey(),
-      secretHash: this.hashValue(plainSecret),
+      secretHash: this.hashSecret(plainSecret).hash,
+      secretHashVersion: SECRET_HASH_VERSION_HMAC_SHA256_V1,
       scopes: this.normalizeOpenApiScopes(dto.scopes),
       expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : undefined,
       createdByName: actor.displayName
@@ -127,8 +148,10 @@ export class OpenIntegrationService {
     }
 
     const plainSecret = this.generateSecret("opsk");
+    const hashedSecret = this.hashSecret(plainSecret);
     const credential = await this.openIntegrationRepository.updateOpenApiCredential(id, tenantId, {
-      secretHash: this.hashValue(plainSecret),
+      secretHash: hashedSecret.hash,
+      secretHashVersion: hashedSecret.version,
       rotatedAt: new Date()
     });
 
@@ -161,13 +184,16 @@ export class OpenIntegrationService {
   async createWebhookSubscription(dto: CreateWebhookSubscriptionDto, actor: AuthUser) {
     const tenantId = requireTenantId(actor);
     const plainSigningSecret = this.generateSecret("whs");
+    const encryptedSigningSecret = this.encryptSecret(plainSigningSecret);
     const subscription = await this.openIntegrationRepository.createWebhookSubscription({
       tenantId,
       name: dto.name.trim(),
       endpointUrl: dto.endpointUrl.trim(),
       eventTypes: this.normalizeWebhookEventTypes(dto.eventTypes),
       status: dto.status ?? WebhookSubscriptionStatus.ACTIVE,
-      signingSecret: plainSigningSecret,
+      signingSecret: encryptedSigningSecret.ciphertext,
+      signingSecretCiphertext: encryptedSigningSecret.ciphertext,
+      signingSecretVersion: encryptedSigningSecret.version,
       signingSecretHint: this.buildSecretHint(plainSigningSecret),
       maxAttempts: dto.maxAttempts ?? 3,
       timeoutSeconds: dto.timeoutSeconds ?? 10,
@@ -187,12 +213,15 @@ export class OpenIntegrationService {
     const tenantId = requireTenantId(actor);
     const current = await this.openIntegrationRepository.findWebhookSubscriptionById(id, tenantId);
     const nextSecret = dto.rotateSecret ? this.generateSecret("whs") : undefined;
+    const encryptedNextSecret = nextSecret ? this.encryptSecret(nextSecret) : undefined;
     const subscription = await this.openIntegrationRepository.updateWebhookSubscription(id, tenantId, {
       name: dto.name?.trim(),
       endpointUrl: dto.endpointUrl?.trim(),
       eventTypes: dto.eventTypes ? this.normalizeWebhookEventTypes(dto.eventTypes) : undefined,
       status: dto.status,
-      signingSecret: nextSecret,
+      signingSecret: encryptedNextSecret?.ciphertext,
+      signingSecretCiphertext: encryptedNextSecret?.ciphertext,
+      signingSecretVersion: encryptedNextSecret?.version,
       signingSecretHint: nextSecret ? this.buildSecretHint(nextSecret) : undefined,
       maxAttempts: dto.maxAttempts,
       timeoutSeconds: dto.timeoutSeconds,
@@ -229,8 +258,7 @@ export class OpenIntegrationService {
       occurredAt: new Date().toISOString(),
       tenantId
     };
-    const signature = this.signWebhookPayload(subscription.signingSecret, payload);
-    const result = await this.runWebhookTestDelivery(subscription, payload, signature);
+    const signature = this.signWebhookPayload(this.resolveWebhookSigningSecret(subscription), payload);
     const delivery = await this.openIntegrationRepository.createWebhookDelivery({
       tenantId,
       subscriptionId: subscription.id,
@@ -239,6 +267,105 @@ export class OpenIntegrationService {
       sourceId: payload.sourceId,
       payload: {
         ...payload,
+        queued: true
+      },
+      signature,
+      status: WebhookDeliveryStatus.PENDING,
+      attemptCount: 0,
+      responseStatusCode: null,
+      responseBody: null,
+      errorMessage: null,
+      nextRetryAt: null,
+      deliveredAt: null
+    });
+
+    await this.openIntegrationRepository.updateWebhookSubscription(subscription.id, tenantId, {
+      lastTriggeredAt: new Date(),
+      lastDeliveryStatus: delivery.status,
+      lastFailureMessage: null,
+      updatedByName: actor.displayName
+    });
+
+    if (!this.jobQueueService) {
+      const completedDelivery = await this.executeWebhookTestDeliveryJob({
+        tenantId,
+        subscriptionId: subscription.id,
+        deliveryId: delivery.id,
+        actorId: actor.id,
+        actorName: actor.displayName
+      });
+
+      return this.mapWebhookDelivery(completedDelivery);
+    }
+
+    await this.jobQueueService.enqueue({
+      type: WEBHOOK_TEST_JOB_TYPE,
+      payload: {
+        tenantId,
+        subscriptionId: subscription.id,
+        deliveryId: delivery.id,
+        actorId: actor.id,
+        actorName: actor.displayName
+      },
+      correlationId: delivery.id
+    });
+    this.jobQueueService.scheduleRun([WEBHOOK_TEST_JOB_TYPE]);
+
+    return this.mapWebhookDelivery(delivery);
+  }
+
+  private handleWebhookTestJob = async (job: Parameters<BackgroundJobHandler>[0]) => {
+    const payload = this.readJobPayload(job.payload);
+    const delivery = await this.executeWebhookTestDeliveryJob({
+      tenantId: this.readRequiredPayloadString(payload, "tenantId"),
+      subscriptionId: this.readRequiredPayloadString(payload, "subscriptionId"),
+      deliveryId: this.readRequiredPayloadString(payload, "deliveryId"),
+      actorId: this.readOptionalPayloadString(payload, "actorId"),
+      actorName: this.readOptionalPayloadString(payload, "actorName")
+    });
+
+    return {
+      deliveryId: delivery.id,
+      status: delivery.status
+    };
+  };
+
+  private handleWebhookEventDeliveryJob = async (job: Parameters<BackgroundJobHandler>[0]) => {
+    const payload = this.readJobPayload(job.payload);
+    const delivery = await this.executeWebhookEventDeliveryJob({
+      tenantId: this.readRequiredPayloadString(payload, "tenantId"),
+      subscriptionId: this.readRequiredPayloadString(payload, "subscriptionId"),
+      deliveryId: this.readRequiredPayloadString(payload, "deliveryId"),
+      actorId: this.readOptionalPayloadString(payload, "actorId"),
+      actorName: this.readOptionalPayloadString(payload, "actorName")
+    });
+
+    return {
+      deliveryId: delivery.id,
+      status: delivery.status
+    };
+  };
+
+  private async executeWebhookTestDeliveryJob(input: {
+    tenantId: string;
+    subscriptionId: string;
+    deliveryId: string;
+    actorId?: string;
+    actorName?: string;
+  }): Promise<WebhookDeliveryRecord> {
+    const subscription = await this.openIntegrationRepository.findWebhookSubscriptionById(input.subscriptionId, input.tenantId);
+    const eventPayload = {
+      eventType: this.readStringArray(subscription.eventTypes)[0] ?? "GOVERNANCE_ALERT",
+      sourceType: "system-administration",
+      sourceId: input.subscriptionId,
+      occurredAt: new Date().toISOString(),
+      tenantId: input.tenantId
+    };
+    const signature = this.signWebhookPayload(this.resolveWebhookSigningSecret(subscription), eventPayload);
+    const result = await this.runWebhookTestDelivery(subscription, eventPayload, signature);
+    const delivery = await this.openIntegrationRepository.updateWebhookDelivery(input.deliveryId, input.tenantId, {
+      payload: {
+        ...eventPayload,
         deliveryMode: result.deliveryMode,
         durationMs: result.durationMs
       },
@@ -252,16 +379,21 @@ export class OpenIntegrationService {
       deliveredAt: result.deliveredAt
     });
 
-    await this.openIntegrationRepository.updateWebhookSubscription(subscription.id, tenantId, {
-      lastTriggeredAt: new Date(),
+    await this.openIntegrationRepository.updateWebhookSubscription(subscription.id, input.tenantId, {
       lastDeliveryStatus: delivery.status,
       lastFailureMessage: delivery.errorMessage ?? null,
-      updatedByName: actor.displayName
+      updatedByName: input.actorName ?? undefined
     });
 
     await this.createAuditLog(
-      tenantId,
-      actor,
+      input.tenantId,
+      {
+        id: input.actorId ?? "system",
+        displayName: input.actorName ?? "system",
+        username: input.actorName ?? "system",
+        roleCodes: [],
+        permissions: []
+      } as AuthUser,
       delivery.status === WebhookDeliveryStatus.SUCCEEDED
         ? AuditActionType.WEBHOOK_DELIVERY
         : AuditActionType.WEBHOOK_DELIVERY_FAILED,
@@ -276,7 +408,79 @@ export class OpenIntegrationService {
       }
     );
 
-    return this.mapWebhookDelivery(delivery);
+    return delivery;
+  }
+
+  private async executeWebhookEventDeliveryJob(input: {
+    tenantId: string;
+    subscriptionId: string;
+    deliveryId: string;
+    actorId?: string;
+    actorName?: string;
+  }): Promise<WebhookDeliveryRecord> {
+    const subscription = await this.openIntegrationRepository.findWebhookSubscriptionById(input.subscriptionId, input.tenantId);
+    const existingDelivery = (await this.openIntegrationRepository.listWebhookDeliveries(input.tenantId, input.subscriptionId)).find(
+      (item) => item.id === input.deliveryId
+    );
+
+    if (!existingDelivery) {
+      throw new BadRequestException("Webhook delivery was not found.");
+    }
+
+    const payloadMetadata =
+      existingDelivery.payload && typeof existingDelivery.payload === "object" && !Array.isArray(existingDelivery.payload)
+        ? (existingDelivery.payload as Record<string, unknown>)
+        : {};
+    const signature = this.signWebhookPayload(this.resolveWebhookSigningSecret(subscription), payloadMetadata);
+    const result = await this.runWebhookTestDelivery(subscription, payloadMetadata, signature);
+    const delivery = await this.openIntegrationRepository.updateWebhookDelivery(input.deliveryId, input.tenantId, {
+      payload: {
+        ...payloadMetadata,
+        deliveryMode: result.deliveryMode,
+        durationMs: result.durationMs
+      },
+      signature,
+      status: result.status,
+      attemptCount: result.attemptCount,
+      responseStatusCode: result.responseStatusCode,
+      responseBody: result.responseBody,
+      errorMessage: result.errorMessage,
+      nextRetryAt: result.nextRetryAt,
+      deliveredAt: result.deliveredAt
+    });
+
+    await this.openIntegrationRepository.updateWebhookSubscription(subscription.id, input.tenantId, {
+      lastDeliveryStatus: delivery.status,
+      lastFailureMessage: delivery.errorMessage ?? null,
+      updatedByName: input.actorName ?? undefined
+    });
+
+    await this.createAuditLog(
+      input.tenantId,
+      {
+        id: input.actorId ?? "system",
+        displayName: input.actorName ?? "system",
+        username: input.actorName ?? "system",
+        roleCodes: [],
+        permissions: []
+      } as AuthUser,
+      delivery.status === WebhookDeliveryStatus.SUCCEEDED
+        ? AuditActionType.WEBHOOK_DELIVERY
+        : AuditActionType.WEBHOOK_DELIVERY_FAILED,
+      "webhook-delivery",
+      delivery.id,
+      {
+        endpointUrl: subscription.endpointUrl,
+        eventType: delivery.eventType,
+        attemptCount: delivery.attemptCount,
+        deliveryMode: result.deliveryMode,
+        durationMs: result.durationMs,
+        sourceType: delivery.sourceType,
+        sourceId: delivery.sourceId
+      }
+    );
+
+    return delivery;
   }
 
   async listWebhookDeliveries(subscriptionId: string, actor: AuthUser) {
@@ -284,6 +488,86 @@ export class OpenIntegrationService {
     await this.openIntegrationRepository.findWebhookSubscriptionById(subscriptionId, tenantId);
     const deliveries = await this.openIntegrationRepository.listWebhookDeliveries(tenantId, subscriptionId);
     return deliveries.map((item) => this.mapWebhookDelivery(item));
+  }
+
+  async dispatchBusinessWebhookEvent(input: {
+    tenantId: string;
+    eventType: WebhookEventType;
+    sourceType: string;
+    sourceId: string;
+    payload: Record<string, unknown>;
+    actorId?: string | null;
+    actorName?: string | null;
+    occurredAt?: Date;
+  }) {
+    const subscriptions = (await this.openIntegrationRepository.listWebhookSubscriptions(input.tenantId)).filter(
+      (subscription) =>
+        subscription.status === WebhookSubscriptionStatus.ACTIVE &&
+        this.readStringArray(subscription.eventTypes).includes(input.eventType)
+    );
+
+    for (const subscription of subscriptions) {
+      const eventPayload = {
+        eventType: input.eventType,
+        sourceType: input.sourceType,
+        sourceId: input.sourceId,
+        occurredAt: (input.occurredAt ?? new Date()).toISOString(),
+        tenantId: input.tenantId,
+        payload: input.payload
+      };
+      const signature = this.signWebhookPayload(this.resolveWebhookSigningSecret(subscription), eventPayload);
+      const delivery = await this.openIntegrationRepository.createWebhookDelivery({
+        tenantId: input.tenantId,
+        subscriptionId: subscription.id,
+        eventType: input.eventType,
+        sourceType: input.sourceType,
+        sourceId: input.sourceId,
+        payload: {
+          ...eventPayload,
+          queued: true
+        },
+        signature,
+        status: WebhookDeliveryStatus.PENDING,
+        attemptCount: 0,
+        responseStatusCode: null,
+        responseBody: null,
+        errorMessage: null,
+        nextRetryAt: null,
+        deliveredAt: null
+      });
+
+      await this.openIntegrationRepository.updateWebhookSubscription(subscription.id, input.tenantId, {
+        lastTriggeredAt: new Date(),
+        lastDeliveryStatus: delivery.status,
+        lastFailureMessage: null,
+        updatedByName: input.actorName ?? undefined
+      });
+
+      if (!this.jobQueueService) {
+        await this.executeWebhookEventDeliveryJob({
+          tenantId: input.tenantId,
+          subscriptionId: subscription.id,
+          deliveryId: delivery.id,
+          actorId: input.actorId ?? undefined,
+          actorName: input.actorName ?? undefined
+        });
+        continue;
+      }
+
+      await this.jobQueueService.enqueue({
+        type: WEBHOOK_EVENT_DELIVERY_JOB_TYPE,
+        payload: {
+          tenantId: input.tenantId,
+          subscriptionId: subscription.id,
+          deliveryId: delivery.id,
+          actorId: input.actorId ?? null,
+          actorName: input.actorName ?? null
+        },
+        correlationId: delivery.id
+      });
+    }
+
+    this.jobQueueService?.scheduleRun([WEBHOOK_EVENT_DELIVERY_JOB_TYPE]);
   }
 
   async listIdentityConnectors(actor: AuthUser) {
@@ -304,7 +588,8 @@ export class OpenIntegrationService {
       tokenUrl: this.normalizeText(dto.tokenUrl),
       directoryUrl: this.normalizeText(dto.directoryUrl),
       clientId: this.normalizeText(dto.clientId),
-      clientSecretHash: dto.clientSecret ? this.hashValue(dto.clientSecret) : undefined,
+      clientSecretHash: dto.clientSecret ? this.hashSecret(dto.clientSecret).hash : undefined,
+      clientSecretHashVersion: dto.clientSecret ? SECRET_HASH_VERSION_HMAC_SHA256_V1 : undefined,
       clientSecretHint: dto.clientSecret ? this.buildSecretHint(dto.clientSecret) : undefined,
       allowedDomains: this.normalizeDomains(dto.allowedDomains),
       config: dto.config,
@@ -333,7 +618,8 @@ export class OpenIntegrationService {
       tokenUrl: dto.tokenUrl === undefined ? undefined : this.normalizeText(dto.tokenUrl),
       directoryUrl: dto.directoryUrl === undefined ? undefined : this.normalizeText(dto.directoryUrl),
       clientId: dto.clientId === undefined ? undefined : this.normalizeText(dto.clientId),
-      clientSecretHash: dto.clientSecret ? this.hashValue(dto.clientSecret) : undefined,
+      clientSecretHash: dto.clientSecret ? this.hashSecret(dto.clientSecret).hash : undefined,
+      clientSecretHashVersion: dto.clientSecret ? SECRET_HASH_VERSION_HMAC_SHA256_V1 : undefined,
       clientSecretHint: dto.clientSecret ? this.buildSecretHint(dto.clientSecret) : undefined,
       allowedDomains: dto.allowedDomains ? this.normalizeDomains(dto.allowedDomains) : undefined,
       config: dto.config,
@@ -425,7 +711,13 @@ export class OpenIntegrationService {
       });
     }
 
+    const upgradedConnectorSecret =
+      dto.proofType === "CLIENT_SECRET" && dto.proofSecret && this.needsSecretHashUpgrade(connector.clientSecretHashVersion)
+        ? this.hashSecret(dto.proofSecret.trim())
+        : undefined;
     await this.openIntegrationRepository.updateIdentityConnector(connector.id, tenantId, {
+      clientSecretHash: upgradedConnectorSecret?.hash,
+      clientSecretHashVersion: upgradedConnectorSecret?.version,
       lastAuthenticatedAt: new Date(),
       lastFailureAt: null,
       lastFailureMessage: null
@@ -522,9 +814,8 @@ export class OpenIntegrationService {
     const throttleKey = this.buildThrottleKey("open-api", normalizedAccessKey);
     await this.riskThrottleService?.assertAllowed(throttleKey, OPEN_API_THROTTLE);
     const credential = await this.openIntegrationRepository.findOpenApiCredentialByAccessKey(normalizedAccessKey);
-    const secretHash = this.hashValue(secret.trim());
 
-    if (!credential || !this.isHashEqual(credential.secretHash, secretHash)) {
+    if (!credential || !this.verifyStoredSecret(secret.trim(), credential.secretHash, credential.secretHashVersion)) {
       await this.riskThrottleService?.recordFailure(throttleKey, OPEN_API_THROTTLE);
       await this.auditLogsService.create({
         actorName: accessKey,
@@ -578,8 +869,13 @@ export class OpenIntegrationService {
     }
 
     await this.riskThrottleService?.recordSuccess(throttleKey);
+    const upgradedOpenApiSecret = this.needsSecretHashUpgrade(credential.secretHashVersion)
+      ? this.hashSecret(secret.trim())
+      : undefined;
     await this.openIntegrationRepository.updateOpenApiCredential(credential.id, credential.tenantId, {
-      lastUsedAt: new Date()
+      lastUsedAt: new Date(),
+      secretHash: upgradedOpenApiSecret?.hash,
+      secretHashVersion: upgradedOpenApiSecret?.version
     });
     await this.auditLogsService.create({
       tenantId: credential.tenantId,
@@ -631,7 +927,10 @@ export class OpenIntegrationService {
       throw new UnauthorizedException("Connector login proof is required.");
     }
 
-    if (!connector.clientSecretHash || !this.isHashEqual(connector.clientSecretHash, this.hashValue(dto.proofSecret.trim()))) {
+    if (
+      !connector.clientSecretHash ||
+      !this.verifyStoredSecret(dto.proofSecret.trim(), connector.clientSecretHash, connector.clientSecretHashVersion)
+    ) {
       throw new UnauthorizedException("Connector login proof is invalid.");
     }
   }
@@ -717,8 +1016,105 @@ export class OpenIntegrationService {
     return `${prefix}_${randomBytes(24).toString("hex")}`;
   }
 
-  private hashValue(value: string) {
-    return createHash("sha256").update(value).digest("hex");
+  private hashSecret(value: string) {
+    return {
+      hash: createHmac("sha256", this.getSecretHashPepper()).update(value).digest("hex"),
+      version: SECRET_HASH_VERSION_HMAC_SHA256_V1
+    };
+  }
+
+  private verifyStoredSecret(value: string, expectedHash: string, version?: string | null): boolean {
+    const actualHash =
+      version === SECRET_HASH_VERSION_HMAC_SHA256_V1
+        ? this.hashSecret(value).hash
+        : createHash("sha256").update(value).digest("hex");
+
+    return this.isHashEqual(expectedHash, actualHash);
+  }
+
+  private needsSecretHashUpgrade(version?: string | null): boolean {
+    return version !== SECRET_HASH_VERSION_HMAC_SHA256_V1;
+  }
+
+  private getSecretHashPepper(): string {
+    const configuredPepper = this.configService?.get<string>("OPEN_INTEGRATION_SECRET_PEPPER")?.trim();
+
+    if (configuredPepper) {
+      return configuredPepper;
+    }
+
+    const fallbackSecret = this.configService?.get<string>("JWT_SECRET")?.trim();
+    if (fallbackSecret) {
+      return fallbackSecret;
+    }
+
+    if (this.configService && !isLocalRuntime(this.configService)) {
+      throw new Error("OPEN_INTEGRATION_SECRET_PEPPER is required outside local/test environments.");
+    }
+
+    return "local-open-integration-secret-pepper";
+  }
+
+  private encryptSecret(secret: string) {
+    const key = this.getSecretEncryptionKey();
+    const iv = randomBytes(SECRET_ENCRYPTION_IV_BYTES);
+    const cipher = createCipheriv("aes-256-gcm", key, iv);
+    const encrypted = Buffer.concat([cipher.update(secret, "utf8"), cipher.final()]);
+    const tag = cipher.getAuthTag();
+
+    return {
+      ciphertext: [iv, tag, encrypted].map((item) => item.toString("base64url")).join("."),
+      version: SECRET_CIPHER_VERSION_AES_256_GCM_V1
+    };
+  }
+
+  private decryptSecret(ciphertext: string) {
+    const [ivPart, tagPart, encryptedPart] = ciphertext.split(".");
+
+    if (!ivPart || !tagPart || !encryptedPart) {
+      throw new Error("Encrypted secret payload is malformed.");
+    }
+
+    const decipher = createDecipheriv("aes-256-gcm", this.getSecretEncryptionKey(), Buffer.from(ivPart, "base64url"));
+    decipher.setAuthTag(Buffer.from(tagPart, "base64url"));
+
+    return Buffer.concat([
+      decipher.update(Buffer.from(encryptedPart, "base64url")),
+      decipher.final()
+    ]).toString("utf8");
+  }
+
+  private getSecretEncryptionKey(): Buffer {
+    const configuredKey = this.configService?.get<string>("OPEN_INTEGRATION_SECRET_ENCRYPTION_KEY")?.trim();
+    const material = configuredKey || this.configService?.get<string>("JWT_SECRET")?.trim();
+
+    if (!material) {
+      if (this.configService && !isLocalRuntime(this.configService)) {
+        throw new Error("OPEN_INTEGRATION_SECRET_ENCRYPTION_KEY is required outside local/test environments.");
+      }
+
+      return createHash("sha256").update("local-open-integration-secret-encryption-key").digest();
+    }
+
+    if (/^[A-Za-z0-9_-]{43}$/.test(material)) {
+      const decoded = Buffer.from(material, "base64url");
+      if (decoded.length === SECRET_ENCRYPTION_KEY_BYTES) {
+        return decoded;
+      }
+    }
+
+    return createHash("sha256").update(material).digest();
+  }
+
+  private resolveWebhookSigningSecret(subscription: WebhookSubscriptionRecord) {
+    if (
+      subscription.signingSecretVersion === SECRET_CIPHER_VERSION_AES_256_GCM_V1 &&
+      subscription.signingSecretCiphertext
+    ) {
+      return this.decryptSecret(subscription.signingSecretCiphertext);
+    }
+
+    return subscription.signingSecret;
   }
 
   private isHashEqual(expectedHash: string, actualHash: string): boolean {
@@ -1061,6 +1457,26 @@ export class OpenIntegrationService {
 
   private readStringArray(value: unknown): string[] {
     return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  }
+
+  private readJobPayload(value: unknown): Record<string, unknown> {
+    return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  }
+
+  private readRequiredPayloadString(payload: Record<string, unknown>, key: string): string {
+    const value = payload[key];
+
+    if (typeof value !== "string" || !value) {
+      throw new BadRequestException(`Background job payload is missing ${key}.`);
+    }
+
+    return value;
+  }
+
+  private readOptionalPayloadString(payload: Record<string, unknown>, key: string): string | undefined {
+    const value = payload[key];
+
+    return typeof value === "string" && value ? value : undefined;
   }
 
   private mapOpenApiCredential(record: OpenApiCredentialRecord, plainSecret?: string) {

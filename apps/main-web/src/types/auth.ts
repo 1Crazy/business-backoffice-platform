@@ -15,11 +15,34 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface VerifyLoginMfaPayload {
+  ticket: string;
+  code: string;
+}
+
+export interface RequestPasswordResetPayload {
+  identifier: string;
+}
+
+export interface ResetPasswordPayload {
+  token: string;
+  password: string;
+}
+
 export interface LoginFormModel extends LoginPayload {}
 
 export interface LoginResponse {
-  accessToken: string;
-  sessionExpiresAt: string;
-  success?: boolean;
-  user: CurrentUser;
+  success: boolean;
+  mfaRequired: boolean;
+  mfaEnrollmentRequired: boolean;
+  mfaTicket: string | null;
+  mfaChallengeType: "totp" | null;
+  mfaSetupChallenge: string | null;
+  mfaRecoveryCodes: string[];
+  sessionExpiresAt: string | null;
+  user: CurrentUser | null;
+}
+
+export interface PasswordResetResponse {
+  success: boolean;
 }

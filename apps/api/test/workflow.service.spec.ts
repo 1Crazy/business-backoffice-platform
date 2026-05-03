@@ -9,31 +9,34 @@ import { WorkflowService } from "../src/modules/workflow/workflow.service";
 
 describe("WorkflowService", () => {
   const mockRepository = {
-    listTemplates: jest.fn(),
-    findTemplateById: jest.fn(),
-    createTemplate: jest.fn(),
-    updateTemplate: jest.fn(),
-    updateTemplateStatus: jest.fn(),
-    listUsersByIds: jest.fn(),
-    listUsersByPermission: jest.fn(),
-    createWorkflowInstance: jest.fn(),
-    findInstanceById: jest.fn(),
-    findTaskById: jest.fn(),
-    approveTask: jest.fn(),
-    rejectTask: jest.fn(),
-    transferTask: jest.fn(),
-    addSignTask: jest.fn(),
-    addCcRecipients: jest.fn(),
-    closeInstance: jest.fn()
+    listTemplates: vi.fn(),
+    findTemplateById: vi.fn(),
+    createTemplate: vi.fn(),
+    updateTemplate: vi.fn(),
+    updateTemplateStatus: vi.fn(),
+    listUsersByIds: vi.fn(),
+    listUsersByPermission: vi.fn(),
+    createWorkflowInstance: vi.fn(),
+    findInstanceById: vi.fn(),
+    findTaskById: vi.fn(),
+    approveTask: vi.fn(),
+    rejectTask: vi.fn(),
+    transferTask: vi.fn(),
+    addSignTask: vi.fn(),
+    addCcRecipients: vi.fn(),
+    closeInstance: vi.fn()
   };
   const mockAuditLogs = {
-    create: jest.fn()
+    create: vi.fn()
+  };
+  const mockOpenIntegration = {
+    dispatchBusinessWebhookEvent: vi.fn().mockResolvedValue(undefined)
   };
 
-  const service = new WorkflowService(mockRepository as any, mockAuditLogs as any);
+  const service = new WorkflowService(mockRepository as any, mockAuditLogs as any, mockOpenIntegration as any);
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("creates a workflow template and records audit log", async () => {
@@ -251,7 +254,89 @@ describe("WorkflowService", () => {
         completeInstance: false
       })
     );
+    expect(mockOpenIntegration.dispatchBusinessWebhookEvent).not.toHaveBeenCalled();
     expect(result.currentNodeKey).toBe("finance-approval");
+  });
+
+  it("publishes a webhook event when workflow instance is completed", async () => {
+    mockRepository.findTaskById.mockResolvedValue(
+      buildTaskRecord({
+        id: "task-complete-1",
+        assignee: {
+          id: "approver-1",
+          displayName: "经理"
+        },
+        templateNode: {
+          id: "node-1",
+          nodeKey: "manager-approval",
+          name: "经理审批",
+          position: 1,
+          assignmentType: WorkflowAssignmentType.USER,
+          assignmentConfig: { userIds: ["approver-1"] },
+          branchRules: []
+        },
+        instance: buildInstanceRecord({
+          id: "instance-complete-1",
+          title: "请假审批",
+          template: buildTemplateRecord({
+            id: "template-wf-1",
+            key: "leave-v2",
+            nodes: [
+              {
+                id: "node-1",
+                nodeKey: "manager-approval",
+                name: "经理审批",
+                position: 1,
+                assignmentType: WorkflowAssignmentType.USER,
+                assignmentConfig: { userIds: ["approver-1"] },
+                branchRules: []
+              }
+            ]
+          }),
+          tasks: [
+            buildTaskSummary({
+              id: "task-complete-1",
+              nodeKey: "manager-approval",
+              assigneeId: "approver-1",
+              assigneeName: "经理"
+            })
+          ]
+        })
+      })
+    );
+    mockRepository.approveTask.mockResolvedValue(
+      buildInstanceRecord({
+        id: "instance-complete-1",
+        title: "请假审批",
+        status: WorkflowInstanceStatus.APPROVED,
+        currentNodeKey: null,
+        completedAt: new Date("2026-04-16T11:00:00.000Z"),
+        template: buildTemplateRecord({
+          id: "template-wf-1",
+          key: "leave-v2"
+        })
+      })
+    );
+
+    await service.approveTask(
+      "task-complete-1",
+      {
+        comment: "通过"
+      },
+      buildActor({
+        id: "approver-1",
+        displayName: "经理"
+      })
+    );
+
+    expect(mockOpenIntegration.dispatchBusinessWebhookEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: "tenant-1",
+        eventType: "WORKFLOW_INSTANCE_COMPLETED",
+        sourceType: "workflow-instance",
+        sourceId: "instance-complete-1"
+      })
+    );
   });
 
   it("transfers and add-signs pending tasks", async () => {

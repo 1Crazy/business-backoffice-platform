@@ -6,7 +6,10 @@ import { APP_GUARD } from "@nestjs/core";
 import { AppController } from "./app.controller";
 import { DataScopeModule } from "./common/data-scope/data-scope.module";
 import { JwtAuthGuard } from "./common/guards/jwt-auth.guard";
+import { ApiRateLimitGuard } from "./common/guards/api-rate-limit.guard";
+import { CsrfGuard } from "./common/guards/csrf.guard";
 import { PermissionsGuard } from "./common/guards/permissions.guard";
+import { JobQueueModule } from "./common/job-queue/job-queue.module";
 import { ObservabilityModule } from "./common/observability/observability.module";
 import { RequestObservabilityMiddleware } from "./common/observability/request-observability.middleware";
 import { PrismaModule } from "./common/prisma/prisma.module";
@@ -42,6 +45,7 @@ import { WorkflowModule } from "./modules/workflow/workflow.module";
     }),
     PrismaModule,
     ObservabilityModule,
+    JobQueueModule,
     RiskThrottleModule,
     TenantQuotaModule,
     DataScopeModule,
@@ -72,6 +76,14 @@ import { WorkflowModule } from "./modules/workflow/workflow.module";
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ApiRateLimitGuard
+    },
+    {
+      provide: APP_GUARD,
+      useClass: CsrfGuard
     },
     {
       provide: APP_GUARD,

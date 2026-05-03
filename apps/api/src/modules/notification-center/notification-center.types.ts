@@ -17,6 +17,7 @@ export interface NotificationEventDraft {
   summary?: string | null;
   priority?: NotificationPriorityValue;
   payload: Record<string, unknown>;
+  requiredChannels?: NotificationChannelValue[];
   metadata?: Record<string, unknown> | null;
   targetPath?: string | null;
   targetLabel?: string | null;

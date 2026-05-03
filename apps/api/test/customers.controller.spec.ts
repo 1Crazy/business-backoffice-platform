@@ -3,7 +3,7 @@ import { CustomersController } from "../src/modules/customers/customers.controll
 describe("CustomersController", () => {
   it("delegates detail queries to customers service", async () => {
     const customersService = {
-      detail: jest.fn().mockResolvedValue({
+      detail: vi.fn().mockResolvedValue({
         id: "customer-1"
       })
     } as any;
@@ -19,7 +19,7 @@ describe("CustomersController", () => {
 
   it("delegates follow-up creation to customers service", async () => {
     const customersService = {
-      createFollowUp: jest.fn().mockResolvedValue({
+      createFollowUp: vi.fn().mockResolvedValue({
         id: "follow-1"
       })
     } as any;

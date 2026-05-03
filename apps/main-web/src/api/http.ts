@@ -1,7 +1,7 @@
 /** HTTP 基础设施：统一请求实例、鉴权头注入与会话续期策略。 */
 import axios from "axios";
 
-import { clearStoredSession, getStoredSession, updateAccessToken } from "@/auth/session";
+import { clearStoredSession, getCsrfToken, updateSessionMetadata } from "@/auth/session";
 import type { LoginResponse } from "@/types/auth";
 
 const baseURL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:3000/api";
@@ -18,13 +18,13 @@ const refreshHttp = axios.create({
   withCredentials: true
 });
 
-let refreshPromise: Promise<string | null> | null = null;
+let refreshPromise: Promise<boolean> | null = null;
 
 http.interceptors.request.use((config) => {
-  const { accessToken } = getStoredSession();
+  const csrfToken = getCsrfToken();
 
-  if (accessToken) {
-    config.headers.Authorization = `Bearer ${accessToken}`;
+  if (csrfToken) {
+    config.headers["X-CSRF-Token"] = csrfToken;
   }
 
   return config;
@@ -46,31 +46,28 @@ http.interceptors.response.use(
     }
 
     originalRequest._retry = true;
-    const nextAccessToken = await refreshAccessToken();
+    const refreshed = await refreshAccessToken();
 
-    if (!nextAccessToken) {
+    if (!refreshed) {
       clearStoredSession();
       throw error;
     }
-
-    originalRequest.headers = originalRequest.headers ?? {};
-    originalRequest.headers.Authorization = `Bearer ${nextAccessToken}`;
 
     return http(originalRequest);
   }
 );
 
-async function refreshAccessToken(): Promise<string | null> {
+async function refreshAccessToken(): Promise<boolean> {
   if (!refreshPromise) {
     refreshPromise = refreshHttp
       .post<LoginResponse>("/auth/refresh")
       .then(({ data }) => {
-        updateAccessToken(data.accessToken, data.sessionExpiresAt);
-        return data.accessToken;
+        updateSessionMetadata(data.sessionExpiresAt ?? undefined);
+        return true;
       })
       .catch(() => {
         clearStoredSession();
-        return null;
+        return false;
       })
       .finally(() => {
         refreshPromise = null;

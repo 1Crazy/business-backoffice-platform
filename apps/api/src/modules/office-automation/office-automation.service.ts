@@ -6,6 +6,7 @@ import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { NotificationCenterService } from "../notification-center/notification-center.service";
+import { OpenIntegrationService } from "../open-integration/open-integration.service";
 import { ApprovalActionDto } from "./dto/approval-action.dto";
 import { CreateAdministrativeRequestDto } from "./dto/create-administrative-request.dto";
 import { CreateLeaveRequestDto } from "./dto/create-leave-request.dto";
@@ -34,7 +35,8 @@ export class OfficeAutomationService {
   constructor(
     private readonly officeAutomationRepository: OfficeAutomationRepository,
     private readonly auditLogsService: AuditLogsService,
-    private readonly notificationCenterService: NotificationCenterService
+    private readonly notificationCenterService: NotificationCenterService,
+    private readonly openIntegrationService: OpenIntegrationService
   ) {}
 
   async getWorkspaceOverview(actor: AuthUser) {
@@ -320,6 +322,22 @@ export class OfficeAutomationService {
         recipientIds: [decidedRequest.applicant.id]
       });
     }
+
+    await this.openIntegrationService.dispatchBusinessWebhookEvent({
+      tenantId,
+      eventType: "APPROVAL_COMPLETED",
+      sourceType: "administrative-request",
+      sourceId: decidedRequest.id,
+      payload: {
+        requestId: decidedRequest.id,
+        requestNo: decidedRequest.requestNo,
+        title: decidedRequest.title,
+        decision: dto.decision
+      },
+      actorId: actor.id,
+      actorName: actor.displayName,
+      occurredAt: decidedRequest.updatedAt
+    });
 
     return mapAdministrativeRequestItem(decidedRequest);
   }

@@ -214,6 +214,57 @@ function checkPrismaUsagePlacement() {
   }
 }
 
+function checkFrontendProductionCsp() {
+  const nginxFiles = getFrontendAppDirs()
+    .map((appDir) => path.join(appDir, "nginx.conf"))
+    .filter((filePath) => fs.existsSync(filePath));
+
+  for (const filePath of nginxFiles) {
+    const file = relativePath(filePath);
+    const content = readFile(filePath);
+    const cspLine = content
+      .split(/\r?\n/)
+      .find((line) => line.includes("Content-Security-Policy"));
+
+    if (!cspLine) {
+      addFailure("frontendProductionCsp", file, "nginx.conf must define a Content-Security-Policy header.");
+      continue;
+    }
+
+    if (cspLine.includes("'unsafe-eval'")) {
+      addFailure("frontendProductionCsp", file, "Production CSP must not enable 'unsafe-eval'.");
+    }
+
+    const scriptSrc = cspLine.match(/script-src\s+([^;"]+)/)?.[1] ?? "";
+    const allowedScriptSources = new Set(["'self'", "http://localhost:8081", "http://localhost:8082"]);
+
+    for (const source of scriptSrc.split(/\s+/).filter(Boolean)) {
+      if (!allowedScriptSources.has(source)) {
+        addFailure("frontendProductionCsp", file, `script-src contains an unregistered source: ${source}`);
+      }
+    }
+  }
+}
+
+function checkComposePostgresExposure() {
+  const composePath = path.join(repoRoot, "docker-compose.yml");
+
+  if (!fs.existsSync(composePath)) {
+    return;
+  }
+
+  const content = readFile(composePath);
+  const postgresServiceBlock = content.match(/  postgres:\n([\s\S]*?)(?=\n  [a-zA-Z0-9_-]+:|\nvolumes:|$)/)?.[1] ?? "";
+
+  if (postgresServiceBlock.includes("ports:")) {
+    addFailure(
+      "composePostgresExposure",
+      "docker-compose.yml",
+      "Production-like compose must not publish PostgreSQL by default. Use docker-compose.dev.yml for local host access."
+    );
+  }
+}
+
 function printResults() {
   if (!failures.length) {
     console.log("architecture:check passed");
@@ -248,4 +299,6 @@ checkPresentationHttpImports();
 checkBackendDeepRelativeImports();
 checkControllerOrmAccess();
 checkPrismaUsagePlacement();
+checkFrontendProductionCsp();
+checkComposePostgresExposure();
 printResults();

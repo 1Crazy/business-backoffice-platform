@@ -11,6 +11,27 @@ const FIELD_VISIBILITY_PRIORITY: Record<FieldVisibility, number> = {
   HIDDEN: 4
 };
 
+const DEFAULT_PII_FIELD_RULES: FieldPermissionRule[] = [
+  { resource: "customer", field: "contactName", visibility: "MASKED" },
+  { resource: "customer", field: "phone", visibility: "MASKED" },
+  { resource: "customer", field: "email", visibility: "MASKED" },
+  { resource: "customer", field: "owner.email", visibility: "HIDDEN" },
+  { resource: "customer", field: "owner.phone", visibility: "HIDDEN" },
+  { resource: "lead", field: "contactName", visibility: "MASKED" },
+  { resource: "lead", field: "phone", visibility: "MASKED" },
+  { resource: "lead", field: "owner.email", visibility: "HIDDEN" },
+  { resource: "lead", field: "owner.phone", visibility: "HIDDEN" },
+  { resource: "opportunity", field: "customer.contactName", visibility: "MASKED" },
+  { resource: "opportunity", field: "customer.phone", visibility: "MASKED" },
+  { resource: "opportunity", field: "sourceLead.contactName", visibility: "MASKED" },
+  { resource: "opportunity", field: "sourceLead.phone", visibility: "MASKED" },
+  { resource: "user", field: "email", visibility: "MASKED" },
+  { resource: "user", field: "phone", visibility: "MASKED" },
+  { resource: "audit-log", field: "actorName", visibility: "MASKED" },
+  { resource: "payment-record", field: "note", visibility: "MASKED" },
+  { resource: "renewal-reminder", field: "note", visibility: "MASKED" }
+];
+
 @Injectable()
 export class AccessPolicyService {
   assertActionAllowed(
@@ -72,19 +93,20 @@ export class AccessPolicyService {
   private collectEffectiveFieldRules(actor: AuthUser, resource: string): FieldPermissionRule[] {
     const ruleMap = new Map<string, FieldPermissionRule>();
 
+    for (const rule of DEFAULT_PII_FIELD_RULES) {
+      if (!this.matchesResource(rule.resource, resource)) {
+        continue;
+      }
+
+      ruleMap.set(rule.field, rule);
+    }
+
     for (const rule of actor.fieldPermissionRules ?? []) {
       if (!this.matchesResource(rule.resource, resource)) {
         continue;
       }
 
-      const existingRule = ruleMap.get(rule.field);
-
-      if (
-        !existingRule ||
-        FIELD_VISIBILITY_PRIORITY[rule.visibility] > FIELD_VISIBILITY_PRIORITY[existingRule.visibility]
-      ) {
-        ruleMap.set(rule.field, rule);
-      }
+      ruleMap.set(rule.field, rule);
     }
 
     return Array.from(ruleMap.values());

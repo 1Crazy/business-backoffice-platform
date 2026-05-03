@@ -64,6 +64,11 @@ export class RiskThrottleService {
     }
   }
 
+  async consume(key: string, options: RiskThrottleOptions): Promise<void> {
+    await this.assertAllowed(key, options);
+    await this.recordFailure(key, options);
+  }
+
   async recordFailure(key: string, options: RiskThrottleOptions): Promise<void> {
     const normalizedKey = this.normalizeKey(key);
     const now = Date.now();

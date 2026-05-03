@@ -230,3 +230,24 @@ export class SchedulerJobExecutionVo {
   })
   createdAt!: string;
 }
+
+export class PersonalDataExportVo {
+  @ApiProperty()
+  user!: Record<string, unknown>;
+
+  @ApiProperty({
+    type: "object",
+    additionalProperties: true
+  })
+  exportMeta!: Record<string, unknown>;
+}
+
+export class PersonalDataAnonymizationVo {
+  @ApiProperty()
+  userId!: string;
+
+  @ApiProperty({
+    format: "date-time"
+  })
+  anonymizedAt!: string;
+}

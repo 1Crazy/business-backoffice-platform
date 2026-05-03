@@ -11,6 +11,8 @@ import { UpdateStorageConfigDto } from "./dto/update-storage-config.dto";
 import { SystemGovernanceService } from "./system-governance.service";
 import {
   NotificationChannelConfigVo,
+  PersonalDataAnonymizationVo,
+  PersonalDataExportVo,
   SchedulerJobExecutionVo,
   SchedulerJobVo,
   StorageConfigVo
@@ -132,5 +134,31 @@ export class SystemGovernanceController {
   })
   runSchedulerJob(@Param("code") code: string, @CurrentUser() user: AuthUser) {
     return this.systemGovernanceService.runSchedulerJob(code, user);
+  }
+
+  @Post("privacy/users/:id/export")
+  @Permissions("system-governance:write")
+  @ApiOperation({
+    summary: "导出用户个人数据",
+    description: "导出指定用户在系统内的个人数据快照。"
+  })
+  @ApiOkResponse({
+    type: PersonalDataExportVo
+  })
+  exportPersonalData(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.systemGovernanceService.exportPersonalData(id, user);
+  }
+
+  @Post("privacy/users/:id/anonymize")
+  @Permissions("system-governance:write")
+  @ApiOperation({
+    summary: "匿名化用户个人数据",
+    description: "对指定用户的个人标识字段执行受控匿名化。"
+  })
+  @ApiOkResponse({
+    type: PersonalDataAnonymizationVo
+  })
+  anonymizePersonalData(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.systemGovernanceService.anonymizePersonalData(id, user);
   }
 }

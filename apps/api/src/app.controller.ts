@@ -14,9 +14,22 @@ export class AppController {
 
   @Get("health")
   @Public()
-  async getHealth(): Promise<{ status: string; timestamp: string; dependencies: { database: string }; metrics: ReturnType<MetricsService["getSnapshot"]> }> {
+  async getHealth(): Promise<{
+    status: string;
+    timestamp: string;
+    dependencies: {
+      database: string;
+      jobQueue: string;
+      attachmentStorage: string;
+      attachmentScan: string;
+    };
+    metrics: ReturnType<MetricsService["getSnapshot"]>;
+  }> {
     const dependencies = {
-      database: "ok"
+      database: "ok",
+      jobQueue: "ok",
+      attachmentStorage: "ok",
+      attachmentScan: "ok"
     };
 
     try {
@@ -25,8 +38,33 @@ export class AppController {
       dependencies.database = "error";
     }
 
+    try {
+      await this.appHealthRepository.pingJobQueue();
+    } catch {
+      dependencies.jobQueue = "error";
+    }
+
+    try {
+      await this.appHealthRepository.pingAttachmentStorage();
+    } catch {
+      dependencies.attachmentStorage = "error";
+    }
+
+    try {
+      dependencies.attachmentScan = await this.appHealthRepository.getAttachmentScanStatus();
+    } catch {
+      dependencies.attachmentScan = "error";
+    }
+
+    const dependencyStates = Object.values(dependencies);
+    const status = dependencyStates.every((value) => value === "ok" || value === "disabled")
+      ? "ok"
+      : dependencyStates.some((value) => value === "ok" || value === "disabled")
+        ? "degraded"
+        : "error";
+
     return {
-      status: dependencies.database === "ok" ? "ok" : "degraded",
+      status,
       timestamp: new Date().toISOString(),
       dependencies,
       metrics: this.metricsService.getSnapshot()

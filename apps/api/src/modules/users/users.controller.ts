@@ -82,4 +82,17 @@ export class UsersController {
   disable(@Param("id") id: string, @CurrentUser() user: AuthUser) {
     return this.usersService.toggle(id, UserStatus.DISABLED, user);
   }
+
+  @Patch(":id/unlock")
+  @Permissions("user:write")
+  @ApiOperation({
+    summary: "解除员工永久锁定",
+    description: "管理员解除员工的永久锁定状态。"
+  })
+  @ApiOkResponse({
+    type: UserVo
+  })
+  unlock(@Param("id") id: string, @CurrentUser() user: AuthUser) {
+    return this.usersService.unlock(id, user);
+  }
 }

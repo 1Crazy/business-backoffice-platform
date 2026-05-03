@@ -6,7 +6,8 @@ import {
   ForbiddenException,
   Inject,
   Injectable,
-  NotFoundException
+  NotFoundException,
+  OnModuleInit
 } from "@nestjs/common";
 import {
   AuditActionType,
@@ -17,6 +18,7 @@ import {
 
 import type { AuthUser } from "@/common/auth/auth-user.interface";
 import { DataScopeService } from "@/common/data-scope/data-scope.service";
+import { JobQueueService, type BackgroundJobHandler } from "@/common/job-queue/job-queue.service";
 import { TenantQuotaExceededException, TenantQuotaService } from "@/common/tenant/tenant-quota.service";
 import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
@@ -38,16 +40,25 @@ type CustomerImportRow = {
   notes?: string;
 };
 
+const CUSTOMER_EXPORT_JOB_TYPE = "batch-task.customer-export";
+const CUSTOMER_IMPORT_JOB_TYPE = "batch-task.customer-import";
+
 @Injectable()
-export class BatchTasksService {
+export class BatchTasksService implements OnModuleInit {
   constructor(
     private readonly batchTasksRepository: BatchTasksRepository,
     private readonly dataScopeService: DataScopeService,
     private readonly auditLogsService: AuditLogsService,
     private readonly tenantQuotaService: TenantQuotaService,
     @Inject(ATTACHMENT_STORAGE_DRIVER)
-    private readonly storageDriver: AttachmentStorageDriver
+    private readonly storageDriver: AttachmentStorageDriver,
+    private readonly jobQueueService?: JobQueueService
   ) {}
+
+  onModuleInit(): void {
+    this.jobQueueService?.registerHandler(CUSTOMER_EXPORT_JOB_TYPE, this.handleCustomerExportJob as BackgroundJobHandler);
+    this.jobQueueService?.registerHandler(CUSTOMER_IMPORT_JOB_TYPE, this.handleCustomerImportJob as BackgroundJobHandler);
+  }
 
   async listTasks(query: ListBatchTasksDto) {
     const tasks = await this.batchTasksRepository.listTasks({
@@ -99,9 +110,33 @@ export class BatchTasksService {
       }
     });
 
-    queueMicrotask(() => {
-      void this.processCustomerExportTask(task.id, dto, actor);
+    if (!this.jobQueueService) {
+      queueMicrotask(() => {
+        void this.processCustomerExportTask(task.id, dto, actor);
+      });
+      return mapBatchTask(task);
+    }
+
+    await this.jobQueueService.enqueue({
+      type: CUSTOMER_EXPORT_JOB_TYPE,
+      payload: {
+        taskId: task.id,
+        actorId: actor.id,
+        actorTenantId: actor.tenantId ?? null,
+        actorTenantCode: actor.tenantCode ?? null,
+        actorUsername: actor.username,
+        actorDisplayName: actor.displayName,
+        actorDepartmentId: actor.departmentId ?? null,
+        actorRoleCodes: actor.roleCodes,
+        actorPermissions: actor.permissions,
+        actorDataScopes: actor.dataScopes ?? [],
+        keyword: dto.keyword ?? null,
+        status: dto.status ?? null,
+        ownerId: dto.ownerId ?? null
+      },
+      correlationId: task.id
     });
+    this.jobQueueService.scheduleRun([CUSTOMER_EXPORT_JOB_TYPE]);
 
     return mapBatchTask(task);
   }
@@ -144,12 +179,87 @@ export class BatchTasksService {
       }
     });
 
-    queueMicrotask(() => {
-      void this.processCustomerImportTask(task.id, file, ownerId, actor);
+    if (!this.jobQueueService) {
+      queueMicrotask(() => {
+        void this.processCustomerImportTask(task.id, file, ownerId, actor);
+      });
+      return mapBatchTask(task);
+    }
+
+    await this.jobQueueService.enqueue({
+      type: CUSTOMER_IMPORT_JOB_TYPE,
+      payload: {
+        taskId: task.id,
+        actorId: actor.id,
+        actorTenantId: actor.tenantId ?? null,
+        actorTenantCode: actor.tenantCode ?? null,
+        actorUsername: actor.username,
+        actorDisplayName: actor.displayName,
+        actorDepartmentId: actor.departmentId ?? null,
+        actorRoleCodes: actor.roleCodes,
+        actorPermissions: actor.permissions,
+        actorDataScopes: actor.dataScopes ?? [],
+        fileName: file.originalname,
+        fileMimeType: file.mimetype,
+        fileContentBase64: file.buffer.toString("base64"),
+        ownerId: ownerId ?? null
+      },
+      correlationId: task.id
     });
+    this.jobQueueService.scheduleRun([CUSTOMER_IMPORT_JOB_TYPE]);
 
     return mapBatchTask(task);
   }
+
+  private handleCustomerExportJob = async (job: Parameters<BackgroundJobHandler>[0]) => {
+    const payload = this.readJobPayload(job.payload);
+    await this.processCustomerExportTask(
+      this.readRequiredPayloadString(payload, "taskId"),
+      {
+        keyword: this.readOptionalPayloadString(payload, "keyword"),
+        status: this.readOptionalPayloadString(payload, "status"),
+        ownerId: this.readOptionalPayloadString(payload, "ownerId")
+      },
+      this.readActorFromJobPayload(payload)
+    );
+
+    return {
+      taskId: this.readRequiredPayloadString(payload, "taskId"),
+      status: "SUCCEEDED"
+    };
+  };
+
+  private handleCustomerImportJob = async (job: Parameters<BackgroundJobHandler>[0]) => {
+    const payload = this.readJobPayload(job.payload);
+    const fileContentBase64 = this.readRequiredPayloadString(payload, "fileContentBase64");
+    const fileName = this.readRequiredPayloadString(payload, "fileName");
+    const fileMimeType = this.readRequiredPayloadString(payload, "fileMimeType");
+    const buffer = Buffer.from(fileContentBase64, "base64");
+
+    await this.processCustomerImportTask(
+      this.readRequiredPayloadString(payload, "taskId"),
+      {
+        fieldname: "file",
+        originalname: fileName,
+        encoding: "7bit",
+        mimetype: fileMimeType,
+        size: buffer.length,
+        buffer,
+        stream: Readable.from(buffer),
+        destination: "",
+        filename: fileName,
+        path: "",
+        destinationPath: ""
+      } as unknown as Express.Multer.File,
+      this.readOptionalPayloadString(payload, "ownerId"),
+      this.readActorFromJobPayload(payload)
+    );
+
+    return {
+      taskId: this.readRequiredPayloadString(payload, "taskId"),
+      status: "SUCCEEDED"
+    };
+  };
 
   async downloadResultFile(id: string, actor: AuthUser) {
     const task = await this.batchTasksRepository.findTaskById(id);
@@ -489,6 +599,46 @@ export class BatchTasksService {
 
   private toJsonValue(value: Record<string, unknown>) {
     return value as Prisma.InputJsonValue;
+  }
+
+  private readJobPayload(value: unknown): Record<string, unknown> {
+    return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+  }
+
+  private readRequiredPayloadString(payload: Record<string, unknown>, key: string): string {
+    const value = payload[key];
+
+    if (typeof value !== "string" || !value) {
+      throw new BadRequestException(`Background job payload is missing ${key}.`);
+    }
+
+    return value;
+  }
+
+  private readOptionalPayloadString(payload: Record<string, unknown>, key: string): string | undefined {
+    const value = payload[key];
+
+    return typeof value === "string" && value ? value : undefined;
+  }
+
+  private readStringArrayPayload(payload: Record<string, unknown>, key: string): string[] {
+    const value = payload[key];
+
+    return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+  }
+
+  private readActorFromJobPayload(payload: Record<string, unknown>): AuthUser {
+    return {
+      id: this.readRequiredPayloadString(payload, "actorId"),
+      tenantId: this.readOptionalPayloadString(payload, "actorTenantId"),
+      tenantCode: this.readOptionalPayloadString(payload, "actorTenantCode"),
+      username: this.readRequiredPayloadString(payload, "actorUsername"),
+      displayName: this.readRequiredPayloadString(payload, "actorDisplayName"),
+      departmentId: this.readOptionalPayloadString(payload, "actorDepartmentId") ?? null,
+      roleCodes: this.readStringArrayPayload(payload, "actorRoleCodes"),
+      permissions: this.readStringArrayPayload(payload, "actorPermissions"),
+      dataScopes: this.readStringArrayPayload(payload, "actorDataScopes") as AuthUser["dataScopes"]
+    };
   }
 
   private async assertMonthlyTaskQuotaAvailable(

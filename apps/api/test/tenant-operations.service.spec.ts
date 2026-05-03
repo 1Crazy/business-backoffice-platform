@@ -41,26 +41,26 @@ function buildTenantRecord(overrides: Record<string, unknown> = {}) {
 
 describe("TenantOperationsService", () => {
   const repository = {
-    listTenants: jest.fn(),
-    findTenantById: jest.fn(),
-    listPermissionCatalog: jest.fn(),
-    createTenantWithInitialization: jest.fn(),
-    updateTenant: jest.fn(),
-    revokeActiveSessionsByTenant: jest.fn(),
-    countUsers: jest.fn(),
-    sumAttachmentSizeBytes: jest.fn(),
-    countBatchTasks: jest.fn(),
-    countFailedBatchTasks: jest.fn(),
-    countNotificationDeliveryFailures: jest.fn(),
-    findLatestSessionActivity: jest.fn()
+    listTenants: vi.fn(),
+    findTenantById: vi.fn(),
+    listPermissionCatalog: vi.fn(),
+    createTenantWithInitialization: vi.fn(),
+    updateTenant: vi.fn(),
+    revokeActiveSessionsByTenant: vi.fn(),
+    countUsers: vi.fn(),
+    sumAttachmentSizeBytes: vi.fn(),
+    countBatchTasks: vi.fn(),
+    countFailedBatchTasks: vi.fn(),
+    countNotificationDeliveryFailures: vi.fn(),
+    findLatestSessionActivity: vi.fn()
   };
   const auditLogsService = {
-    create: jest.fn().mockResolvedValue(undefined)
+    create: vi.fn().mockResolvedValue(undefined)
   };
   const service = new TenantOperationsService(repository as any, auditLogsService as any);
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     repository.countUsers.mockResolvedValueOnce(18).mockResolvedValueOnce(16);
     repository.sumAttachmentSizeBytes.mockResolvedValue(950 * 1024 * 1024);
     repository.countBatchTasks.mockResolvedValue(1800);

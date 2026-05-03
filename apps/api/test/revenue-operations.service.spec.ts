@@ -4,30 +4,33 @@ import { RevenueOperationsService } from "../src/modules/revenue-operations/reve
 
 describe("RevenueOperationsService", () => {
   const mockRepository = {
-    findOpportunityContextById: jest.fn(),
-    findCustomerOverview: jest.fn(),
-    findOpportunityOverview: jest.fn(),
-    findContractContextById: jest.fn(),
-    findPaymentPlanContextById: jest.fn(),
-    createQuote: jest.fn(),
-    createContract: jest.fn(),
-    createPaymentPlan: jest.fn(),
-    createPaymentRecord: jest.fn(),
-    createRenewalReminder: jest.fn()
+    findOpportunityContextById: vi.fn(),
+    findCustomerOverview: vi.fn(),
+    findOpportunityOverview: vi.fn(),
+    findContractContextById: vi.fn(),
+    findPaymentPlanContextById: vi.fn(),
+    createQuote: vi.fn(),
+    createContract: vi.fn(),
+    createPaymentPlan: vi.fn(),
+    createPaymentRecord: vi.fn(),
+    createRenewalReminder: vi.fn()
   };
   const mockDataScope = {
-    assertCustomerAccessible: jest.fn(),
-    assertOpportunityAccessible: jest.fn()
+    assertCustomerAccessible: vi.fn(),
+    assertOpportunityAccessible: vi.fn()
   };
   const mockAuditLogs = {
-    create: jest.fn()
+    create: vi.fn()
   };
   const mockAccessPolicy = {
-    sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
-    assertWritableFields: jest.fn()
+    sanitizeReadFields: vi.fn().mockImplementation((_actor, _resource, payload) => payload),
+    assertWritableFields: vi.fn()
   };
   const mockNotificationCenter = {
-    publishEvent: jest.fn().mockResolvedValue(undefined)
+    publishEvent: vi.fn().mockResolvedValue(undefined)
+  };
+  const mockOpenIntegration = {
+    dispatchBusinessWebhookEvent: vi.fn().mockResolvedValue(undefined)
   };
 
   const defaultActor = {
@@ -45,11 +48,12 @@ describe("RevenueOperationsService", () => {
     mockDataScope as any,
     mockAuditLogs as any,
     mockAccessPolicy as any,
-    mockNotificationCenter as any
+    mockNotificationCenter as any,
+    mockOpenIntegration as any
   );
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     mockDataScope.assertCustomerAccessible.mockResolvedValue(undefined);
     mockDataScope.assertOpportunityAccessible.mockResolvedValue(undefined);
   });
@@ -144,6 +148,14 @@ describe("RevenueOperationsService", () => {
       expect.objectContaining({
         targetType: "revenue-payment-record",
         targetId: "payment-record-1"
+      })
+    );
+    expect(mockOpenIntegration.dispatchBusinessWebhookEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: "tenant-default",
+        eventType: "REVENUE_PAYMENT_RECEIVED",
+        sourceType: "payment-record",
+        sourceId: "payment-record-1"
       })
     );
     expect(result.paymentPlanId).toBe("payment-plan-1");

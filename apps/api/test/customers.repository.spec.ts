@@ -4,10 +4,10 @@ describe("CustomersRepository", () => {
   it("lists customers with pagination and shared include", async () => {
     const prisma = {
       customer: {
-        findMany: jest.fn().mockResolvedValue([{ id: "customer-1" }]),
-        count: jest.fn().mockResolvedValue(1)
+        findMany: vi.fn().mockResolvedValue([{ id: "customer-1" }]),
+        count: vi.fn().mockResolvedValue(1)
       },
-      $transaction: jest.fn().mockImplementation(async (operations: Array<Promise<unknown>>) => Promise.all(operations))
+      $transaction: vi.fn().mockImplementation(async (operations: Array<Promise<unknown>>) => Promise.all(operations))
     } as any;
     const repository = new CustomersRepository(prisma);
 
@@ -43,21 +43,21 @@ describe("CustomersRepository", () => {
   it("creates reminders together with customer follow-ups", async () => {
     const tx = {
       followUp: {
-        create: jest.fn().mockResolvedValue({
+        create: vi.fn().mockResolvedValue({
           id: "follow-1"
         }),
-        findUniqueOrThrow: jest.fn().mockResolvedValue({
+        findUniqueOrThrow: vi.fn().mockResolvedValue({
           id: "follow-1"
         })
       },
       reminder: {
-        create: jest.fn().mockResolvedValue({
+        create: vi.fn().mockResolvedValue({
           id: "reminder-1"
         })
       }
     };
     const prisma = {
-      $transaction: jest.fn().mockImplementation(async (callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx))
+      $transaction: vi.fn().mockImplementation(async (callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx))
     } as any;
     const repository = new CustomersRepository(prisma);
 

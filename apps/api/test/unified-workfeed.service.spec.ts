@@ -2,23 +2,23 @@ import { UnifiedWorkfeedService } from "../src/modules/unified-workfeed/unified-
 
 describe("UnifiedWorkfeedService", () => {
   const repository = {
-    listPendingLeaveApprovals: jest.fn(),
-    listPendingAdministrativeApprovals: jest.fn(),
-    listPendingReminders: jest.fn(),
-    listPendingRenewalReminders: jest.fn(),
-    listActiveAnnouncements: jest.fn(),
-    listNotificationReadStates: jest.fn(),
-    markNotificationRead: jest.fn()
+    listPendingLeaveApprovals: vi.fn(),
+    listPendingAdministrativeApprovals: vi.fn(),
+    listPendingReminders: vi.fn(),
+    listPendingRenewalReminders: vi.fn(),
+    listActiveAnnouncements: vi.fn(),
+    listNotificationReadStates: vi.fn(),
+    markNotificationRead: vi.fn()
   };
   const notificationCenterRepository = {
-    listNotificationRecords: jest.fn(),
-    markNotificationRead: jest.fn()
+    listNotificationRecords: vi.fn(),
+    markNotificationRead: vi.fn()
   };
 
   const service = new UnifiedWorkfeedService(repository as any, notificationCenterRepository as any);
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("aggregates todos and notifications with filter and read state handling", async () => {

@@ -16,6 +16,7 @@ import { TenantQuotaExceededException, TenantQuotaService } from "@/common/tenan
 import { requireTenantId } from "@/common/tenant/tenant.util";
 import { AuditLogsService } from "../audit-logs/audit-logs.service";
 import { SystemGovernanceService } from "../system-governance/system-governance.service";
+import { AttachmentScanService } from "./attachment-scan.service";
 import { ListUploadsDto } from "./dto/list-uploads.dto";
 import { UploadsRepository } from "./repositories/uploads.repository";
 import {
@@ -42,6 +43,7 @@ export class UploadsService {
     private readonly dataScopeService: DataScopeService,
     private readonly systemGovernanceService: SystemGovernanceService,
     private readonly tenantQuotaService: TenantQuotaService,
+    private readonly attachmentScanService: AttachmentScanService,
     @Inject(ATTACHMENT_STORAGE_DRIVER)
     private readonly storageDriver: AttachmentStorageDriver
   ) {}
@@ -67,6 +69,16 @@ export class UploadsService {
       ...input.file,
       originalname: this.normalizeOriginalName(input.file.originalname)
     };
+    const scanResult = await this.attachmentScanService.scan(normalizedFile);
+
+    if (scanResult.status === "MALICIOUS") {
+      throw new UnsupportedMediaTypeException(scanResult.message ?? "Attachment scan detected malicious content.");
+    }
+
+    if (scanResult.status === "ERROR" && this.attachmentScanService.shouldFailClosed()) {
+      throw new BadRequestException(scanResult.message ?? "Attachment scan is unavailable.");
+    }
+
     const storedFile = await this.storageDriver.store(normalizedFile);
 
     try {
@@ -78,6 +90,10 @@ export class UploadsService {
         originalName: normalizedFile.originalname,
         mimeType: normalizedFile.mimetype,
         size: normalizedFile.size,
+        scanStatus: scanResult.status,
+        scanProvider: scanResult.provider,
+        scanMessage: scanResult.message ?? null,
+        scannedAt: scanResult.status === "ERROR" ? null : new Date(),
         storageProvider: storedFile.storageProvider,
         storageKey: storedFile.storageKey,
         uploadedById: actor.id
@@ -137,6 +153,7 @@ export class UploadsService {
     const attachment = await this.uploadsRepository.findAttachmentById(id, requireTenantId(actor));
 
     await this.assertBusinessAccessible(attachment.businessType, attachment.businessId, actor);
+    this.assertAttachmentReadable(attachment.scanStatus);
     const file = await this.storageDriver.openReadStream(attachment.storageKey);
     await this.auditLogsService.create({
       actorId: actor.id,
@@ -162,6 +179,7 @@ export class UploadsService {
     const attachment = await this.uploadsRepository.findAttachmentById(id, requireTenantId(actor));
 
     await this.assertBusinessAccessible(attachment.businessType, attachment.businessId, actor);
+    this.assertAttachmentReadable(attachment.scanStatus);
     this.assertPreviewSupported(attachment.mimeType);
     await this.systemGovernanceService.assertStoragePreviewAllowed(attachment.storageProvider);
     const file = await this.storageDriver.openReadStream(attachment.storageKey);
@@ -251,6 +269,14 @@ export class UploadsService {
     ) {
       throw new BadRequestException("Attachment preview is not supported for this file type.");
     }
+  }
+
+  private assertAttachmentReadable(scanStatus: string): void {
+    if (scanStatus === "CLEAN" || scanStatus === "SKIPPED") {
+      return;
+    }
+
+    throw new ForbiddenException("Attachment is not available until the scan is clean.");
   }
 
   private normalizeOriginalName(originalName: string): string {

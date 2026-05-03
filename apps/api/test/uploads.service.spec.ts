@@ -7,22 +7,36 @@ import { UploadsService } from "../src/modules/uploads/uploads.service";
 
 describe("UploadsService", () => {
   const governanceService = {
-    assertStoragePreviewAllowed: jest.fn().mockResolvedValue(undefined)
+    assertStoragePreviewAllowed: vi.fn().mockResolvedValue(undefined)
   } as any;
   const tenantQuotaService = {
-    assertStorageQuotaAvailable: jest.fn().mockResolvedValue(undefined)
+    assertStorageQuotaAvailable: vi.fn().mockResolvedValue(undefined)
+  } as any;
+  const attachmentScanService = {
+    scan: vi.fn().mockResolvedValue({
+      status: "CLEAN",
+      provider: "stub",
+      message: null
+    }),
+    shouldFailClosed: vi.fn().mockReturnValue(false)
   } as any;
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
+    attachmentScanService.scan.mockResolvedValue({
+      status: "CLEAN",
+      provider: "stub",
+      message: null
+    });
+    attachmentScanService.shouldFailClosed.mockReturnValue(false);
   });
 
   it("checks customer ownership before listing attachments", async () => {
     const uploadsRepository = {
-      findCustomerOwnerById: jest.fn().mockResolvedValue({
+      findCustomerOwnerById: vi.fn().mockResolvedValue({
         ownerId: "owner-1"
       }),
-      listByBusiness: jest.fn().mockResolvedValue([
+      listByBusiness: vi.fn().mockResolvedValue([
         {
           id: "attachment-1",
           businessType: AttachmentBusinessType.CUSTOMER,
@@ -31,26 +45,31 @@ describe("UploadsService", () => {
           originalName: "contract.pdf",
           mimeType: "application/pdf",
           size: 1024,
+          scanStatus: "CLEAN",
+          scanProvider: "stub",
+          scanMessage: null,
+          scannedAt: new Date("2026-04-05T08:00:00.000Z"),
           createdAt: new Date("2026-04-05T08:00:00.000Z")
         }
       ])
     } as any;
     const dataScopeService = {
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
     } as any;
     const storageDriver = {
-      store: jest.fn(),
-      openReadStream: jest.fn(),
-      delete: jest.fn()
+      store: vi.fn(),
+      openReadStream: vi.fn(),
+      delete: vi.fn()
     } as any;
     const service = new UploadsService(
       uploadsRepository,
       {
-        create: jest.fn().mockResolvedValue(undefined)
+        create: vi.fn().mockResolvedValue(undefined)
       } as any,
       dataScopeService,
       governanceService,
       tenantQuotaService,
+      attachmentScanService,
       storageDriver
     );
     const actor = {
@@ -92,20 +111,25 @@ describe("UploadsService", () => {
 
   it("rejects unsupported attachment types before storage", async () => {
     const storageDriver = {
-      store: jest.fn(),
-      openReadStream: jest.fn(),
-      delete: jest.fn()
+      store: vi.fn(),
+      openReadStream: vi.fn(),
+      delete: vi.fn()
     } as any;
     const service = new UploadsService(
-      {} as any,
       {
-        create: jest.fn().mockResolvedValue(undefined)
+        findCustomerOwnerById: vi.fn().mockResolvedValue({
+          ownerId: "owner-1"
+        })
       } as any,
       {
-        assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+        create: vi.fn().mockResolvedValue(undefined)
+      } as any,
+      {
+        assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
       } as any,
       governanceService,
       tenantQuotaService,
+      attachmentScanService,
       storageDriver
     );
 
@@ -138,20 +162,21 @@ describe("UploadsService", () => {
 
   it("rejects oversized attachments before storage", async () => {
     const storageDriver = {
-      store: jest.fn(),
-      openReadStream: jest.fn(),
-      delete: jest.fn()
+      store: vi.fn(),
+      openReadStream: vi.fn(),
+      delete: vi.fn()
     } as any;
     const service = new UploadsService(
       {} as any,
       {
-        create: jest.fn().mockResolvedValue(undefined)
+        create: vi.fn().mockResolvedValue(undefined)
       } as any,
       {
-        assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+        assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
       } as any,
       governanceService,
       tenantQuotaService,
+      attachmentScanService,
       storageDriver
     );
 
@@ -185,31 +210,32 @@ describe("UploadsService", () => {
   it("checks business access before downloading attachments", async () => {
     const stream = Readable.from(["hello"]);
     const uploadsRepository = {
-      findCustomerOwnerById: jest.fn().mockResolvedValue({
+      findCustomerOwnerById: vi.fn().mockResolvedValue({
         ownerId: "owner-1"
       }),
-      findAttachmentById: jest.fn().mockResolvedValue({
+      findAttachmentById: vi.fn().mockResolvedValue({
         id: "attachment-1",
         businessType: AttachmentBusinessType.CUSTOMER,
         businessId: "customer-1",
         mimeType: "application/pdf",
         originalName: "contract.pdf",
+        scanStatus: "CLEAN",
         storageKey: "stored-file.pdf"
       })
     } as any;
     const dataScopeService = {
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
     } as any;
     const storageDriver = {
-      store: jest.fn(),
-      openReadStream: jest.fn().mockResolvedValue({
+      store: vi.fn(),
+      openReadStream: vi.fn().mockResolvedValue({
         stream,
         size: 5
       }),
-      delete: jest.fn()
+      delete: vi.fn()
     } as any;
     const auditLogsService = {
-      create: jest.fn().mockResolvedValue(undefined)
+      create: vi.fn().mockResolvedValue(undefined)
     } as any;
     const service = new UploadsService(
       uploadsRepository,
@@ -217,6 +243,7 @@ describe("UploadsService", () => {
       dataScopeService,
       governanceService,
       tenantQuotaService,
+      attachmentScanService,
       storageDriver
     );
     const actor = {
@@ -254,12 +281,12 @@ describe("UploadsService", () => {
 
   it("rejects attachment download when the actor lacks business read permission", async () => {
     const storageDriver = {
-      store: jest.fn(),
-      openReadStream: jest.fn(),
-      delete: jest.fn()
+      store: vi.fn(),
+      openReadStream: vi.fn(),
+      delete: vi.fn()
     } as any;
     const uploadsRepository = {
-      findAttachmentById: jest.fn().mockResolvedValue({
+      findAttachmentById: vi.fn().mockResolvedValue({
         id: "attachment-1",
         businessType: AttachmentBusinessType.CUSTOMER,
         businessId: "customer-1",
@@ -269,13 +296,14 @@ describe("UploadsService", () => {
     const service = new UploadsService(
       uploadsRepository,
       {
-        create: jest.fn().mockResolvedValue(undefined)
+        create: vi.fn().mockResolvedValue(undefined)
       } as any,
       {
-        assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+        assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
       } as any,
       governanceService,
       tenantQuotaService,
+      attachmentScanService,
       storageDriver
     );
 
@@ -297,32 +325,33 @@ describe("UploadsService", () => {
   it("allows secure preview for supported attachment types and records audit log", async () => {
     const stream = Readable.from(["preview"]);
     const uploadsRepository = {
-      findCustomerOwnerById: jest.fn().mockResolvedValue({
+      findCustomerOwnerById: vi.fn().mockResolvedValue({
         ownerId: "owner-1"
       }),
-      findAttachmentById: jest.fn().mockResolvedValue({
+      findAttachmentById: vi.fn().mockResolvedValue({
         id: "attachment-2",
         businessType: AttachmentBusinessType.CUSTOMER,
         businessId: "customer-1",
         mimeType: "application/pdf",
         originalName: "contract.pdf",
         storageProvider: "LOCAL",
+        scanStatus: "CLEAN",
         storageKey: "stored-preview.pdf"
       })
     } as any;
     const dataScopeService = {
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
     } as any;
     const auditLogsService = {
-      create: jest.fn().mockResolvedValue(undefined)
+      create: vi.fn().mockResolvedValue(undefined)
     } as any;
     const storageDriver = {
-      store: jest.fn(),
-      openReadStream: jest.fn().mockResolvedValue({
+      store: vi.fn(),
+      openReadStream: vi.fn().mockResolvedValue({
         stream,
         size: 7
       }),
-      delete: jest.fn()
+      delete: vi.fn()
     } as any;
     const service = new UploadsService(
       uploadsRepository,
@@ -330,6 +359,7 @@ describe("UploadsService", () => {
       dataScopeService,
       governanceService,
       tenantQuotaService,
+      attachmentScanService,
       storageDriver
     );
 
@@ -361,29 +391,30 @@ describe("UploadsService", () => {
 
   it("rejects preview for unsupported attachment types before opening storage", async () => {
     const uploadsRepository = {
-      findAttachmentById: jest.fn().mockResolvedValue({
+      findAttachmentById: vi.fn().mockResolvedValue({
         id: "attachment-3",
         businessType: AttachmentBusinessType.CUSTOMER,
         businessId: "customer-1",
         mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         originalName: "spec.docx",
         storageProvider: "LOCAL",
+        scanStatus: "CLEAN",
         storageKey: "stored-spec.docx"
       }),
-      findCustomerOwnerById: jest.fn().mockResolvedValue({
+      findCustomerOwnerById: vi.fn().mockResolvedValue({
         ownerId: "owner-1"
       })
     } as any;
     const dataScopeService = {
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
     } as any;
     const auditLogsService = {
-      create: jest.fn().mockResolvedValue(undefined)
+      create: vi.fn().mockResolvedValue(undefined)
     } as any;
     const storageDriver = {
-      store: jest.fn(),
-      openReadStream: jest.fn(),
-      delete: jest.fn()
+      store: vi.fn(),
+      openReadStream: vi.fn(),
+      delete: vi.fn()
     } as any;
     const service = new UploadsService(
       uploadsRepository,
@@ -391,6 +422,7 @@ describe("UploadsService", () => {
       dataScopeService,
       governanceService,
       tenantQuotaService,
+      attachmentScanService,
       storageDriver
     );
 
@@ -412,32 +444,33 @@ describe("UploadsService", () => {
 
   it("rejects preview when storage governance disables preview for the provider", async () => {
     const uploadsRepository = {
-      findAttachmentById: jest.fn().mockResolvedValue({
+      findAttachmentById: vi.fn().mockResolvedValue({
         id: "attachment-4",
         businessType: AttachmentBusinessType.CUSTOMER,
         businessId: "customer-1",
         mimeType: "application/pdf",
         originalName: "contract.pdf",
         storageProvider: "OBJECT_STORAGE",
+        scanStatus: "CLEAN",
         storageKey: "object/contract.pdf"
       }),
-      findCustomerOwnerById: jest.fn().mockResolvedValue({
+      findCustomerOwnerById: vi.fn().mockResolvedValue({
         ownerId: "owner-1"
       })
     } as any;
     const dataScopeService = {
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
     } as any;
     const auditLogsService = {
-      create: jest.fn().mockResolvedValue(undefined)
+      create: vi.fn().mockResolvedValue(undefined)
     } as any;
     const previewBlockedGovernanceService = {
-      assertStoragePreviewAllowed: jest.fn().mockRejectedValue(new Error("Attachment preview is disabled for this storage configuration."))
+      assertStoragePreviewAllowed: vi.fn().mockRejectedValue(new Error("Attachment preview is disabled for this storage configuration."))
     } as any;
     const storageDriver = {
-      store: jest.fn(),
-      openReadStream: jest.fn(),
-      delete: jest.fn()
+      store: vi.fn(),
+      openReadStream: vi.fn(),
+      delete: vi.fn()
     } as any;
     const service = new UploadsService(
       uploadsRepository,
@@ -445,6 +478,7 @@ describe("UploadsService", () => {
       dataScopeService,
       previewBlockedGovernanceService,
       tenantQuotaService,
+      attachmentScanService,
       storageDriver
     );
 
@@ -466,20 +500,25 @@ describe("UploadsService", () => {
 
   it("rejects attachments whose content does not match the declared MIME type", async () => {
     const storageDriver = {
-      store: jest.fn(),
-      openReadStream: jest.fn(),
-      delete: jest.fn()
+      store: vi.fn(),
+      openReadStream: vi.fn(),
+      delete: vi.fn()
     } as any;
     const service = new UploadsService(
-      {} as any,
       {
-        create: jest.fn().mockResolvedValue(undefined)
+        findCustomerOwnerById: vi.fn().mockResolvedValue({
+          ownerId: "owner-1"
+        })
       } as any,
       {
-        assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+        create: vi.fn().mockResolvedValue(undefined)
+      } as any,
+      {
+        assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
       } as any,
       governanceService,
       tenantQuotaService,
+      attachmentScanService,
       storageDriver
     );
 
@@ -512,35 +551,36 @@ describe("UploadsService", () => {
 
   it("normalizes uploaded filenames before storage and metadata persistence", async () => {
     const uploadsRepository = {
-      findCustomerOwnerById: jest.fn().mockResolvedValue({
+      findCustomerOwnerById: vi.fn().mockResolvedValue({
         ownerId: "owner-1"
       }),
-      createAttachment: jest.fn().mockImplementation(async (input) => ({
+      createAttachment: vi.fn().mockImplementation(async (input) => ({
         id: "attachment-5",
         ...input,
         createdAt: new Date("2026-04-05T08:00:00.000Z")
       }))
     } as any;
     const dataScopeService = {
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
     } as any;
     const storageDriver = {
-      store: jest.fn().mockResolvedValue({
+      store: vi.fn().mockResolvedValue({
         storageProvider: "LOCAL",
         storageKey: "stored.pdf",
         fileName: "stored.pdf"
       }),
-      openReadStream: jest.fn(),
-      delete: jest.fn()
+      openReadStream: vi.fn(),
+      delete: vi.fn()
     } as any;
     const service = new UploadsService(
       uploadsRepository,
       {
-        create: jest.fn().mockResolvedValue(undefined)
+        create: vi.fn().mockResolvedValue(undefined)
       } as any,
       dataScopeService,
       governanceService,
       tenantQuotaService,
+      attachmentScanService,
       storageDriver
     );
 
@@ -569,26 +609,269 @@ describe("UploadsService", () => {
     expect(storageDriver.store).toHaveBeenCalledWith(expect.objectContaining({ originalname: ".._contract.pdf" }));
     expect(uploadsRepository.createAttachment).toHaveBeenCalledWith(
       expect.objectContaining({
-        originalName: ".._contract.pdf"
+        originalName: ".._contract.pdf",
+        scanStatus: "CLEAN",
+        scanProvider: "stub"
       })
+    );
+  });
+
+  it("rejects malicious attachments before storage", async () => {
+    const maliciousScanService = {
+      scan: vi.fn().mockResolvedValue({
+        status: "MALICIOUS",
+        provider: "stub",
+        message: "扫描器识别到恶意内容特征。"
+      }),
+      shouldFailClosed: vi.fn().mockReturnValue(false)
+    } as any;
+    const storageDriver = {
+      store: vi.fn(),
+      openReadStream: vi.fn(),
+      delete: vi.fn()
+    } as any;
+    const service = new UploadsService(
+      {
+        findCustomerOwnerById: vi.fn().mockResolvedValue({
+          ownerId: "owner-1"
+        })
+      } as any,
+      {
+        create: vi.fn().mockResolvedValue(undefined)
+      } as any,
+      {
+        assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
+      } as any,
+      governanceService,
+      tenantQuotaService,
+      maliciousScanService,
+      storageDriver
+    );
+
+    await expect(
+      service.create(
+        {
+          businessType: AttachmentBusinessType.CUSTOMER,
+          businessId: "customer-1",
+          file: {
+            originalname: "eicar-test.txt",
+            mimetype: "text/plain",
+            size: 32,
+            buffer: Buffer.from("eicar")
+          } as Express.Multer.File
+        },
+        {
+          id: "user-1",
+          tenantId: "tenant-default",
+          tenantCode: "default",
+          username: "sales",
+          displayName: "销售",
+          roleCodes: ["sales-member"],
+          permissions: ["upload:write", "customer:read"]
+        }
+      )
+    ).rejects.toThrow("扫描器识别到恶意内容特征。");
+
+    expect(storageDriver.store).not.toHaveBeenCalled();
+  });
+
+  it("allows scan errors to fail open in local mode and persists scan status", async () => {
+    const errorScanService = {
+      scan: vi.fn().mockResolvedValue({
+        status: "ERROR",
+        provider: "stub",
+        message: "扫描器当前不可用。"
+      }),
+      shouldFailClosed: vi.fn().mockReturnValue(false)
+    } as any;
+    const uploadsRepository = {
+      findCustomerOwnerById: vi.fn().mockResolvedValue({
+        ownerId: "owner-1"
+      }),
+      createAttachment: vi.fn().mockImplementation(async (input) => ({
+        id: "attachment-6",
+        ...input,
+        createdAt: new Date("2026-04-05T08:00:00.000Z")
+      }))
+    } as any;
+    const service = new UploadsService(
+      uploadsRepository,
+      {
+        create: vi.fn().mockResolvedValue(undefined)
+      } as any,
+      {
+        assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
+      } as any,
+      governanceService,
+      tenantQuotaService,
+      errorScanService,
+      {
+        store: vi.fn().mockResolvedValue({
+          storageProvider: "LOCAL",
+          storageKey: "stored-scan-error.txt",
+          fileName: "stored-scan-error.txt"
+        }),
+        openReadStream: vi.fn(),
+        delete: vi.fn()
+      } as any
+    );
+
+    await service.create(
+      {
+        businessType: AttachmentBusinessType.CUSTOMER,
+        businessId: "customer-1",
+        file: {
+          originalname: "scan-error.txt",
+          mimetype: "text/plain",
+          size: 16,
+          buffer: Buffer.from("normal text")
+        } as Express.Multer.File
+      },
+      {
+        id: "user-1",
+        tenantId: "tenant-default",
+        tenantCode: "default",
+        username: "sales",
+        displayName: "销售",
+        roleCodes: ["sales-member"],
+        permissions: ["upload:write", "customer:read"]
+      }
+    );
+
+    expect(uploadsRepository.createAttachment).toHaveBeenCalledWith(
+      expect.objectContaining({
+        scanStatus: "ERROR",
+        scanProvider: "stub",
+        scanMessage: "扫描器当前不可用。"
+      })
+    );
+  });
+
+  it("rejects scan errors when fail-closed is enabled", async () => {
+    const failClosedScanService = {
+      scan: vi.fn().mockResolvedValue({
+        status: "ERROR",
+        provider: "stub",
+        message: "扫描器当前不可用。"
+      }),
+      shouldFailClosed: vi.fn().mockReturnValue(true)
+    } as any;
+    const storageDriver = {
+      store: vi.fn(),
+      openReadStream: vi.fn(),
+      delete: vi.fn()
+    } as any;
+    const service = new UploadsService(
+      {
+        findCustomerOwnerById: vi.fn().mockResolvedValue({
+          ownerId: "owner-1"
+        })
+      } as any,
+      {
+        create: vi.fn().mockResolvedValue(undefined)
+      } as any,
+      {
+        assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
+      } as any,
+      governanceService,
+      tenantQuotaService,
+      failClosedScanService,
+      storageDriver
+    );
+
+    await expect(
+      service.create(
+        {
+          businessType: AttachmentBusinessType.CUSTOMER,
+          businessId: "customer-1",
+          file: {
+            originalname: "scan-error.txt",
+            mimetype: "text/plain",
+            size: 16,
+            buffer: Buffer.from("normal text")
+          } as Express.Multer.File
+        },
+        {
+          id: "user-1",
+          tenantId: "tenant-default",
+          tenantCode: "default",
+          username: "sales",
+          displayName: "销售",
+          roleCodes: ["sales-member"],
+          permissions: ["upload:write", "customer:read"]
+        }
+      )
+    ).rejects.toThrow("扫描器当前不可用。");
+
+    expect(storageDriver.store).not.toHaveBeenCalled();
+  });
+
+  it("blocks download and preview until the scan is clean", async () => {
+    const uploadsRepository = {
+      findAttachmentById: vi.fn().mockResolvedValue({
+        id: "attachment-7",
+        businessType: AttachmentBusinessType.CUSTOMER,
+        businessId: "customer-1",
+        mimeType: "application/pdf",
+        originalName: "contract.pdf",
+        storageProvider: "LOCAL",
+        scanStatus: "PENDING",
+        storageKey: "stored-file.pdf"
+      }),
+      findCustomerOwnerById: vi.fn().mockResolvedValue({
+        ownerId: "owner-1"
+      })
+    } as any;
+    const service = new UploadsService(
+      uploadsRepository,
+      {
+        create: vi.fn().mockResolvedValue(undefined)
+      } as any,
+      {
+        assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
+      } as any,
+      governanceService,
+      tenantQuotaService,
+      attachmentScanService,
+      {
+        store: vi.fn(),
+        openReadStream: vi.fn(),
+        delete: vi.fn()
+      } as any
+    );
+    const actor = {
+      id: "user-1",
+      tenantId: "tenant-default",
+      tenantCode: "default",
+      username: "sales",
+      displayName: "销售",
+      roleCodes: ["sales-member"],
+      permissions: ["customer:read"]
+    };
+
+    await expect(service.download("attachment-7", actor)).rejects.toThrow(
+      "Attachment is not available until the scan is clean."
+    );
+    await expect(service.preview("attachment-7", actor)).rejects.toThrow(
+      "Attachment is not available until the scan is clean."
     );
   });
 
   it("rejects uploads that would exceed storageQuotaMb before storing files or metadata", async () => {
     const uploadsRepository = {
-      findCustomerOwnerById: jest.fn().mockResolvedValue({
+      findCustomerOwnerById: vi.fn().mockResolvedValue({
         ownerId: "owner-1"
       }),
-      createAttachment: jest.fn()
+      createAttachment: vi.fn()
     } as any;
     const dataScopeService = {
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
     } as any;
     const auditLogsService = {
-      create: jest.fn().mockResolvedValue(undefined)
+      create: vi.fn().mockResolvedValue(undefined)
     } as any;
     const quotaService = {
-      assertStorageQuotaAvailable: jest.fn().mockRejectedValue(
+      assertStorageQuotaAvailable: vi.fn().mockRejectedValue(
         new TenantQuotaExceededException({
           type: "storage",
           limit: 1024,
@@ -599,9 +882,9 @@ describe("UploadsService", () => {
       )
     } as any;
     const storageDriver = {
-      store: jest.fn(),
-      openReadStream: jest.fn(),
-      delete: jest.fn()
+      store: vi.fn(),
+      openReadStream: vi.fn(),
+      delete: vi.fn()
     } as any;
     const service = new UploadsService(
       uploadsRepository,
@@ -609,6 +892,7 @@ describe("UploadsService", () => {
       dataScopeService,
       governanceService,
       quotaService,
+      attachmentScanService,
       storageDriver
     );
 

@@ -37,44 +37,48 @@ type AdministrativeRequestStatus =
 
 describe("OfficeAutomationService", () => {
   const mockRepository = {
-    findDefaultApprover: jest.fn(),
-    findSelfApprover: jest.fn(),
-    createLeaveRequest: jest.fn(),
-    createAdministrativeRequest: jest.fn(),
-    findLeaveRequestById: jest.fn(),
-    findAdministrativeRequestById: jest.fn(),
-    applyApprovalDecision: jest.fn(),
-    applyAdministrativeApprovalDecision: jest.fn(),
-    applyAdministrativeCancellation: jest.fn(),
-    countPendingApprovals: jest.fn(),
-    countPendingAdministrativeApprovals: jest.fn(),
-    countMyLeaveRequests: jest.fn(),
-    countMyAdministrativeRequests: jest.fn(),
-    countActiveAnnouncements: jest.fn(),
-    countActiveDepartments: jest.fn(),
-    listRecentAnnouncements: jest.fn(),
-    listAnnouncements: jest.fn(),
-    findAnnouncementById: jest.fn(),
-    listActiveDepartments: jest.fn(),
-    listDirectoryMembers: jest.fn(),
-    listMyAdministrativeRequests: jest.fn(),
-    listPendingAdministrativeApprovals: jest.fn()
+    findDefaultApprover: vi.fn(),
+    findSelfApprover: vi.fn(),
+    createLeaveRequest: vi.fn(),
+    createAdministrativeRequest: vi.fn(),
+    findLeaveRequestById: vi.fn(),
+    findAdministrativeRequestById: vi.fn(),
+    applyApprovalDecision: vi.fn(),
+    applyAdministrativeApprovalDecision: vi.fn(),
+    applyAdministrativeCancellation: vi.fn(),
+    countPendingApprovals: vi.fn(),
+    countPendingAdministrativeApprovals: vi.fn(),
+    countMyLeaveRequests: vi.fn(),
+    countMyAdministrativeRequests: vi.fn(),
+    countActiveAnnouncements: vi.fn(),
+    countActiveDepartments: vi.fn(),
+    listRecentAnnouncements: vi.fn(),
+    listAnnouncements: vi.fn(),
+    findAnnouncementById: vi.fn(),
+    listActiveDepartments: vi.fn(),
+    listDirectoryMembers: vi.fn(),
+    listMyAdministrativeRequests: vi.fn(),
+    listPendingAdministrativeApprovals: vi.fn()
   };
   const mockAuditLogs = {
-    create: jest.fn()
+    create: vi.fn()
   };
   const mockNotificationCenter = {
-    publishEvent: jest.fn().mockResolvedValue(undefined)
+    publishEvent: vi.fn().mockResolvedValue(undefined)
+  };
+  const mockOpenIntegration = {
+    dispatchBusinessWebhookEvent: vi.fn().mockResolvedValue(undefined)
   };
 
   const service = new OfficeAutomationService(
     mockRepository as any,
     mockAuditLogs as any,
-    mockNotificationCenter as any
+    mockNotificationCenter as any,
+    mockOpenIntegration as any
   );
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("creates a leave request and records audit log", async () => {
@@ -326,6 +330,14 @@ describe("OfficeAutomationService", () => {
       expect.objectContaining({
         targetType: "oa-administrative-request",
         actionType: "UPDATE"
+      })
+    );
+    expect(mockOpenIntegration.dispatchBusinessWebhookEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenantId: "tenant-1",
+        eventType: "APPROVAL_COMPLETED",
+        sourceType: "administrative-request",
+        sourceId: "admin-request-2"
       })
     );
     expect(result.status).toBe(AdministrativeRequestStatus.APPROVED);

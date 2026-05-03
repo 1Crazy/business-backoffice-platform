@@ -73,12 +73,15 @@
 
 - `POSTGRES_DB` / `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_PORT`
 - `JWT_SECRET`
+- `OPEN_INTEGRATION_SECRET_PEPPER` / `OPEN_INTEGRATION_SECRET_ENCRYPTION_KEY`
 
 后端 `apps/api/.env`：
 
 - `PORT`
 - `JWT_SECRET`
 - `DATABASE_URL`
+
+本地需要把 PostgreSQL 暴露到宿主机时，使用 `docker-compose.dev.yml` 叠加启动；默认 `docker-compose.yml` 不发布数据库端口。
 
 前端 `apps/main-web/.env`：
 
@@ -219,6 +222,7 @@ Docker 联调默认地址：
 - API：`http://localhost:3000/api`
 
 数据库备份恢复、上传文件一致性和生产环境变量见 [`docs/operations.md`](./operations.md)。
+API 兼容级别、内部接口边界和对外稳定契约版本化规则见 [`docs/api-versioning.md`](./api-versioning.md)。
 
 ## 第一阶段模块说明
 

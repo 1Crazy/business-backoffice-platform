@@ -7,9 +7,17 @@ import LoginPage from "./LoginPage.vue";
 const pushMock = vi.fn(() => Promise.resolve());
 
 const authStore = {
+  requiresMfa: false,
+  pendingMfa: null as { setupChallenge: string | null; enrollmentRequired: boolean } | null,
+  latestRecoveryCodes: [] as string[],
   currentUser: null as { permissions: string[] } | null,
   login: vi.fn(async () => {
     authStore.currentUser = { permissions: [] };
+    return {
+      success: true,
+      mfaRequired: false,
+      mfaEnrollmentRequired: false
+    };
   })
 };
 
@@ -88,6 +96,9 @@ describe("LoginPage", () => {
 
   beforeEach(async () => {
     pushMock.mockClear();
+    authStore.requiresMfa = false;
+    authStore.pendingMfa = null;
+    authStore.latestRecoveryCodes = [];
     authStore.currentUser = null;
     (authStore.login as ReturnType<typeof vi.fn>).mockClear();
 

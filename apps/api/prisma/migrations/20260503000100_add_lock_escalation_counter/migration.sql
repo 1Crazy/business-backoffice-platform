@@ -1,0 +1,2 @@
+ALTER TABLE "User"
+  ADD COLUMN "lockEscalationCount" INTEGER NOT NULL DEFAULT 0;

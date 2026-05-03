@@ -1,24 +1,23 @@
-/** 会话存储能力：负责把登录态在浏览器持久化，并为鉴权链路提供统一读写入口。 */
+/** 会话存储能力：只保留非敏感会话元数据，并清理历史浏览器可读 token。 */
 const ACCESS_TOKEN_KEY = "platform-access-token";
 const REFRESH_TOKEN_KEY = "platform-refresh-token";
 const SESSION_EXPIRES_AT_KEY = "platform-session-expires-at";
+const CSRF_TOKEN_KEY = "platform_csrf_token";
 
 export interface StoredSession {
-  accessToken: string | null;
   sessionExpiresAt: string | null;
 }
 
 export function getStoredSession(): StoredSession {
+  clearLegacyBrowserReadableTokens();
+
   return {
-    accessToken: window.localStorage.getItem(ACCESS_TOKEN_KEY),
     sessionExpiresAt: window.localStorage.getItem(SESSION_EXPIRES_AT_KEY)
   };
 }
 
-export function storeSession(accessToken: string, sessionExpiresAt?: string): void {
-  window.localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-  // refresh token 只允许存在于 HttpOnly cookie；这里清理历史版本遗留的浏览器可读 token。
-  window.localStorage.removeItem(REFRESH_TOKEN_KEY);
+export function storeSession(sessionExpiresAt?: string): void {
+  clearLegacyBrowserReadableTokens();
 
   if (sessionExpiresAt) {
     window.localStorage.setItem(SESSION_EXPIRES_AT_KEY, sessionExpiresAt);
@@ -27,16 +26,26 @@ export function storeSession(accessToken: string, sessionExpiresAt?: string): vo
   }
 }
 
-export function updateAccessToken(accessToken: string, sessionExpiresAt?: string): void {
-  window.localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-
+export function updateSessionMetadata(sessionExpiresAt?: string): void {
   if (sessionExpiresAt) {
     window.localStorage.setItem(SESSION_EXPIRES_AT_KEY, sessionExpiresAt);
   }
 }
 
+export function getCsrfToken(): string | null {
+  return document.cookie
+    .split(";")
+    .map((item) => item.trim())
+    .find((item) => item.startsWith(`${CSRF_TOKEN_KEY}=`))
+    ?.slice(CSRF_TOKEN_KEY.length + 1) ?? null;
+}
+
 export function clearStoredSession(): void {
+  clearLegacyBrowserReadableTokens();
+  window.localStorage.removeItem(SESSION_EXPIRES_AT_KEY);
+}
+
+function clearLegacyBrowserReadableTokens(): void {
   window.localStorage.removeItem(ACCESS_TOKEN_KEY);
   window.localStorage.removeItem(REFRESH_TOKEN_KEY);
-  window.localStorage.removeItem(SESSION_EXPIRES_AT_KEY);
 }

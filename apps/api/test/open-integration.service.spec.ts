@@ -46,37 +46,41 @@ function buildConnectorUser(overrides: Record<string, unknown> = {}) {
 
 describe("OpenIntegrationService", () => {
   const repository = {
-    listOpenApiCredentials: jest.fn(),
-    findOpenApiCredentialById: jest.fn(),
-    findOpenApiCredentialByAccessKey: jest.fn(),
-    createOpenApiCredential: jest.fn(),
-    updateOpenApiCredential: jest.fn(),
-    listWebhookSubscriptions: jest.fn(),
-    findWebhookSubscriptionById: jest.fn(),
-    createWebhookSubscription: jest.fn(),
-    updateWebhookSubscription: jest.fn(),
-    createWebhookDelivery: jest.fn(),
-    listWebhookDeliveries: jest.fn(),
-    listIdentityConnectors: jest.fn(),
-    findIdentityConnectorById: jest.fn(),
-    createIdentityConnector: jest.fn(),
-    updateIdentityConnector: jest.fn(),
-    findIdentityBindingBySubject: jest.fn(),
-    upsertIdentityBinding: jest.fn(),
-    findConnectorLoginUser: jest.fn(),
-    listOpenApiCustomers: jest.fn(),
-    findOpenApiCustomerById: jest.fn()
+    listOpenApiCredentials: vi.fn(),
+    findOpenApiCredentialById: vi.fn(),
+    findOpenApiCredentialByAccessKey: vi.fn(),
+    createOpenApiCredential: vi.fn(),
+    updateOpenApiCredential: vi.fn(),
+    listWebhookSubscriptions: vi.fn(),
+    findWebhookSubscriptionById: vi.fn(),
+    createWebhookSubscription: vi.fn(),
+    updateWebhookSubscription: vi.fn(),
+    createWebhookDelivery: vi.fn(),
+    updateWebhookDelivery: vi.fn(),
+    listWebhookDeliveries: vi.fn(),
+    listIdentityConnectors: vi.fn(),
+    findIdentityConnectorById: vi.fn(),
+    createIdentityConnector: vi.fn(),
+    updateIdentityConnector: vi.fn(),
+    findIdentityBindingBySubject: vi.fn(),
+    upsertIdentityBinding: vi.fn(),
+    findConnectorLoginUser: vi.fn(),
+    listOpenApiCustomers: vi.fn(),
+    findOpenApiCustomerById: vi.fn()
   };
   const auditLogsService = {
-    create: jest.fn().mockResolvedValue(undefined)
+    create: vi.fn().mockResolvedValue(undefined)
   };
   const authService = {
-    loginWithUser: jest.fn()
+    loginWithUser: vi.fn()
   };
   const configService = {
-    get: jest.fn((key: string) => {
+    get: vi.fn((key: string) => {
       const values: Record<string, string> = {
         NODE_ENV: "test",
+        JWT_SECRET: "test-jwt-secret-that-is-long-enough-for-local-tests",
+        OPEN_INTEGRATION_SECRET_PEPPER: "test-open-integration-pepper",
+        OPEN_INTEGRATION_SECRET_ENCRYPTION_KEY: "test-open-integration-encryption-key",
         ALLOW_MOCK_CONNECTOR_LOGIN: "true",
         WEBHOOK_TEST_MODE: "SIMULATION"
       };
@@ -92,16 +96,19 @@ describe("OpenIntegrationService", () => {
   );
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     configService.get.mockImplementation((key: string) => {
       const values: Record<string, string> = {
         NODE_ENV: "test",
+        JWT_SECRET: "test-jwt-secret-that-is-long-enough-for-local-tests",
+        OPEN_INTEGRATION_SECRET_PEPPER: "test-open-integration-pepper",
+        OPEN_INTEGRATION_SECRET_ENCRYPTION_KEY: "test-open-integration-encryption-key",
         ALLOW_MOCK_CONNECTOR_LOGIN: "true",
         WEBHOOK_TEST_MODE: "SIMULATION"
       };
       return values[key];
     });
-    jest.restoreAllMocks();
+    vi.restoreAllMocks();
   });
 
   it("creates tenant-level open api credentials with plaintext secret returned once", async () => {
@@ -111,6 +118,7 @@ describe("OpenIntegrationService", () => {
       name: input.name,
       accessKey: input.accessKey,
       secretHash: input.secretHash,
+      secretHashVersion: input.secretHashVersion,
       scopes: input.scopes,
       status: OpenApiCredentialStatus.ACTIVE,
       expiresAt: input.expiresAt ?? null,
@@ -136,8 +144,12 @@ describe("OpenIntegrationService", () => {
     expect(repository.createOpenApiCredential).toHaveBeenCalledWith(
       expect.objectContaining({
         tenantId: "tenant-1",
+        secretHashVersion: "hmac-sha256-v1",
         scopes: ["customer:read"]
       })
+    );
+    expect(repository.createOpenApiCredential.mock.calls[0][0].secretHash).not.toBe(
+      createHash("sha256").update(result.plainSecret!).digest("hex")
     );
     expect(auditLogsService.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -154,6 +166,7 @@ describe("OpenIntegrationService", () => {
       name: "线索只读",
       accessKey: "oak_scope_only",
       secretHash: createHash("sha256").update("secret-123").digest("hex"),
+      secretHashVersion: "sha256",
       scopes: ["lead:read"],
       status: OpenApiCredentialStatus.ACTIVE,
       expiresAt: null,
@@ -177,6 +190,96 @@ describe("OpenIntegrationService", () => {
     );
   });
 
+  it("upgrades legacy sha256 open api secret after successful use", async () => {
+    repository.findOpenApiCredentialByAccessKey.mockResolvedValue({
+      id: "credential-1",
+      tenantId: "tenant-1",
+      name: "客户只读",
+      accessKey: "oak_legacy",
+      secretHash: createHash("sha256").update("legacy-secret").digest("hex"),
+      secretHashVersion: "sha256",
+      scopes: ["customer:read"],
+      status: OpenApiCredentialStatus.ACTIVE,
+      expiresAt: null,
+      lastUsedAt: null,
+      rotatedAt: null,
+      revokedAt: null,
+      createdByName: "租户管理员",
+      createdAt: new Date("2026-04-18T10:00:00.000Z"),
+      updatedAt: new Date("2026-04-18T10:00:00.000Z")
+    });
+    repository.updateOpenApiCredential.mockResolvedValue(undefined);
+    repository.listOpenApiCustomers.mockResolvedValue({
+      items: [],
+      total: 0
+    });
+
+    await service.listOpenApiCustomers({ page: 1, pageSize: 20 } as any, "oak_legacy", "legacy-secret");
+
+    expect(repository.updateOpenApiCredential).toHaveBeenCalledWith(
+      "credential-1",
+      "tenant-1",
+      expect.objectContaining({
+        lastUsedAt: expect.any(Date),
+        secretHash: expect.any(String),
+        secretHashVersion: "hmac-sha256-v1"
+      })
+    );
+    expect(repository.updateOpenApiCredential.mock.calls[0][2].secretHash).not.toBe(
+      createHash("sha256").update("legacy-secret").digest("hex")
+    );
+  });
+
+  it("stores webhook signing secret as ciphertext and signs with decrypted value", async () => {
+    let storedSubscription: any;
+    repository.createWebhookSubscription.mockImplementation(async (input) => {
+      storedSubscription = {
+        id: "webhook-1",
+        tenantId: input.tenantId,
+        name: input.name,
+        endpointUrl: input.endpointUrl,
+        eventTypes: input.eventTypes,
+        status: input.status,
+        signingSecret: input.signingSecret,
+        signingSecretCiphertext: input.signingSecretCiphertext,
+        signingSecretVersion: input.signingSecretVersion,
+        signingSecretHint: input.signingSecretHint,
+        maxAttempts: input.maxAttempts,
+        timeoutSeconds: input.timeoutSeconds,
+        lastTriggeredAt: null,
+        lastDeliveryStatus: null,
+        lastFailureMessage: null,
+        createdByName: input.createdByName,
+        updatedByName: input.updatedByName,
+        createdAt: new Date("2026-04-18T10:00:00.000Z"),
+        updatedAt: new Date("2026-04-18T10:00:00.000Z")
+      };
+      return storedSubscription;
+    });
+    repository.findWebhookSubscriptionById.mockImplementation(async () => storedSubscription);
+    mockWebhookDeliveryCreate();
+
+    const created = await service.createWebhookSubscription(
+      {
+        name: "经营回调",
+        endpointUrl: "https://hooks.example.test/retry-once",
+        eventTypes: ["GOVERNANCE_ALERT"]
+      } as any,
+      buildActor()
+    );
+    const delivery = await service.triggerWebhookTest("webhook-1", buildActor());
+
+    expect(repository.createWebhookSubscription).toHaveBeenCalledWith(
+      expect.objectContaining({
+        signingSecret: expect.any(String),
+        signingSecretCiphertext: expect.any(String),
+        signingSecretVersion: "aes-256-gcm-v1"
+      })
+    );
+    expect(repository.createWebhookSubscription.mock.calls[0][0].signingSecret).not.toBe(created.plainSigningSecret);
+    expect(delivery.signature).toMatch(/^sha256=/);
+  });
+
   function mockWebhookSubscription(overrides: Record<string, unknown> = {}) {
     repository.findWebhookSubscriptionById.mockResolvedValue({
       id: "webhook-1",
@@ -186,6 +289,8 @@ describe("OpenIntegrationService", () => {
       eventTypes: ["GOVERNANCE_ALERT"],
       status: WebhookSubscriptionStatus.ACTIVE,
       signingSecret: "whs_secret",
+      signingSecretCiphertext: null,
+      signingSecretVersion: "plain",
       signingSecretHint: "whs_12...abcd",
       maxAttempts: 3,
       timeoutSeconds: 10,
@@ -220,6 +325,25 @@ describe("OpenIntegrationService", () => {
       createdAt: new Date("2026-04-18T10:05:00.000Z"),
       updatedAt: new Date("2026-04-18T10:05:00.000Z")
     }));
+    repository.updateWebhookDelivery.mockImplementation(async (deliveryId, _tenantId, input) => ({
+      id: deliveryId,
+      tenantId: "tenant-1",
+      subscriptionId: "webhook-1",
+      eventType: "GOVERNANCE_ALERT",
+      sourceType: "system-administration",
+      sourceId: "webhook-1",
+      payload: input.payload,
+      signature: input.signature,
+      status: input.status,
+      attemptCount: input.attemptCount,
+      responseStatusCode: input.responseStatusCode,
+      responseBody: input.responseBody,
+      errorMessage: input.errorMessage,
+      nextRetryAt: input.nextRetryAt,
+      deliveredAt: input.deliveredAt,
+      createdAt: new Date("2026-04-18T10:05:00.000Z"),
+      updatedAt: new Date("2026-04-18T10:05:00.000Z")
+    }));
     repository.updateWebhookSubscription.mockResolvedValue(undefined);
   }
 
@@ -233,7 +357,9 @@ describe("OpenIntegrationService", () => {
     expect(result.attemptCount).toBe(2);
     expect(result.deliveryMode).toBe("SIMULATION");
     expect(result.responseBody).toBe("simulation:accepted");
-    expect(repository.createWebhookDelivery).toHaveBeenCalledWith(
+    expect(repository.updateWebhookDelivery).toHaveBeenCalledWith(
+      "delivery-1",
+      "tenant-1",
       expect.objectContaining({
         status: WebhookDeliveryStatus.SUCCEEDED,
         attemptCount: 2,
@@ -259,8 +385,8 @@ describe("OpenIntegrationService", () => {
       endpointUrl: "https://hooks.example.com/webhook"
     });
     mockWebhookDeliveryCreate();
-    jest.spyOn(service as any, "assertWebhookEndpointAllowed").mockResolvedValue(new URL("https://hooks.example.com/webhook"));
-    jest.spyOn(global, "fetch").mockResolvedValue(
+    vi.spyOn(service as any, "assertWebhookEndpointAllowed").mockResolvedValue(new URL("https://hooks.example.com/webhook"));
+    vi.spyOn(global, "fetch").mockResolvedValue(
       new Response("accepted", {
         status: 202
       })
@@ -298,8 +424,8 @@ describe("OpenIntegrationService", () => {
       maxAttempts: 2
     });
     mockWebhookDeliveryCreate();
-    jest.spyOn(service as any, "assertWebhookEndpointAllowed").mockResolvedValue(new URL("https://hooks.example.com/fail"));
-    jest.spyOn(global, "fetch").mockResolvedValue(
+    vi.spyOn(service as any, "assertWebhookEndpointAllowed").mockResolvedValue(new URL("https://hooks.example.com/fail"));
+    vi.spyOn(global, "fetch").mockResolvedValue(
       new Response("server unavailable", {
         status: 503
       })
@@ -408,6 +534,8 @@ describe("OpenIntegrationService", () => {
       eventTypes: ["GOVERNANCE_ALERT"],
       status: WebhookSubscriptionStatus.ACTIVE,
       signingSecret: "whs_secret",
+      signingSecretCiphertext: null,
+      signingSecretVersion: "plain",
       signingSecretHint: "whs_12...abcd",
       maxAttempts: 3,
       timeoutSeconds: 10,
@@ -419,32 +547,15 @@ describe("OpenIntegrationService", () => {
       createdAt: new Date("2026-04-18T10:00:00.000Z"),
       updatedAt: new Date("2026-04-18T10:00:00.000Z")
     });
-    repository.createWebhookDelivery.mockImplementation(async (input) => ({
-      id: "delivery-1",
-      tenantId: input.tenantId,
-      subscriptionId: input.subscriptionId,
-      eventType: input.eventType,
-      sourceType: input.sourceType,
-      sourceId: input.sourceId,
-      payload: input.payload,
-      signature: input.signature,
-      status: input.status,
-      attemptCount: input.attemptCount,
-      responseStatusCode: input.responseStatusCode,
-      responseBody: input.responseBody,
-      errorMessage: input.errorMessage,
-      nextRetryAt: input.nextRetryAt,
-      deliveredAt: input.deliveredAt,
-      createdAt: new Date("2026-04-18T10:05:00.000Z"),
-      updatedAt: new Date("2026-04-18T10:05:00.000Z")
-    }));
-    repository.updateWebhookSubscription.mockResolvedValue(undefined);
+    mockWebhookDeliveryCreate();
 
     const result = await service.triggerWebhookTest("webhook-1", buildActor());
 
     expect(result.status).toBe(WebhookDeliveryStatus.SUCCEEDED);
     expect(result.attemptCount).toBe(2);
-    expect(repository.createWebhookDelivery).toHaveBeenCalledWith(
+    expect(repository.updateWebhookDelivery).toHaveBeenCalledWith(
+      "delivery-1",
+      "tenant-1",
       expect.objectContaining({
         status: WebhookDeliveryStatus.SUCCEEDED,
         attemptCount: 2
@@ -466,6 +577,7 @@ describe("OpenIntegrationService", () => {
       directoryUrl: null,
       clientId: "client-1",
       clientSecretHash: createHash("sha256").update("client-secret").digest("hex"),
+      clientSecretHashVersion: "sha256",
       clientSecretHint: "clie...1234",
       allowedDomains: ["acme.test"],
       config: null,
@@ -482,6 +594,13 @@ describe("OpenIntegrationService", () => {
     repository.upsertIdentityBinding.mockResolvedValue(undefined);
     repository.updateIdentityConnector.mockResolvedValue(undefined);
     authService.loginWithUser.mockResolvedValue({
+      success: true,
+      mfaRequired: false,
+      mfaEnrollmentRequired: false,
+      mfaTicket: null,
+      mfaChallengeType: null,
+      mfaSetupChallenge: null,
+      mfaRecoveryCodes: [],
       accessToken: "token",
       refreshToken: "refresh",
       sessionExpiresAt: "2026-05-01T00:00:00.000Z",
@@ -505,6 +624,15 @@ describe("OpenIntegrationService", () => {
         externalSubject: "idp-user-1"
       })
     );
+    expect(repository.updateIdentityConnector).toHaveBeenCalledWith(
+      "connector-1",
+      "tenant-1",
+      expect.objectContaining({
+        clientSecretHash: expect.any(String),
+        clientSecretHashVersion: "hmac-sha256-v1",
+        lastAuthenticatedAt: expect.any(Date)
+      })
+    );
     expect(authService.loginWithUser).toHaveBeenCalled();
     expect(result.accessToken).toBe("token");
   });
@@ -523,6 +651,7 @@ describe("OpenIntegrationService", () => {
       directoryUrl: null,
       clientId: "client-1",
       clientSecretHash: createHash("sha256").update("client-secret").digest("hex"),
+      clientSecretHashVersion: "sha256",
       clientSecretHint: "clie...cret",
       allowedDomains: ["acme.test"],
       config: null,
@@ -553,6 +682,7 @@ describe("OpenIntegrationService", () => {
       name: "客户只读",
       accessKey: "oak_limited",
       secretHash: createHash("sha256").update("right-secret").digest("hex"),
+      secretHashVersion: "sha256",
       scopes: ["customer:read"],
       status: OpenApiCredentialStatus.ACTIVE,
       expiresAt: null,

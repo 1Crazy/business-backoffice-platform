@@ -1,4 +1,5 @@
 import { CustomersService } from "../src/modules/customers/customers.service";
+import { AccessPolicyService } from "../src/common/access-policy/access-policy.service";
 
 function buildCustomerRecord(overrides: Record<string, unknown> = {}) {
   return {
@@ -39,30 +40,30 @@ function buildCustomerRecord(overrides: Record<string, unknown> = {}) {
 describe("CustomersService", () => {
   it("returns paginated customers with scoped owner filters", async () => {
     const customersRepository = {
-      list: jest.fn().mockResolvedValue({
+      list: vi.fn().mockResolvedValue({
         items: [buildCustomerRecord()],
         total: 11
       })
     } as any;
     const dataScopeService = {
-      buildScopedCustomerFilter: jest.fn().mockResolvedValue({
+      buildScopedCustomerFilter: vi.fn().mockResolvedValue({
         ownerId: {
           in: ["user-1", "user-2"]
         }
       }),
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
     } as any;
     const accessPolicyService = {
-      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
-      assertWritableFields: jest.fn()
+      sanitizeReadFields: vi.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: vi.fn()
     } as any;
     const notificationCenterService = {
-      publishEvent: jest.fn().mockResolvedValue(undefined)
+      publishEvent: vi.fn().mockResolvedValue(undefined)
     } as any;
     const service = new CustomersService(
       customersRepository,
       {
-        create: jest.fn().mockResolvedValue(undefined)
+        create: vi.fn().mockResolvedValue(undefined)
       } as any,
       dataScopeService,
       accessPolicyService,
@@ -126,10 +127,10 @@ describe("CustomersService", () => {
 
   it("checks both current and target owners when reassigning a customer", async () => {
     const customersRepository = {
-      findOwnerById: jest.fn().mockResolvedValue({
+      findOwnerById: vi.fn().mockResolvedValue({
         ownerId: "owner-1"
       }),
-      updateOwner: jest.fn().mockResolvedValue(
+      updateOwner: vi.fn().mockResolvedValue(
         buildCustomerRecord({
           ownerId: "owner-2",
           owner: {
@@ -145,16 +146,16 @@ describe("CustomersService", () => {
       )
     } as any;
     const auditLogsService = {
-      create: jest.fn().mockResolvedValue(undefined)
+      create: vi.fn().mockResolvedValue(undefined)
     } as any;
     const dataScopeService = {
-      buildScopedCustomerFilter: jest.fn(),
-      assertCustomerAccessible: jest.fn().mockResolvedValue(undefined),
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+      buildScopedCustomerFilter: vi.fn(),
+      assertCustomerAccessible: vi.fn().mockResolvedValue(undefined),
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
     } as any;
     const accessPolicyService = {
-      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
-      assertWritableFields: jest.fn()
+      sanitizeReadFields: vi.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: vi.fn()
     } as any;
     const service = new CustomersService(
       customersRepository,
@@ -162,7 +163,7 @@ describe("CustomersService", () => {
       dataScopeService,
       accessPolicyService,
       {
-        publishEvent: jest.fn().mockResolvedValue(undefined)
+        publishEvent: vi.fn().mockResolvedValue(undefined)
       } as any
     );
     const actor = {
@@ -195,6 +196,40 @@ describe("CustomersService", () => {
       owner: {
         displayName: "销售乙"
       }
+    });
+  });
+
+  it("applies default pii masking for customer responses without explicit field rules", async () => {
+    const customersRepository = {
+      findDetailById: vi.fn().mockResolvedValue(buildCustomerRecord())
+    } as any;
+    const service = new CustomersService(
+      customersRepository,
+      {
+        create: vi.fn().mockResolvedValue(undefined)
+      } as any,
+      {
+        assertCustomerAccessible: vi.fn().mockResolvedValue(undefined)
+      } as any,
+      new AccessPolicyService(),
+      {
+        publishEvent: vi.fn().mockResolvedValue(undefined)
+      } as any
+    );
+
+    const result = await service.detail("customer-1", {
+      id: "manager-1",
+      tenantId: "tenant-default",
+      username: "manager",
+      displayName: "销售主管",
+      roleCodes: ["sales-manager"],
+      permissions: ["customer:read"]
+    } as any);
+
+    expect(result).toMatchObject({
+      contactName: "**",
+      phone: "138****0000",
+      email: "b***@example.com"
     });
   });
 });

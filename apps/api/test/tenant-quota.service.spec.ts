@@ -2,15 +2,15 @@ import { TenantQuotaExceededException, TenantQuotaService } from "../src/common/
 
 describe("TenantQuotaService", () => {
   const repository = {
-    getTenantQuotas: jest.fn(),
-    countActiveUsers: jest.fn(),
-    sumAttachmentSizeBytes: jest.fn(),
-    countBatchTasksSince: jest.fn()
+    getTenantQuotas: vi.fn(),
+    countActiveUsers: vi.fn(),
+    sumAttachmentSizeBytes: vi.fn(),
+    countBatchTasksSince: vi.fn()
   };
   const service = new TenantQuotaService(repository as any);
 
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
   });
 
   it("rejects active user growth when the current tenant reaches userQuota", async () => {

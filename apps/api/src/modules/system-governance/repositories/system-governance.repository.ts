@@ -97,6 +97,47 @@ export type SchedulerJobExecutionRecord = Prisma.SchedulerJobExecutionGetPayload
   select: typeof schedulerJobExecutionSelect;
 }>;
 
+type PersonalDataExportRecord = {
+  user: {
+    id: string;
+    tenantId: string;
+    username: string;
+    displayName: string;
+    email: string | null;
+    phone: string | null;
+    status: string;
+    departmentId: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+  };
+  customers: Array<{
+    id: string;
+    name: string;
+    contactName: string | null;
+    phone: string | null;
+    email: string | null;
+  }>;
+  leads: Array<{
+    id: string;
+    name: string;
+    contactName: string | null;
+    phone: string | null;
+  }>;
+  notifications: Array<{
+    id: string;
+    eventType: string;
+    title: string;
+    summary: string | null;
+    createdAt: Date;
+  }>;
+  auditLogs: Array<{
+    id: string;
+    actionType: string;
+    targetType: string;
+    createdAt: Date;
+  }>;
+};
+
 @Injectable()
 export class SystemGovernanceRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -344,6 +385,19 @@ export class SystemGovernanceRepository {
     });
   }
 
+  listDueSchedulerJobs(referenceAt: Date): Promise<SchedulerJobRecord[]> {
+    return this.prisma.schedulerJob.findMany({
+      where: {
+        status: SchedulerJobStatus.RUNNING,
+        nextRunAt: {
+          lte: referenceAt
+        }
+      },
+      select: schedulerJobSelect,
+      orderBy: [{ nextRunAt: "asc" }, { code: "asc" }]
+    });
+  }
+
   findSchedulerJobByCode(code: string): Promise<SchedulerJobRecord> {
     return this.prisma.schedulerJob.findUniqueOrThrow({
       where: {
@@ -481,5 +535,210 @@ export class SystemGovernanceRepository {
         }
       }
     });
+  }
+
+  async purgeRetentionData(input: {
+    auditLogsBefore: Date;
+    notificationsBefore: Date;
+    webhookDeliveriesBefore: Date;
+    revokedSessionsBefore: Date;
+    batchFailuresBefore: Date;
+  }) {
+    const [auditLogs, notifications, webhookDeliveries, sessions, batchFailures] = await this.prisma.$transaction([
+      this.prisma.auditLog.deleteMany({
+        where: {
+          createdAt: {
+            lt: input.auditLogsBefore
+          }
+        }
+      }),
+      this.prisma.notificationRecord.deleteMany({
+        where: {
+          createdAt: {
+            lt: input.notificationsBefore
+          },
+          archivedAt: {
+            not: null
+          }
+        }
+      }),
+      this.prisma.webhookDelivery.deleteMany({
+        where: {
+          createdAt: {
+            lt: input.webhookDeliveriesBefore
+          },
+          status: {
+            in: ["SUCCEEDED", "FAILED"]
+          }
+        }
+      }),
+      this.prisma.userSession.deleteMany({
+        where: {
+          revokedAt: {
+            not: null,
+            lt: input.revokedSessionsBefore
+          }
+        }
+      }),
+      this.prisma.batchTaskFailure.deleteMany({
+        where: {
+          createdAt: {
+            lt: input.batchFailuresBefore
+          }
+        }
+      })
+    ]);
+
+    return {
+      auditLogsDeleted: auditLogs.count,
+      notificationsDeleted: notifications.count,
+      webhookDeliveriesDeleted: webhookDeliveries.count,
+      revokedSessionsDeleted: sessions.count,
+      batchTaskFailuresDeleted: batchFailures.count
+    };
+  }
+
+  async exportPersonalData(userId: string): Promise<PersonalDataExportRecord> {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: {
+        id: userId
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        username: true,
+        displayName: true,
+        email: true,
+        phone: true,
+        status: true,
+        departmentId: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+    const [customers, leads, notifications, auditLogs] = await this.prisma.$transaction([
+      this.prisma.customer.findMany({
+        where: {
+          ownerId: userId
+        },
+        select: {
+          id: true,
+          name: true,
+          contactName: true,
+          phone: true,
+          email: true
+        }
+      }),
+      this.prisma.lead.findMany({
+        where: {
+          ownerId: userId
+        },
+        select: {
+          id: true,
+          name: true,
+          contactName: true,
+          phone: true
+        }
+      }),
+      this.prisma.notificationRecord.findMany({
+        where: {
+          recipientId: userId
+        },
+        select: {
+          id: true,
+          eventType: true,
+          title: true,
+          summary: true,
+          createdAt: true
+        },
+        take: 200
+      }),
+      this.prisma.auditLog.findMany({
+        where: {
+          actorId: userId
+        },
+        select: {
+          id: true,
+          actionType: true,
+          targetType: true,
+          createdAt: true
+        },
+        take: 200
+      })
+    ]);
+
+    return {
+      user,
+      customers,
+      leads,
+      notifications,
+      auditLogs
+    };
+  }
+
+  async anonymizeUser(userId: string, actorId: string) {
+    const now = new Date();
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: {
+        id: userId
+      },
+      select: {
+        id: true,
+        tenantId: true,
+        username: true
+      }
+    });
+    const token = user.id.slice(0, 8);
+
+    await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: {
+          id: userId
+        },
+        data: {
+          displayName: `匿名用户-${token}`,
+          email: null,
+          phone: null
+        }
+      }),
+      this.prisma.customer.updateMany({
+        where: {
+          ownerId: userId
+        },
+        data: {
+          contactName: null,
+          phone: null,
+          email: null,
+          notes: `personal-data-anonymized:${now.toISOString()}`
+        }
+      }),
+      this.prisma.lead.updateMany({
+        where: {
+          ownerId: userId
+        },
+        data: {
+          contactName: null,
+          phone: null,
+          notes: `personal-data-anonymized:${now.toISOString()}`
+        }
+      }),
+      this.prisma.auditLog.create({
+        data: {
+          tenantId: user.tenantId,
+          actorId,
+          actionType: "UPDATE",
+          targetType: "personal-data-anonymization",
+          targetId: userId,
+          detail: {
+            anonymizedAt: now.toISOString()
+          }
+        }
+      })
+    ]);
+
+    return {
+      userId,
+      anonymizedAt: now
+    };
   }
 }

@@ -16,10 +16,10 @@ export class CreateUserDto {
   displayName!: string;
 
   @ApiProperty({
-    description: "登录密码，最少 8 位。"
+    description: "登录密码，最少 12 位且包含大小写字母、数字和符号。"
   })
   @IsString()
-  @MinLength(8)
+  @MinLength(12)
   password!: string;
 
   @ApiPropertyOptional({

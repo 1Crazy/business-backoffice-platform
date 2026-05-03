@@ -3,6 +3,7 @@ import { ForbiddenException, Injectable } from "@nestjs/common";
 import { DataScope, Prisma, RecordStatus } from "@prisma/client";
 
 import type { AuthUser } from "../auth/auth-user.interface";
+import { RuntimeCacheService } from "../cache/runtime-cache.service";
 import { requireTenantId, withTenantWhere } from "../tenant/tenant.util";
 import type { ExtendedDataScopeRule } from "../access-policy/access-policy.types";
 import { PrismaService } from "../prisma/prisma.service";
@@ -17,59 +18,66 @@ const DATA_SCOPE_PRIORITY: Record<DataScope, number> = {
 
 @Injectable()
 export class DataScopeService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly runtimeCacheService: RuntimeCacheService
+  ) {}
 
   async resolveDataScope(actor: AuthUser): Promise<ResolvedDataScope> {
     const tenantId = requireTenantId(actor);
-    const scopes = await this.getScopesForUser(actor);
-    const primaryScope = this.pickHighestScope(scopes);
-    const extendedScope = await this.resolveExtendedScope(actor);
+    const cacheKey = `data-scope:${tenantId}:${actor.id}`;
 
-    if (primaryScope === DataScope.ALL) {
+    return this.runtimeCacheService.getOrSet(cacheKey, 60_000, async () => {
+      const scopes = await this.getScopesForUser(actor);
+      const primaryScope = this.pickHighestScope(scopes);
+      const extendedScope = await this.resolveExtendedScope(actor);
+
+      if (primaryScope === DataScope.ALL) {
+        return {
+          primaryScope,
+          scopes,
+          isGlobal: true,
+          departmentIds: [],
+          customerPoolTagIds: extendedScope.customerPoolTagIds
+        };
+      }
+
+      if (primaryScope === DataScope.SELF || !actor.departmentId) {
+        return {
+          primaryScope: actor.departmentId ? primaryScope : DataScope.SELF,
+          scopes,
+          isGlobal: false,
+          departmentIds: actor.departmentId ? [actor.departmentId] : [],
+          ownerIds: Array.from(new Set([actor.id, ...extendedScope.ownerIds])),
+          customerPoolTagIds: extendedScope.customerPoolTagIds
+        };
+      }
+
+      const departmentIds =
+        primaryScope === DataScope.DEPARTMENT_AND_SUBTREE
+          ? await this.getDepartmentSubtreeIds(actor.departmentId, tenantId)
+          : [actor.departmentId];
+      const owners = await this.prisma.user.findMany({
+        where: {
+          tenantId,
+          departmentId: {
+            in: departmentIds
+          }
+        },
+        select: {
+          id: true
+        }
+      });
+
       return {
         primaryScope,
         scopes,
-        isGlobal: true,
-        departmentIds: [],
-        customerPoolTagIds: extendedScope.customerPoolTagIds
-      };
-    }
-
-    if (primaryScope === DataScope.SELF || !actor.departmentId) {
-      return {
-        primaryScope: actor.departmentId ? primaryScope : DataScope.SELF,
-        scopes,
         isGlobal: false,
-        departmentIds: actor.departmentId ? [actor.departmentId] : [],
-        ownerIds: Array.from(new Set([actor.id, ...extendedScope.ownerIds])),
+        departmentIds,
+        ownerIds: Array.from(new Set([...owners.map((owner) => owner.id), ...extendedScope.ownerIds])),
         customerPoolTagIds: extendedScope.customerPoolTagIds
       };
-    }
-
-    const departmentIds =
-      primaryScope === DataScope.DEPARTMENT_AND_SUBTREE
-        ? await this.getDepartmentSubtreeIds(actor.departmentId, tenantId)
-        : [actor.departmentId];
-    const owners = await this.prisma.user.findMany({
-      where: {
-        tenantId,
-        departmentId: {
-          in: departmentIds
-        }
-      },
-      select: {
-        id: true
-      }
     });
-
-    return {
-      primaryScope,
-      scopes,
-      isGlobal: false,
-      departmentIds,
-      ownerIds: Array.from(new Set([...owners.map((owner) => owner.id), ...extendedScope.ownerIds])),
-      customerPoolTagIds: extendedScope.customerPoolTagIds
-    };
   }
 
   async resolveAccessibleOwnerIds(actor: AuthUser): Promise<string[] | undefined> {

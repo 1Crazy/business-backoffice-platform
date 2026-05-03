@@ -34,16 +34,16 @@ describe("RiskThrottleService", () => {
   });
 
   it("resets expired windows before locking a key", async () => {
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date("2026-05-01T00:00:00.000Z"));
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-01T00:00:00.000Z"));
     const service = new RiskThrottleService(new InMemoryRiskThrottleStore());
 
     await service.recordFailure("auth:refresh:hash-1", options);
-    jest.setSystemTime(new Date("2026-05-01T00:02:00.000Z"));
+    vi.setSystemTime(new Date("2026-05-01T00:02:00.000Z"));
     await service.assertAllowed("auth:refresh:hash-1", options);
     await service.recordFailure("auth:refresh:hash-1", options);
 
     await expect(service.assertAllowed("auth:refresh:hash-1", options)).resolves.toBeUndefined();
-    jest.useRealTimers();
+    vi.useRealTimers();
   });
 });

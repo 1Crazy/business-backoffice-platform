@@ -4,10 +4,10 @@ describe("LeadsRepository", () => {
   it("lists reminders with pagination and relations", async () => {
     const prisma = {
       reminder: {
-        findMany: jest.fn().mockResolvedValue([{ id: "reminder-1" }]),
-        count: jest.fn().mockResolvedValue(2)
+        findMany: vi.fn().mockResolvedValue([{ id: "reminder-1" }]),
+        count: vi.fn().mockResolvedValue(2)
       },
-      $transaction: jest.fn().mockImplementation(async (operations: Array<Promise<unknown>>) => Promise.all(operations))
+      $transaction: vi.fn().mockImplementation(async (operations: Array<Promise<unknown>>) => Promise.all(operations))
     } as any;
     const repository = new LeadsRepository(prisma);
 
@@ -43,16 +43,16 @@ describe("LeadsRepository", () => {
   it("converts a lead to a customer inside one transaction", async () => {
     const tx = {
       customer: {
-        create: jest.fn().mockResolvedValue({
+        create: vi.fn().mockResolvedValue({
           id: "customer-1"
         })
       },
       lead: {
-        update: jest.fn().mockResolvedValue(undefined)
+        update: vi.fn().mockResolvedValue(undefined)
       }
     };
     const prisma = {
-      $transaction: jest.fn().mockImplementation(async (callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx))
+      $transaction: vi.fn().mockImplementation(async (callback: (transaction: typeof tx) => Promise<unknown>) => callback(tx))
     } as any;
     const repository = new LeadsRepository(prisma);
 

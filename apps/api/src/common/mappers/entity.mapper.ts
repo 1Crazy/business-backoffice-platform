@@ -10,6 +10,10 @@ interface AttachmentRecord {
   originalName: string;
   mimeType: string;
   size: number;
+  scanStatus: "PENDING" | "CLEAN" | "MALICIOUS" | "SKIPPED" | "ERROR";
+  scanProvider?: string | null;
+  scanMessage?: string | null;
+  scannedAt?: Date | null;
   createdAt: Date;
 }
 
@@ -47,6 +51,10 @@ export function mapAttachment(record: AttachmentRecord) {
     originalName: record.originalName,
     mimeType: record.mimeType,
     size: record.size,
+    scanStatus: record.scanStatus,
+    scanProvider: record.scanProvider ?? null,
+    scanMessage: record.scanMessage ?? null,
+    scannedAt: toIsoString(record.scannedAt),
     createdAt: toIsoString(record.createdAt)!
   };
 }

@@ -29,6 +29,27 @@ export type UserRecord = Prisma.UserGetPayload<{
 export class UsersRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  listPasswordHistory(userId: string, limit: number) {
+    return this.prisma.userPasswordHistory.findMany({
+      where: {
+        userId
+      },
+      orderBy: {
+        createdAt: "desc"
+      },
+      take: limit
+    });
+  }
+
+  createPasswordHistory(userId: string, passwordHash: string) {
+    return this.prisma.userPasswordHistory.create({
+      data: {
+        userId,
+        passwordHash
+      }
+    });
+  }
+
   list(tenantId: string) {
     return this.prisma.user.findMany({
       where: {
@@ -124,6 +145,15 @@ export class UsersRepository {
           passwordHash: input.passwordHash
         }
       });
+
+      if (input.passwordHash) {
+        await tx.userPasswordHistory.create({
+          data: {
+            userId: id,
+            passwordHash: input.passwordHash
+          }
+        });
+      }
     });
 
     return this.findById(id, tenantId);
@@ -136,6 +166,23 @@ export class UsersRepository {
         tenantId
       },
       data: { status }
+    });
+
+    return this.findById(id, tenantId);
+  }
+
+  async unlockUser(id: string, tenantId: string) {
+    await this.prisma.user.updateMany({
+      where: {
+        id,
+        tenantId
+      },
+      data: {
+        lockedAt: null,
+        securityLockStatus: "NONE",
+        securityLockReason: null,
+        securityLockReviewedAt: new Date()
+      }
     });
 
     return this.findById(id, tenantId);

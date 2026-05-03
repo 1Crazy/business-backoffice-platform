@@ -2,11 +2,12 @@
 import { Global, Module } from "@nestjs/common";
 
 import { AccessPolicyService } from "../access-policy/access-policy.service";
+import { RuntimeCacheService } from "../cache/runtime-cache.service";
 import { DataScopeService } from "./data-scope.service";
 
 @Global()
 @Module({
-  providers: [DataScopeService, AccessPolicyService],
-  exports: [DataScopeService, AccessPolicyService]
+  providers: [RuntimeCacheService, DataScopeService, AccessPolicyService],
+  exports: [RuntimeCacheService, DataScopeService, AccessPolicyService]
 })
 export class DataScopeModule {}

@@ -28,6 +28,7 @@
         <div class="identity-pill">SCRM</div>
       </div>
       <el-form
+        v-if="!authStore.requiresMfa"
         ref="loginFormRef"
         :model="form"
         :rules="rules"
@@ -46,7 +47,53 @@
         <el-button type="primary" :loading="submitting" class="submit-button" @click="handleSubmit">
           登录系统
         </el-button>
+        <el-button text class="link-button" :disabled="submitting" @click="goForgotPassword">
+          忘记密码
+        </el-button>
       </el-form>
+      <el-form
+        v-else
+        ref="mfaFormRef"
+        :model="mfaForm"
+        :rules="mfaRules"
+        label-position="top"
+        require-asterisk-position="right"
+        status-icon
+        class="dialog-form"
+        @submit.prevent="handleMfaSubmit"
+      >
+        <div class="mfa-panel">
+          <div class="mfa-title">{{ authStore.pendingMfa?.enrollmentRequired ? "启用身份验证器" : "输入动态验证码" }}</div>
+          <div class="mfa-copy">
+            <template v-if="authStore.pendingMfa?.enrollmentRequired">
+              当前账号具有高权限访问范围，首次登录前需要先绑定身份验证器。将下方 `otpauth` 地址导入认证器后，再输入 6 位验证码完成登录。
+            </template>
+            <template v-else>
+              当前账号已启用多因素认证。请输入身份验证器验证码或恢复码继续登录。
+            </template>
+          </div>
+          <el-input
+            v-if="authStore.pendingMfa?.setupChallenge"
+            :model-value="authStore.pendingMfa.setupChallenge"
+            readonly
+            type="textarea"
+            :rows="4"
+          />
+        </div>
+        <el-form-item label="验证码 / 恢复码" prop="code" required>
+          <el-input v-model="mfaForm.code" placeholder="请输入 6 位验证码或恢复码" />
+        </el-form-item>
+        <el-button type="primary" :loading="submitting" class="submit-button" @click="handleMfaSubmit">
+          完成验证
+        </el-button>
+        <el-button class="submit-button secondary-button" :disabled="submitting" @click="resetMfaFlow">
+          返回账号密码登录
+        </el-button>
+      </el-form>
+      <div v-if="authStore.latestRecoveryCodes.length" class="credential-card recovery-card">
+        <span>恢复码</span>
+        <strong>{{ authStore.latestRecoveryCodes.join(" / ") }}</strong>
+      </div>
       <div class="hint">体验账号可直接进入。</div>
       <div class="credential-card">
         <span>体验账号</span>
@@ -71,13 +118,20 @@ const authStore = useAuthStore();
 const router = useRouter();
 const submitting = ref(false);
 const loginFormRef = ref<FormInstance>();
+const mfaFormRef = ref<FormInstance>();
 const form = reactive({
   username: "admin",
   password: "Admin123456!"
 });
+const mfaForm = reactive({
+  code: ""
+});
 const rules: FormRules<typeof form> = {
   username: [{ required: true, message: "请输入账号", trigger: "blur" }],
   password: [{ required: true, message: "请输入密码", trigger: "blur" }]
+};
+const mfaRules: FormRules<typeof mfaForm> = {
+  code: [{ required: true, message: "请输入验证码或恢复码", trigger: "blur" }]
 };
 
 async function handleSubmit(): Promise<void> {
@@ -89,7 +143,12 @@ async function handleSubmit(): Promise<void> {
   submitting.value = true;
 
   try {
-    await authStore.login(normalizeRequiredText(form.username), normalizeRequiredText(form.password));
+    const loginResult = await authStore.login(normalizeRequiredText(form.username), normalizeRequiredText(form.password));
+    if (loginResult.mfaRequired) {
+      mfaForm.code = "";
+      ElMessage.warning(loginResult.mfaEnrollmentRequired ? "请先完成身份验证器绑定。" : "请输入动态验证码完成登录。");
+      return;
+    }
     const targetPath = resolveFirstAccessiblePath(authStore.currentUser?.permissions ?? []);
 
     if (!targetPath) {
@@ -105,6 +164,42 @@ async function handleSubmit(): Promise<void> {
   } finally {
     submitting.value = false;
   }
+}
+
+async function handleMfaSubmit(): Promise<void> {
+  const isValid = await validateForm(mfaFormRef.value);
+  if (!isValid) {
+    return;
+  }
+
+  submitting.value = true;
+
+  try {
+    await authStore.completeMfa(normalizeRequiredText(mfaForm.code));
+    const targetPath = resolveFirstAccessiblePath(authStore.currentUser?.permissions ?? []);
+
+    if (!targetPath) {
+      await router.push("/no-access");
+      ElMessage.warning("当前账号没有可访问的页面，请联系管理员分配权限。");
+      return;
+    }
+
+    await router.push(targetPath);
+    ElMessage.success(authStore.latestRecoveryCodes.length ? "MFA 已启用并登录成功。" : "登录成功。");
+  } catch (error) {
+    ElMessage.error(getRequestErrorMessage(error, "MFA 验证失败，请检查验证码或恢复码。"));
+  } finally {
+    submitting.value = false;
+  }
+}
+
+function resetMfaFlow(): void {
+  authStore.clearPendingMfa();
+  mfaForm.code = "";
+}
+
+async function goForgotPassword() {
+  await router.push("/forgot-password");
 }
 </script>
 
@@ -275,6 +370,37 @@ async function handleSubmit(): Promise<void> {
   margin-top: 8px;
 }
 
+.secondary-button {
+  margin-top: 0;
+}
+
+.link-button {
+  justify-self: flex-end;
+  margin-top: -4px;
+  padding-right: 0;
+}
+
+.mfa-panel {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #f7faff;
+  border: 1px solid rgba(59, 130, 246, 0.14);
+}
+
+.mfa-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--app-text-primary);
+}
+
+.mfa-copy {
+  color: var(--app-text-secondary);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
 .hint {
   color: var(--app-text-secondary);
   font-size: 13px;
@@ -298,6 +424,11 @@ async function handleSubmit(): Promise<void> {
 
 .credential-card strong {
   font-size: 13px;
+}
+
+.recovery-card strong {
+  line-height: 1.7;
+  word-break: break-word;
 }
 
 @media (max-width: 960px) {

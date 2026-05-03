@@ -303,6 +303,32 @@ format: "date-time"
   })
   createdAt!: string;
 
+  @ApiPropertyOptional({
+    description: "永久锁定时间；为空表示当前未被永久锁定。",
+    format: "date-time",
+    nullable: true
+  })
+  lockedAt?: string | null;
+
+  @ApiProperty({
+    description: "账号安全锁定状态。",
+    enum: ["NONE", "REVIEW_REQUIRED", "LOCKED"]
+  })
+  securityLockStatus!: "NONE" | "REVIEW_REQUIRED" | "LOCKED";
+
+  @ApiPropertyOptional({
+    description: "安全锁定或审核原因。",
+    nullable: true
+  })
+  securityLockReason?: string | null;
+
+  @ApiPropertyOptional({
+    description: "最近一次管理员审核时间。",
+    format: "date-time",
+    nullable: true
+  })
+  securityLockReviewedAt?: string | null;
+
   @ApiProperty({
     description: "更新时间。",
 format: "date-time"

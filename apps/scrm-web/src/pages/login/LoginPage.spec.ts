@@ -5,14 +5,23 @@ import LoginPage from "@/pages/login/LoginPage.vue";
 
 const { pushMock, loginMock, successMock, warningMock, authStoreState } = vi.hoisted(() => ({
   pushMock: vi.fn(),
-  loginMock: vi.fn().mockResolvedValue(undefined),
+  loginMock: vi.fn().mockResolvedValue({
+    success: true,
+    mfaRequired: false,
+    mfaEnrollmentRequired: false
+  }),
   successMock: vi.fn(),
   warningMock: vi.fn(),
   authStoreState: {
+    requiresMfa: false,
+    pendingMfa: null as { setupChallenge: string | null; enrollmentRequired: boolean } | null,
+    latestRecoveryCodes: [] as string[],
     currentUser: {
       permissions: ["dashboard:view"]
     },
-    logout: vi.fn()
+    logout: vi.fn(),
+    completeMfa: vi.fn(),
+    clearPendingMfa: vi.fn()
   }
 }));
 
@@ -20,6 +29,17 @@ vi.mock("@/stores/auth", () => ({
   useAuthStore: () => ({
     login: loginMock,
     logout: authStoreState.logout,
+    completeMfa: authStoreState.completeMfa,
+    clearPendingMfa: authStoreState.clearPendingMfa,
+    get requiresMfa() {
+      return authStoreState.requiresMfa;
+    },
+    get pendingMfa() {
+      return authStoreState.pendingMfa;
+    },
+    get latestRecoveryCodes() {
+      return authStoreState.latestRecoveryCodes;
+    },
     get currentUser() {
       return authStoreState.currentUser;
     }
@@ -48,10 +68,19 @@ describe("LoginPage", () => {
   beforeEach(() => {
     pushMock.mockReset();
     loginMock.mockReset();
-    loginMock.mockResolvedValue(undefined);
+    loginMock.mockResolvedValue({
+      success: true,
+      mfaRequired: false,
+      mfaEnrollmentRequired: false
+    });
     successMock.mockReset();
     warningMock.mockReset();
     authStoreState.logout.mockReset();
+    authStoreState.completeMfa.mockReset();
+    authStoreState.clearPendingMfa.mockReset();
+    authStoreState.requiresMfa = false;
+    authStoreState.pendingMfa = null;
+    authStoreState.latestRecoveryCodes = [];
     authStoreState.currentUser = {
       permissions: ["dashboard:view"]
     };

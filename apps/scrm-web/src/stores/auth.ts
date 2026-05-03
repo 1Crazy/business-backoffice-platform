@@ -3,26 +3,47 @@ import { defineStore } from "pinia";
 import { computed, ref } from "vue";
 
 import { clearStoredSession, getStoredSession, storeSession } from "@/auth/session";
-import { fetchCurrentUserProfile, loginByPassword, logoutCurrentSession } from "@/api/auth.api";
-import type { CurrentUser } from "@/types/auth";
+import { fetchCurrentUserProfile, loginByPassword, logoutCurrentSession, verifyLoginMfa } from "@/api/auth.api";
+import type { CurrentUser, LoginResponse } from "@/types/auth";
+
+interface PendingMfaState {
+  ticket: string;
+  challengeType: "totp";
+  setupChallenge: string | null;
+  enrollmentRequired: boolean;
+}
 
 export const useAuthStore = defineStore("auth", () => {
   const initialSession = getStoredSession();
-  const token = ref<string | null>(initialSession.accessToken);
+  const sessionExpiresAt = ref<string | null>(initialSession.sessionExpiresAt);
   const currentUser = ref<CurrentUser | null>(null);
+  const pendingMfa = ref<PendingMfaState | null>(null);
+  const latestRecoveryCodes = ref<string[]>([]);
 
-  const isAuthenticated = computed(() => Boolean(token.value));
+  const isAuthenticated = computed(() => Boolean(currentUser.value));
+  const requiresMfa = computed(() => Boolean(pendingMfa.value));
 
-  async function login(username: string, password: string): Promise<void> {
+  async function login(username: string, password: string): Promise<LoginResponse> {
     const data = await loginByPassword({ username, password });
+    applyLoginResponse(data);
+    return data;
+  }
 
-    token.value = data.accessToken;
-    currentUser.value = data.user;
-    storeSession(data.accessToken, data.sessionExpiresAt);
+  async function completeMfa(code: string): Promise<LoginResponse> {
+    if (!pendingMfa.value) {
+      throw new Error("MFA challenge is not pending.");
+    }
+
+    const data = await verifyLoginMfa({
+      ticket: pendingMfa.value.ticket,
+      code
+    });
+    applyLoginResponse(data);
+    return data;
   }
 
   async function fetchProfile(): Promise<void> {
-    if (!token.value) {
+    if (!sessionExpiresAt.value) {
       currentUser.value = null;
       return;
     }
@@ -31,7 +52,7 @@ export const useAuthStore = defineStore("auth", () => {
   }
 
   async function logout(): Promise<void> {
-    if (token.value) {
+    if (sessionExpiresAt.value || currentUser.value) {
       try {
         await logoutCurrentSession();
       } catch {
@@ -39,8 +60,10 @@ export const useAuthStore = defineStore("auth", () => {
       }
     }
 
-    token.value = null;
+    sessionExpiresAt.value = null;
     currentUser.value = null;
+    pendingMfa.value = null;
+    latestRecoveryCodes.value = [];
     clearStoredSession();
   }
 
@@ -49,11 +72,43 @@ export const useAuthStore = defineStore("auth", () => {
     return currentUser.value?.permissions?.includes(permission) ?? false;
   }
 
+  function clearPendingMfa(): void {
+    pendingMfa.value = null;
+    latestRecoveryCodes.value = [];
+  }
+
+  function applyLoginResponse(data: LoginResponse): void {
+    if (data.success) {
+      pendingMfa.value = null;
+      latestRecoveryCodes.value = data.mfaRecoveryCodes;
+      sessionExpiresAt.value = data.sessionExpiresAt;
+      currentUser.value = data.user;
+      storeSession(data.sessionExpiresAt ?? undefined);
+      return;
+    }
+
+    sessionExpiresAt.value = null;
+    currentUser.value = null;
+    latestRecoveryCodes.value = [];
+    storeSession(undefined);
+    pendingMfa.value = {
+      ticket: data.mfaTicket ?? "",
+      challengeType: "totp",
+      setupChallenge: data.mfaSetupChallenge,
+      enrollmentRequired: data.mfaEnrollmentRequired
+    };
+  }
+
   return {
-    token,
+    sessionExpiresAt,
     currentUser,
+    pendingMfa,
+    latestRecoveryCodes,
     isAuthenticated,
+    requiresMfa,
     login,
+    completeMfa,
+    clearPendingMfa,
     fetchProfile,
     logout,
     hasPermission

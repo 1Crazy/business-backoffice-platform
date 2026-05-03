@@ -11,7 +11,7 @@ describe("WorkflowRepository", () => {
   it("reads workflow templates only inside the current tenant", async () => {
     const prisma = {
       workflowTemplate: {
-        findFirstOrThrow: jest.fn().mockResolvedValue({ id: "template-1" })
+        findFirstOrThrow: vi.fn().mockResolvedValue({ id: "template-1" })
       }
     } as any;
     const repository = new WorkflowRepository(prisma);
@@ -30,7 +30,7 @@ describe("WorkflowRepository", () => {
   it("resolves permission assignees only inside the current tenant", async () => {
     const prisma = {
       user: {
-        findMany: jest.fn().mockResolvedValue([])
+        findMany: vi.fn().mockResolvedValue([])
       }
     } as any;
     const repository = new WorkflowRepository(prisma);
@@ -65,25 +65,25 @@ describe("WorkflowRepository", () => {
   it("advances workflow tasks with tenant-scoped updates and writes", async () => {
     const tx = {
       workflowTask: {
-        updateMany: jest.fn().mockResolvedValue({ count: 1 }),
-        createMany: jest.fn().mockResolvedValue({ count: 1 })
+        updateMany: vi.fn().mockResolvedValue({ count: 1 }),
+        createMany: vi.fn().mockResolvedValue({ count: 1 })
       },
       workflowAction: {
-        create: jest.fn().mockResolvedValue(undefined)
+        create: vi.fn().mockResolvedValue(undefined)
       },
       workflowInstance: {
-        updateMany: jest.fn().mockResolvedValue({ count: 1 })
+        updateMany: vi.fn().mockResolvedValue({ count: 1 })
       },
       workflowCcRecipient: {
-        createMany: jest.fn().mockResolvedValue({ count: 1 })
+        createMany: vi.fn().mockResolvedValue({ count: 1 })
       }
     };
     const prisma = {
-      $transaction: jest.fn().mockImplementation(async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx))
+      $transaction: vi.fn().mockImplementation(async (callback: (client: typeof tx) => Promise<unknown>) => callback(tx))
     } as any;
     const repository = new WorkflowRepository(prisma);
 
-    jest.spyOn(repository, "findInstanceById").mockResolvedValue({ id: "instance-1" } as any);
+    vi.spyOn(repository, "findInstanceById").mockResolvedValue({ id: "instance-1" } as any);
 
     await repository.approveTask({
       tenantId: "tenant-1",

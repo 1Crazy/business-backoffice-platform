@@ -53,20 +53,40 @@ nullable: true
 
 export class LoginResponseVo {
   @ApiProperty({
-    description: "访问令牌。"
+    description: "是否已完成登录。未完成时表示仍需 MFA 验证。"
   })
-  accessToken!: string;
+  success!: boolean;
+
+  @ApiProperty({
+    description: "是否需要继续完成 MFA 验证。"
+  })
+  mfaRequired!: boolean;
+
+  @ApiPropertyOptional({
+    description: "登录挑战 ticket，仅在 mfaRequired=true 时返回。",
+    nullable: true
+  })
+  mfaTicket?: string | null;
+
+  @ApiPropertyOptional({
+    description: "MFA 挑战类型。",
+    nullable: true,
+    enum: ["totp"]
+  })
+  mfaChallengeType?: "totp" | null;
 
   @ApiProperty({
     description: "当前会话过期时间。",
-format: "date-time"
+    format: "date-time",
+    nullable: true
   })
-  sessionExpiresAt!: string;
+  sessionExpiresAt!: string | null;
 
-  @ApiProperty({
-    type: () => CurrentUserVo
+  @ApiPropertyOptional({
+    type: () => CurrentUserVo,
+    nullable: true
   })
-  user!: CurrentUserVo;
+  user!: CurrentUserVo | null;
 }
 
 export class LogoutResponseVo {
@@ -74,4 +94,100 @@ export class LogoutResponseVo {
     description: "success 字段。"
   })
   success!: boolean;
+}
+
+export class UserSessionVo {
+  @ApiProperty({
+    description: "会话 ID。"
+  })
+  id!: string;
+
+  @ApiProperty({
+    description: "会话所属用户 ID。"
+  })
+  userId!: string;
+
+  @ApiProperty({
+    description: "会话过期时间。",
+    format: "date-time"
+  })
+  expiresAt!: string;
+
+  @ApiPropertyOptional({
+    description: "会话撤销时间。",
+    format: "date-time",
+    nullable: true
+  })
+  revokedAt!: string | null;
+
+  @ApiPropertyOptional({
+    description: "最近活跃时间。",
+    format: "date-time",
+    nullable: true
+  })
+  lastSeenAt!: string | null;
+
+  @ApiPropertyOptional({
+    description: "最近一次请求 IP。",
+    nullable: true
+  })
+  ipAddress!: string | null;
+
+  @ApiPropertyOptional({
+    description: "最近一次请求 User-Agent。",
+    nullable: true
+  })
+  userAgent!: string | null;
+
+  @ApiProperty({
+    description: "会话创建时间。",
+    format: "date-time"
+  })
+  createdAt!: string;
+
+  @ApiProperty({
+    description: "会话更新时间。",
+    format: "date-time"
+  })
+  updatedAt!: string;
+
+  @ApiProperty({
+    description: "是否为当前会话。"
+  })
+  isCurrent!: boolean;
+
+  @ApiProperty({
+    description: "是否仍可用于访问或刷新。"
+  })
+  isActive!: boolean;
+}
+
+export class PasswordResetRequestVo {
+  @ApiProperty()
+  success!: boolean;
+}
+
+export class PasswordResetTokenVo {
+  @ApiProperty()
+  success!: boolean;
+}
+
+export class MfaSetupVo {
+  @ApiProperty()
+  enabled!: boolean;
+
+  @ApiProperty({
+    description: "当前是否存在待确认的 MFA 绑定。"
+  })
+  pending!: boolean;
+
+  @ApiPropertyOptional({
+    nullable: true
+  })
+  challenge?: string | null;
+
+  @ApiProperty({
+    type: () => [String]
+  })
+  recoveryCodes!: string[];
 }

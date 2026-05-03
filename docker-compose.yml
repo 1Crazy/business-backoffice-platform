@@ -7,8 +7,6 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-scrm}
       POSTGRES_USER: ${POSTGRES_USER:-scrm}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-scrm}
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     healthcheck:
@@ -33,6 +31,8 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-scrm}:${POSTGRES_PASSWORD:-scrm}@postgres:5432/${POSTGRES_DB:-scrm}?schema=public
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8080,http://localhost:8081,http://localhost:8082}
       RISK_THROTTLE_STORE: ${RISK_THROTTLE_STORE:-database}
+      OPEN_INTEGRATION_SECRET_PEPPER: ${OPEN_INTEGRATION_SECRET_PEPPER:-dev-open-integration-pepper-change-me}
+      OPEN_INTEGRATION_SECRET_ENCRYPTION_KEY: ${OPEN_INTEGRATION_SECRET_ENCRYPTION_KEY:-dev-open-integration-encryption-key-change-me}
       WEBHOOK_ALLOWED_DOMAINS: ${WEBHOOK_ALLOWED_DOMAINS:-}
     ports:
       - "3000:3000"

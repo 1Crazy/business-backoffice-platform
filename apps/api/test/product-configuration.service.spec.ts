@@ -1,5 +1,6 @@
 import { ProductConfigLayer, ProductConfigScope } from "@prisma/client";
 
+import { RuntimeCacheService } from "../src/common/cache/runtime-cache.service";
 import { ProductConfigurationService } from "../src/modules/product-configuration/product-configuration.service";
 
 function buildActor(overrides: Record<string, unknown> = {}) {
@@ -17,18 +18,16 @@ function buildActor(overrides: Record<string, unknown> = {}) {
 
 describe("ProductConfigurationService", () => {
   const repository = {
-    ensureConfigs: jest.fn(),
-    findTenantContext: jest.fn(),
-    listConfigsForResolution: jest.fn(),
-    upsertTenantOverride: jest.fn()
+    ensureConfigs: vi.fn(),
+    findTenantContext: vi.fn(),
+    listConfigsForResolution: vi.fn(),
+    upsertTenantOverride: vi.fn()
   };
   const auditLogsService = {
-    create: jest.fn().mockResolvedValue(undefined)
+    create: vi.fn().mockResolvedValue(undefined)
   };
-  const service = new ProductConfigurationService(repository as any, auditLogsService as any);
-
   beforeEach(() => {
-    jest.clearAllMocks();
+    vi.clearAllMocks();
     repository.findTenantContext.mockResolvedValue({
       id: "tenant-1",
       code: "acme",
@@ -38,6 +37,11 @@ describe("ProductConfigurationService", () => {
   });
 
   it("resolves configuration entries with platform default, industry template and tenant override precedence", async () => {
+    const service = new ProductConfigurationService(
+      repository as any,
+      auditLogsService as any,
+      new RuntimeCacheService() as any
+    );
     repository.listConfigsForResolution.mockResolvedValue([
       {
         id: "cfg-default",
@@ -120,6 +124,11 @@ describe("ProductConfigurationService", () => {
   });
 
   it("derives runtime menu visibility and theme variables from resolved entries", async () => {
+    const service = new ProductConfigurationService(
+      repository as any,
+      auditLogsService as any,
+      new RuntimeCacheService() as any
+    );
     repository.listConfigsForResolution.mockResolvedValue([
       {
         id: "menu-1",
@@ -173,5 +182,54 @@ describe("ProductConfigurationService", () => {
         "platform-workfeed": "协同总线"
       }
     });
+  });
+
+  it("caches runtime and resolved entries until a tenant override invalidates them", async () => {
+    const service = new ProductConfigurationService(
+      repository as any,
+      auditLogsService as any,
+      new RuntimeCacheService() as any
+    );
+    repository.listConfigsForResolution.mockResolvedValue([
+      {
+        id: "theme-1",
+        code: "default-theme",
+        tenantId: null,
+        industryCode: null,
+        layer: ProductConfigLayer.PLATFORM_DEFAULT,
+        scope: ProductConfigScope.THEME,
+        configKey: "brand-kit",
+        displayName: "品牌主题",
+        description: null,
+        value: {
+          brandName: "Acme Workspace",
+          primaryColor: "#0f766e"
+        },
+        createdAt: new Date("2026-04-18T08:00:00.000Z"),
+        updatedAt: new Date("2026-04-18T08:00:00.000Z")
+      }
+    ]);
+    repository.upsertTenantOverride.mockResolvedValue(undefined);
+
+    await service.getRuntimeConfig(buildActor());
+    await service.getRuntimeConfig(buildActor());
+    await service.listResolvedEntries(buildActor());
+    await service.listResolvedEntries(buildActor());
+
+    expect(repository.listConfigsForResolution).toHaveBeenCalledTimes(2);
+
+    await service.upsertTenantOverride(
+      ProductConfigScope.THEME,
+      "brand-kit",
+      {
+        value: {
+          brandName: "Acme New"
+        }
+      },
+      buildActor()
+    );
+    await service.getRuntimeConfig(buildActor());
+
+    expect(repository.listConfigsForResolution).toHaveBeenCalledTimes(5);
   });
 });

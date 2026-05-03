@@ -96,6 +96,24 @@ export function shouldEnableSwagger(configService: ConfigService): boolean {
   return isLocalRuntime(configService);
 }
 
+export function getSwaggerBasicAuth(configService: ConfigService): { username: string; password: string } | null {
+  if (isLocalRuntime(configService)) {
+    return null;
+  }
+
+  const username = configService.get<string>("SWAGGER_BASIC_AUTH_USERNAME")?.trim();
+  const password = configService.get<string>("SWAGGER_BASIC_AUTH_PASSWORD")?.trim();
+
+  if (!username || !password) {
+    throw new Error("SWAGGER_BASIC_AUTH_USERNAME and SWAGGER_BASIC_AUTH_PASSWORD are required when Swagger is enabled outside local/test environments.");
+  }
+
+  return {
+    username,
+    password
+  };
+}
+
 export function getRiskThrottleStoreMode(configService: ConfigService): "memory" | "database" {
   const rawMode = configService.get<string>("RISK_THROTTLE_STORE")?.trim().toLowerCase();
 
@@ -118,4 +136,7 @@ export function assertRuntimeSecurityConfig(configService: ConfigService): void 
   getRequiredJwtSecret(configService);
   getAllowedCorsOrigins(configService);
   getRiskThrottleStoreMode(configService);
+  if (shouldEnableSwagger(configService)) {
+    getSwaggerBasicAuth(configService);
+  }
 }

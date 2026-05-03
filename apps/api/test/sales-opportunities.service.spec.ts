@@ -5,22 +5,22 @@ import { SalesOpportunitiesService } from "../src/modules/sales-opportunities/sa
 describe("SalesOpportunitiesService", () => {
   it("rejects creating an opportunity when the linked customer is outside scope", async () => {
     const salesOpportunitiesRepository = {
-      findLeadScopeById: jest.fn()
+      findLeadScopeById: vi.fn()
     } as any;
     const dataScopeService = {
-      buildScopedOpportunityFilter: jest.fn(),
-      assertCustomerAccessible: jest.fn().mockRejectedValue(new ForbiddenException("out of scope")),
-      assertOwnerAccessible: jest.fn().mockRejectedValue(new ForbiddenException("out of scope"))
+      buildScopedOpportunityFilter: vi.fn(),
+      assertCustomerAccessible: vi.fn().mockRejectedValue(new ForbiddenException("out of scope")),
+      assertOwnerAccessible: vi.fn().mockRejectedValue(new ForbiddenException("out of scope"))
     } as any;
     const accessPolicyService = {
-      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
-      assertWritableFields: jest.fn()
+      sanitizeReadFields: vi.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: vi.fn()
     } as any;
 
     const service = new SalesOpportunitiesService(
       salesOpportunitiesRepository,
       {
-        create: jest.fn()
+        create: vi.fn()
       } as any,
       dataScopeService,
       accessPolicyService
@@ -57,7 +57,7 @@ describe("SalesOpportunitiesService", () => {
 
   it("prevents stage actions after the opportunity is closed", async () => {
     const salesOpportunitiesRepository = {
-      findSnapshotById: jest.fn().mockResolvedValue({
+      findSnapshotById: vi.fn().mockResolvedValue({
         id: "opportunity-1",
         ownerId: "user-1",
         customerId: "customer-1",
@@ -70,20 +70,20 @@ describe("SalesOpportunitiesService", () => {
       })
     } as any;
     const dataScopeService = {
-      buildScopedOpportunityFilter: jest.fn(),
-      assertOpportunityAccessible: jest.fn().mockResolvedValue(undefined),
-      assertCustomerAccessible: jest.fn().mockResolvedValue(undefined),
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+      buildScopedOpportunityFilter: vi.fn(),
+      assertOpportunityAccessible: vi.fn().mockResolvedValue(undefined),
+      assertCustomerAccessible: vi.fn().mockResolvedValue(undefined),
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
     } as any;
     const accessPolicyService = {
-      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
-      assertWritableFields: jest.fn()
+      sanitizeReadFields: vi.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: vi.fn()
     } as any;
 
     const service = new SalesOpportunitiesService(
       salesOpportunitiesRepository,
       {
-        create: jest.fn()
+        create: vi.fn()
       } as any,
       dataScopeService,
       accessPolicyService
@@ -111,7 +111,7 @@ describe("SalesOpportunitiesService", () => {
 
   it("marks an in-progress opportunity as won and records the close transition", async () => {
     const salesOpportunitiesRepository = {
-      findSnapshotById: jest.fn().mockResolvedValue({
+      findSnapshotById: vi.fn().mockResolvedValue({
         id: "opportunity-1",
         ownerId: "user-1",
         customerId: "customer-1",
@@ -122,7 +122,7 @@ describe("SalesOpportunitiesService", () => {
         closedAt: null,
         lostReason: null
       }),
-      changeStage: jest.fn().mockResolvedValue({
+      changeStage: vi.fn().mockResolvedValue({
         id: "opportunity-1",
         name: "Acme 年度框架合作",
         customerId: "customer-1",
@@ -157,17 +157,17 @@ describe("SalesOpportunitiesService", () => {
       })
     } as any;
     const auditLogsService = {
-      create: jest.fn().mockResolvedValue(undefined)
+      create: vi.fn().mockResolvedValue(undefined)
     } as any;
     const dataScopeService = {
-      buildScopedOpportunityFilter: jest.fn(),
-      assertOpportunityAccessible: jest.fn().mockResolvedValue(undefined),
-      assertCustomerAccessible: jest.fn().mockResolvedValue(undefined),
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+      buildScopedOpportunityFilter: vi.fn(),
+      assertOpportunityAccessible: vi.fn().mockResolvedValue(undefined),
+      assertCustomerAccessible: vi.fn().mockResolvedValue(undefined),
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
     } as any;
     const accessPolicyService = {
-      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
-      assertWritableFields: jest.fn()
+      sanitizeReadFields: vi.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: vi.fn()
     } as any;
 
     const service = new SalesOpportunitiesService(
@@ -207,7 +207,7 @@ describe("SalesOpportunitiesService", () => {
 
   it("marks an in-progress opportunity as lost and keeps the lost reason", async () => {
     const salesOpportunitiesRepository = {
-      findSnapshotById: jest.fn().mockResolvedValue({
+      findSnapshotById: vi.fn().mockResolvedValue({
         id: "opportunity-1",
         ownerId: "user-1",
         customerId: "customer-1",
@@ -218,7 +218,7 @@ describe("SalesOpportunitiesService", () => {
         closedAt: null,
         lostReason: null
       }),
-      changeStage: jest.fn().mockResolvedValue({
+      changeStage: vi.fn().mockResolvedValue({
         id: "opportunity-1",
         name: "Acme 年度框架合作",
         customerId: "customer-1",
@@ -253,17 +253,17 @@ describe("SalesOpportunitiesService", () => {
       })
     } as any;
     const auditLogsService = {
-      create: jest.fn().mockResolvedValue(undefined)
+      create: vi.fn().mockResolvedValue(undefined)
     } as any;
     const dataScopeService = {
-      buildScopedOpportunityFilter: jest.fn(),
-      assertOpportunityAccessible: jest.fn().mockResolvedValue(undefined),
-      assertCustomerAccessible: jest.fn().mockResolvedValue(undefined),
-      assertOwnerAccessible: jest.fn().mockResolvedValue(undefined)
+      buildScopedOpportunityFilter: vi.fn(),
+      assertOpportunityAccessible: vi.fn().mockResolvedValue(undefined),
+      assertCustomerAccessible: vi.fn().mockResolvedValue(undefined),
+      assertOwnerAccessible: vi.fn().mockResolvedValue(undefined)
     } as any;
     const accessPolicyService = {
-      sanitizeReadFields: jest.fn().mockImplementation((_actor, _resource, payload) => payload),
-      assertWritableFields: jest.fn()
+      sanitizeReadFields: vi.fn().mockImplementation((_actor, _resource, payload) => payload),
+      assertWritableFields: vi.fn()
     } as any;
 
     const service = new SalesOpportunitiesService(

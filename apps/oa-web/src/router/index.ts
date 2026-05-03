@@ -8,8 +8,10 @@ import { useAuthStore } from "@/stores/auth";
 import { redirectToLoginFromGuard } from "@/utils/host-navigation";
 
 const AppLayout = () => import("@/layout/AppLayout.vue");
+const ForgotPasswordPage = () => import("@/pages/forgot-password/ForgotPasswordPage.vue");
 const LoginPage = () => import("@/pages/login/LoginPage.vue");
 const NoAccessPage = () => import("@/pages/no-access/NoAccessPage.vue");
+const ResetPasswordPage = () => import("@/pages/reset-password/ResetPasswordPage.vue");
 const WorkspacePage = () => import("@/pages/workspace/WorkspacePage.vue");
 const ApprovalsInboxPage = () => import("@/pages/approvals/ApprovalsInboxPage.vue");
 const MyRequestsPage = () => import("@/pages/approvals/MyRequestsPage.vue");
@@ -28,6 +30,24 @@ const routes: RouteRecordRaw[] = [
     component: LoginPage,
     meta: {
       title: "登录"
+    }
+  },
+  {
+    path: "/forgot-password",
+    name: "forgot-password",
+    component: ForgotPasswordPage,
+    meta: {
+      title: "找回密码",
+      hidden: true
+    }
+  },
+  {
+    path: "/auth/password-reset",
+    name: "reset-password",
+    component: ResetPasswordPage,
+    meta: {
+      title: "重置密码",
+      hidden: true
     }
   },
   {
@@ -171,7 +191,7 @@ router.beforeEach(async (to) => {
   const authStore = useAuthStore();
 
   if (to.path === "/login") {
-    if (!authStore.token) {
+    if (!authStore.sessionExpiresAt) {
       return redirectToLoginFromGuard({ allowStandaloneLogin: true });
     }
 
@@ -188,7 +208,7 @@ router.beforeEach(async (to) => {
     return resolveFirstAccessiblePath(authStore.currentUser?.permissions ?? []) ?? "/no-access";
   }
 
-  if (!authStore.token) {
+  if (!authStore.sessionExpiresAt) {
     return redirectToLoginFromGuard();
   }
 

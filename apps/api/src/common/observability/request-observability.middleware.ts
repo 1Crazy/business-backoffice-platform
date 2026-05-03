@@ -2,6 +2,7 @@
 import { randomUUID } from "crypto";
 
 import { Injectable, NestMiddleware } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import type { NextFunction, Request, Response } from "express";
 
 import { MetricsService } from "./metrics.service";
@@ -11,7 +12,10 @@ const SAFE_REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{8,128}$/;
 
 @Injectable()
 export class RequestObservabilityMiddleware implements NestMiddleware {
-  constructor(private readonly metricsService: MetricsService) {}
+  constructor(
+    private readonly metricsService: MetricsService,
+    private readonly configService: ConfigService
+  ) {}
 
   use(request: Request, response: Response, next: NextFunction): void {
     const startedAt = Date.now();
@@ -26,14 +30,25 @@ export class RequestObservabilityMiddleware implements NestMiddleware {
         durationMs
       });
 
+      const authUser = (request as Request & {
+        user?: {
+          id?: string;
+          tenantId?: string;
+          username?: string;
+        };
+      }).user;
       const logPayload = {
         timestamp: new Date().toISOString(),
         level: response.statusCode >= 500 ? "error" : "info",
+        logOutputMode: this.configService.get<string>("LOG_OUTPUT_MODE", "stdout").trim().toLowerCase(),
         requestId,
         method: request.method,
         path: request.originalUrl ?? request.url,
         status: response.statusCode,
         durationMs,
+        tenantId: authUser?.tenantId ?? null,
+        userId: authUser?.id ?? null,
+        username: authUser?.username ?? null,
         userAgent: this.redactHeader(request.headers["user-agent"]),
         remoteAddress: request.ip
       };
