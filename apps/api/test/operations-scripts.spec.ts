@@ -68,4 +68,16 @@ describe("operations scripts", () => {
       })
     ).toThrow();
   });
+
+  it("reports when api database dependency is unavailable", () => {
+    expect(() =>
+      execFileSync("node", ["scripts/check-api-db-ready.cjs"], {
+        cwd: repoRoot,
+        env: {
+          ...process.env,
+          DATABASE_URL: "postgresql://scrm:scrm@127.0.0.1:1/scrm?schema=public"
+        }
+      })
+    ).toThrowError(/数据库未连通/);
+  });
 });

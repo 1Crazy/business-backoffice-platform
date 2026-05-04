@@ -6,7 +6,7 @@
   "scripts": {
     "architecture:check": "node scripts/architecture-check.cjs",
     "build": "pnpm -r build",
-    "dev:api": "pnpm --filter platform-api dev",
+    "dev:api": "node scripts/check-api-db-ready.cjs && pnpm --filter platform-api dev",
     "dev:full": "pnpm --filter platform-api --filter main-web --filter oa-web --filter scrm-web --parallel --stream run dev",
     "dev:full:lan": "VITE_DEV_ALLOW_LAN=true pnpm --filter platform-api --filter main-web --filter oa-web --filter scrm-web --parallel --stream run dev",
     "dev:main-web": "pnpm --filter main-web dev",
