@@ -12,7 +12,7 @@ export class ListUploadsDto {
   businessType!: AttachmentBusinessType;
 
   @ApiProperty({
-    description: "附件所属业务记录 ID。"
+    description: "附件所属业务对象 ID。"
   })
   @IsString()
   businessId!: string;

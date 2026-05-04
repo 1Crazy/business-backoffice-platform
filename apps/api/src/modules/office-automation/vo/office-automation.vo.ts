@@ -9,7 +9,7 @@ import {
 
 export class AnnouncementSummaryVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "公告 ID。"
   })
   id!: string;
 
@@ -83,7 +83,7 @@ export class WorkspaceOverviewVo {
 
 export class PendingApprovalItemVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "待审批事项 ID。"
   })
   id!: string;
 
@@ -133,7 +133,7 @@ export class PendingApprovalItemVo {
 
 export class LeaveRequestItemVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "请假申请 ID。"
   })
   id!: string;
 
@@ -198,7 +198,7 @@ export class LeaveRequestItemVo {
 
 export class AdministrativeRequestItemVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "行政申请 ID。"
   })
   id!: string;
 
@@ -323,7 +323,7 @@ export class AdministrativeRequestTimelineItemVo {
 
 export class AdministrativeRequestDetailVo extends AdministrativeRequestItemVo {
   @ApiProperty({
-    description: "结构化字段。",
+    description: "申请表单字段列表。",
     type: () => [AdministrativeRequestFieldVo]
   })
   formFields!: AdministrativeRequestFieldVo[];
@@ -337,7 +337,7 @@ export class AdministrativeRequestDetailVo extends AdministrativeRequestItemVo {
 
 export class DirectoryDepartmentVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "通讯录部门 ID。"
   })
   id!: string;
 
@@ -354,7 +354,7 @@ export class DirectoryDepartmentVo {
 
 export class DirectoryMemberVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "通讯录员工 ID。"
   })
   id!: string;
 

@@ -7,7 +7,7 @@ import { PaginatedResponseDto } from "@/common/pagination/paginated-response.dto
 
 export class CustomerTagVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "客户标签 ID。"
   })
   id!: string;
 
@@ -33,7 +33,7 @@ export class CustomerTagRelationVo {
 
 export class CustomerVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "客户 ID。"
   })
   id!: string;
 
@@ -79,7 +79,7 @@ nullable: true
   notes?: string | null;
 
   @ApiProperty({
-    description: "负责人 ID。"
+    description: "当前负责该客户的员工 ID。"
   })
   ownerId!: string;
 

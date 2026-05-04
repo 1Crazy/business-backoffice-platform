@@ -9,50 +9,68 @@ import {
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 export class NotificationChannelConfigVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "通知渠道治理配置 ID。"
+  })
   id!: string;
 
   @ApiProperty({
+    description: "通知渠道类型。",
     enum: NotificationChannel
   })
   channel!: NotificationChannel;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "通知渠道适配器编码。"
+  })
   adapterCode!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "通知渠道提供方。"
+  })
   provider!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "通知渠道展示名称。"
+  })
   displayName!: string;
 
   @ApiPropertyOptional({
+    description: "通知渠道说明。",
     nullable: true
   })
   description?: string | null;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "通知渠道是否启用。"
+  })
   isEnabled!: boolean;
 
   @ApiProperty({
+    description: "通知渠道治理健康状态。",
     enum: GovernanceHealthStatus
   })
   status!: GovernanceHealthStatus;
 
   @ApiPropertyOptional({
+    description: "通知路由适用范围。",
     nullable: true
   })
   routeScope?: string | null;
 
   @ApiPropertyOptional({
+    description: "失败后的回退通知渠道。",
     nullable: true
   })
   fallbackChannel?: string | null;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "最近失败次数。"
+  })
   recentFailures!: number;
 
   @ApiPropertyOptional({
+    description: "通知渠道运行配置。",
     nullable: true,
     type: "object",
     additionalProperties: true
@@ -60,6 +78,7 @@ export class NotificationChannelConfigVo {
   config?: Record<string, unknown> | null;
 
   @ApiPropertyOptional({
+    description: "通知渠道能力声明。",
     nullable: true,
     type: "object",
     additionalProperties: true
@@ -67,49 +86,68 @@ export class NotificationChannelConfigVo {
   capabilities?: Record<string, unknown> | null;
 
   @ApiProperty({
+    description: "通知渠道配置创建时间。",
     format: "date-time"
   })
   createdAt!: string;
 
   @ApiProperty({
+    description: "通知渠道配置更新时间。",
     format: "date-time"
   })
   updatedAt!: string;
 }
 
 export class StorageConfigVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "存储治理配置 ID。"
+  })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "存储配置编码。"
+  })
   code!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "存储配置展示名称。"
+  })
   displayName!: string;
 
   @ApiProperty({
+    description: "存储提供方类型。",
     enum: AttachmentStorageProvider
   })
   provider!: AttachmentStorageProvider;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "存储配置是否启用。"
+  })
   isEnabled!: boolean;
 
   @ApiProperty({
+    description: "存储配置健康状态。",
     enum: GovernanceHealthStatus
   })
   status!: GovernanceHealthStatus;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "存储桶名称。"
+  })
   bucketName!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "存储区域名称。"
+  })
   regionLabel!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "是否启用在线预览。"
+  })
   previewEnabled!: boolean;
 
   @ApiPropertyOptional({
+    description: "存储扩展配置。",
     nullable: true,
     type: "object",
     additionalProperties: true
@@ -117,24 +155,32 @@ export class StorageConfigVo {
   config?: Record<string, unknown> | null;
 
   @ApiProperty({
+    description: "存储配置创建时间。",
     format: "date-time"
   })
   createdAt!: string;
 
   @ApiProperty({
+    description: "存储配置更新时间。",
     format: "date-time"
   })
   updatedAt!: string;
 }
 
 export class SchedulerJobVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "调度任务 ID。"
+  })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "调度任务编码。"
+  })
   code!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "调度任务展示名称。"
+  })
   displayName!: string;
 
   @ApiPropertyOptional({
@@ -177,24 +223,31 @@ export class SchedulerJobVo {
   lastErrorMessage?: string | null;
 
   @ApiProperty({
+    description: "调度任务配置创建时间。",
     format: "date-time"
   })
   createdAt!: string;
 
   @ApiProperty({
+    description: "调度任务配置更新时间。",
     format: "date-time"
   })
   updatedAt!: string;
 }
 
 export class SchedulerJobExecutionVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "调度任务执行记录 ID。"
+  })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "所属调度任务 ID。"
+  })
   jobId!: string;
 
   @ApiProperty({
+    description: "调度任务执行状态。",
     enum: SchedulerExecutionStatus
   })
   status!: SchedulerExecutionStatus;
@@ -210,6 +263,7 @@ export class SchedulerJobExecutionVo {
   errorMessage?: string | null;
 
   @ApiProperty({
+    description: "执行开始时间。",
     format: "date-time"
   })
   startedAt!: string;
@@ -226,13 +280,16 @@ export class SchedulerJobExecutionVo {
   durationMs?: number | null;
 
   @ApiProperty({
+    description: "执行记录创建时间。",
     format: "date-time"
   })
   createdAt!: string;
 }
 
 export class PersonalDataExportVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "导出的用户个人数据快照。"
+  })
   user!: Record<string, unknown>;
 
   @ApiProperty({
@@ -243,10 +300,13 @@ export class PersonalDataExportVo {
 }
 
 export class PersonalDataAnonymizationVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "完成匿名化的用户 ID。"
+  })
   userId!: string;
 
   @ApiProperty({
+    description: "匿名化完成时间。",
     format: "date-time"
   })
   anonymizedAt!: string;

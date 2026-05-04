@@ -2,7 +2,9 @@ import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { ProductConfigLayer, ProductConfigScope } from "@prisma/client";
 
 class ProductConfigSourceMetaVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "配置来源展示名称。"
+  })
   displayName!: string;
 
   @ApiPropertyOptional({
@@ -11,6 +13,7 @@ class ProductConfigSourceMetaVo {
   description?: string | null;
 
   @ApiProperty({
+    description: "配置来源最近更新时间。",
     format: "date-time"
   })
   updatedAt!: string;
@@ -38,14 +41,19 @@ class ProductConfigSourcesVo {
 
 export class ProductConfigEntryVo {
   @ApiProperty({
+    description: "配置适用范围。",
     enum: ProductConfigScope
   })
   scope!: ProductConfigScope;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "配置项键。"
+  })
   configKey!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "配置项展示名称。"
+  })
   displayName!: string;
 
   @ApiPropertyOptional({
@@ -54,11 +62,13 @@ export class ProductConfigEntryVo {
   description?: string | null;
 
   @ApiProperty({
+    description: "当前生效配置来源层级。",
     enum: ProductConfigLayer
   })
   effectiveSource!: ProductConfigLayer;
 
   @ApiProperty({
+    description: "当前生效配置值。",
     type: "object",
     additionalProperties: true
   })
@@ -86,33 +96,46 @@ export class ProductConfigEntryVo {
   tenantOverrideValue?: Record<string, unknown> | null;
 
   @ApiProperty({
+    description: "各层配置来源摘要。",
     type: ProductConfigSourcesVo
   })
   sources!: ProductConfigSourcesVo;
 }
 
 export class ProductRuntimeConfigVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "运行时品牌名称。"
+  })
   brandName!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "运行时主色。"
+  })
   primaryColor!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "运行时强调色。"
+  })
   accentColor!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "运行时表面色。"
+  })
   surfaceTint!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "运行时导航模式。"
+  })
   navigationMode!: string;
 
   @ApiProperty({
+    description: "运行时隐藏的导航项键列表。",
     type: [String]
   })
   hiddenNavigationKeys!: string[];
 
   @ApiProperty({
+    description: "运行时导航文案映射。",
     type: "object",
     additionalProperties: true
   })

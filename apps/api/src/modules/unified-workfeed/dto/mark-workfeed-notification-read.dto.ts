@@ -12,7 +12,7 @@ export class MarkWorkfeedNotificationReadDto {
   notificationType!: WorkfeedNotificationType;
 
   @ApiProperty({
-    description: "底层通知源记录 ID。"
+    description: "待标记已读的通知源单 ID。"
   })
   @IsString()
   sourceId!: string;

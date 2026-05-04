@@ -4,7 +4,7 @@ import { IsNotEmpty, IsString, IsOptional } from "class-validator";
 
 export class TransferWorkflowTaskDto {
   @ApiProperty({
-    description: "新的处理人用户 ID。"
+    description: "新的审批处理人员工 ID。"
   })
   @IsString()
   @IsNotEmpty()

@@ -25,7 +25,7 @@ export class CreateIdentityConnectorDto {
   status?: RecordStatus;
 
   @ApiPropertyOptional({
-    description: "账号映射字段。",
+    description: "外部身份与本系统员工账号的匹配字段。",
     enum: IdentityConnectorMatchField
   })
   @IsOptional()

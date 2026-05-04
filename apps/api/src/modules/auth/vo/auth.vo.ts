@@ -4,12 +4,12 @@ import { DataScope } from "@prisma/client";
 
 export class CurrentUserVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "当前登录员工 ID。"
   })
   id!: string;
 
   @ApiProperty({
-    description: "所属租户 ID。"
+    description: "当前登录员工所属租户 ID。"
   })
   tenantId!: string;
 
@@ -29,22 +29,25 @@ export class CurrentUserVo {
   displayName!: string;
 
   @ApiPropertyOptional({
-    description: "所属部门 ID。",
+    description: "当前登录员工所属部门 ID；为空表示未绑定部门。",
 nullable: true
   })
   departmentId?: string | null;
 
   @ApiProperty({
+    description: "当前用户角色编码列表。",
     type: () => [String]
   })
   roleCodes!: string[];
 
   @ApiProperty({
+    description: "当前用户权限编码列表。",
     type: () => [String]
   })
   permissions!: string[];
 
   @ApiProperty({
+    description: "当前用户数据范围编码列表。",
     type: () => [String],
     enum: DataScope
   })
@@ -91,7 +94,7 @@ export class LoginResponseVo {
 
 export class LogoutResponseVo {
   @ApiProperty({
-    description: "success 字段。"
+    description: "是否已成功退出当前会话。"
   })
   success!: boolean;
 }
@@ -103,7 +106,7 @@ export class UserSessionVo {
   id!: string;
 
   @ApiProperty({
-    description: "会话所属用户 ID。"
+    description: "会话归属员工 ID。"
   })
   userId!: string;
 
@@ -163,17 +166,23 @@ export class UserSessionVo {
 }
 
 export class PasswordResetRequestVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "是否已成功完成密码重置。"
+  })
   success!: boolean;
 }
 
 export class PasswordResetTokenVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "是否已成功受理密码重置申请。"
+  })
   success!: boolean;
 }
 
 export class MfaSetupVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "当前账号是否已启用 MFA。"
+  })
   enabled!: boolean;
 
   @ApiProperty({
@@ -182,11 +191,13 @@ export class MfaSetupVo {
   pending!: boolean;
 
   @ApiPropertyOptional({
+    description: "MFA 绑定挑战信息或二维码种子。",
     nullable: true
   })
   challenge?: string | null;
 
   @ApiProperty({
+    description: "首次配置或轮换后返回的一次性恢复码列表。",
     type: () => [String]
   })
   recoveryCodes!: string[];

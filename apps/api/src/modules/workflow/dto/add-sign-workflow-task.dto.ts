@@ -4,7 +4,7 @@ import { IsNotEmpty, IsOptional, IsString } from "class-validator";
 
 export class AddSignWorkflowTaskDto {
   @ApiProperty({
-    description: "加签目标用户 ID。"
+    description: "加签处理人员工 ID。"
   })
   @IsString()
   @IsNotEmpty()

@@ -8,7 +8,9 @@ import {
 } from "../unified-workfeed.constants";
 
 export class WorkfeedTodoVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "工作台待办 ID。"
+  })
   id!: string;
 
   @ApiProperty({
@@ -21,7 +23,9 @@ export class WorkfeedTodoVo {
   })
   type!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "待办标题。"
+  })
   title!: string;
 
   @ApiPropertyOptional({
@@ -39,24 +43,36 @@ export class WorkfeedTodoVo {
   })
   dueAt?: string | null;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "待办状态。"
+  })
   status!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "待办跳转路径。"
+  })
   targetPath!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "待办跳转文案。"
+  })
   targetLabel!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "待办关联源单 ID。"
+  })
   sourceId!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "待办创建时间。"
+  })
   createdAt!: string;
 }
 
 export class WorkfeedNotificationVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "工作台通知 ID。"
+  })
   id!: string;
 
   @ApiProperty({
@@ -69,7 +85,9 @@ export class WorkfeedNotificationVo {
   })
   type!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "通知标题。"
+  })
   title!: string;
 
   @ApiPropertyOptional({
@@ -82,19 +100,29 @@ export class WorkfeedNotificationVo {
   })
   priority!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "通知跳转路径。"
+  })
   targetPath!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "通知跳转文案。"
+  })
   targetLabel!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "通知关联源单 ID。"
+  })
   sourceId!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "通知发生时间。"
+  })
   occurredAt!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "当前通知是否已读。"
+  })
   isRead!: boolean;
 
   @ApiPropertyOptional({

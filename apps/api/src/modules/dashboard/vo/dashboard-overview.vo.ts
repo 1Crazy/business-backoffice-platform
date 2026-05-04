@@ -15,7 +15,7 @@ class DashboardDepartmentFilterVo {
 
 class DashboardOwnerFilterVo {
   @ApiProperty({
-    description: "负责人 ID。"
+    description: "负责人员工 ID。"
   })
   id!: string;
 
@@ -25,7 +25,7 @@ class DashboardOwnerFilterVo {
   displayName!: string;
 
   @ApiProperty({
-    description: "所属部门 ID。",
+    description: "负责人所属部门 ID；为空表示该负责人当前未绑定部门。",
     nullable: true
   })
   departmentId!: string | null;
@@ -61,7 +61,7 @@ class DashboardFunnelItemVo {
 
 class DashboardRankingItemVo {
   @ApiProperty({
-    description: "排行对象 ID。"
+    description: "排行对象 ID。团队排行时为部门 ID，负责人排行时为员工 ID。"
   })
   id!: string;
 
@@ -148,25 +148,25 @@ class DashboardApprovalTimelinessVo {
 
 export class DashboardOverviewVo {
   @ApiProperty({
-    description: "startDate 字段。",
+    description: "统计开始时间。",
 format: "date-time"
   })
   startDate!: string;
 
   @ApiProperty({
-    description: "endDate 字段。",
+    description: "统计结束时间。",
 format: "date-time"
   })
   endDate!: string;
 
   @ApiProperty({
-    description: "当前筛选的部门 ID。",
+    description: "当前生效的部门筛选 ID；为空表示未限定部门。",
     nullable: true
   })
   departmentId!: string | null;
 
   @ApiProperty({
-    description: "当前筛选的负责人 ID。",
+    description: "当前生效的负责人筛选 ID；为空表示未限定负责人。",
     nullable: true
   })
   ownerId!: string | null;
@@ -184,57 +184,57 @@ format: "date-time"
   owners!: DashboardOwnerFilterVo[];
 
   @ApiProperty({
-    description: "newCustomers 字段。"
+    description: "统计周期内新增客户数。"
   })
   newCustomers!: number;
 
   @ApiProperty({
-    description: "followUpCount 字段。"
+    description: "统计周期内新增跟进次数。"
   })
   followUpCount!: number;
 
   @ApiProperty({
-    description: "convertedLeads 字段。"
+    description: "统计周期内转化为客户的线索数。"
   })
   convertedLeads!: number;
 
   @ApiProperty({
-    description: "totalLeads 字段。"
+    description: "统计周期内新增线索总数。"
   })
   totalLeads!: number;
 
   @ApiProperty({
-    description: "conversionRate 字段。"
+    description: "线索转化率。"
   })
   conversionRate!: number;
 
   @ApiProperty({
-    description: "pendingReminders 字段。"
+    description: "当前待处理提醒数。"
   })
   pendingReminders!: number;
 
   @ApiProperty({
-    description: "newOpportunities 字段。"
+    description: "统计周期内新增商机数。"
   })
   newOpportunities!: number;
 
   @ApiProperty({
-    description: "pipelineForecastAmount 字段。"
+    description: "当前在途商机预测金额。"
   })
   pipelineForecastAmount!: number;
 
   @ApiProperty({
-    description: "wonOpportunities 字段。"
+    description: "统计周期内赢单商机数。"
   })
   wonOpportunities!: number;
 
   @ApiProperty({
-    description: "wonAmount 字段。"
+    description: "统计周期内赢单金额。"
   })
   wonAmount!: number;
 
   @ApiProperty({
-    description: "opportunityWinRate 字段。"
+    description: "商机赢单率。"
   })
   opportunityWinRate!: number;
 

@@ -6,7 +6,7 @@ import { UserSummaryVo } from "./access-control.vo";
 
 export class AttachmentVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "附件 ID。"
   })
   id!: string;
 
@@ -17,7 +17,7 @@ export class AttachmentVo {
   businessType!: AttachmentBusinessType;
 
   @ApiProperty({
-    description: "业务实体 ID。"
+    description: "附件归属的业务单据 ID。"
   })
   businessId!: string;
 
@@ -75,7 +75,7 @@ format: "date-time"
 
 export class ReminderVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "提醒 ID。"
   })
   id!: string;
 
@@ -94,7 +94,7 @@ enum: ReminderStatus
 
 export class FollowUpVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "跟进记录 ID。"
   })
   id!: string;
 

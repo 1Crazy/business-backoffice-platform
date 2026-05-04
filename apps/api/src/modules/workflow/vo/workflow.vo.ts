@@ -11,7 +11,7 @@ import {
 
 class WorkflowUserSummaryVo {
   @ApiProperty({
-    description: "用户 ID。"
+    description: "流程相关员工 ID。"
   })
   id!: string;
 
@@ -82,7 +82,7 @@ export class WorkflowTemplateNodeVo {
   allowTransfer!: boolean;
 
   @ApiProperty({
-    description: "自动抄送用户 ID 列表。",
+    description: "当前节点自动抄送的员工 ID 列表。",
     type: [String]
   })
   ccUserIds!: string[];
@@ -132,7 +132,7 @@ export class WorkflowTemplateVo {
   formSchema!: Record<string, unknown>;
 
   @ApiProperty({
-    description: "默认抄送用户 ID 列表。",
+    description: "流程默认抄送的员工 ID 列表。",
     type: [String]
   })
   defaultCcUserIds!: string[];
@@ -261,7 +261,7 @@ export class WorkflowActionVo {
 
 export class WorkflowCcRecipientVo {
   @ApiProperty({
-    description: "抄送记录 ID。"
+    description: "流程抄送记录 ID。"
   })
   id!: string;
 
@@ -324,7 +324,7 @@ export class WorkflowInstanceVo {
   title!: string;
 
   @ApiPropertyOptional({
-    description: "业务主键。",
+    description: "关联业务单据 ID 或外部业务键。",
     nullable: true
   })
   businessKey?: string | null;
@@ -429,7 +429,7 @@ export class WorkflowPendingTaskVo {
   title!: string;
 
   @ApiPropertyOptional({
-    description: "业务主键。",
+    description: "关联业务单据 ID 或外部业务键。",
     nullable: true
   })
   businessKey?: string | null;

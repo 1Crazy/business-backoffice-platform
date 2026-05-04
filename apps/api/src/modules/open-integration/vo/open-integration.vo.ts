@@ -12,13 +12,19 @@ import { PaginatedResponseDto } from "@/common/pagination/paginated-response.dto
 import { LoginResponseVo } from "@/modules/auth/vo/auth.vo";
 
 export class OpenApiCredentialVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "Open API 凭证 ID。"
+  })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "Open API 凭证名称。"
+  })
   name!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "Open API 访问键标识。"
+  })
   accessKey!: string;
 
   @ApiProperty({
@@ -78,16 +84,24 @@ export class OpenApiCredentialVo {
 }
 
 export class WebhookDeliveryVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "Webhook 投递记录 ID。"
+  })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "Webhook 事件类型。"
+  })
   eventType!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "Webhook 事件来源对象类型。"
+  })
   sourceType!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "Webhook 事件来源对象 ID。"
+  })
   sourceId!: string;
 
   @ApiProperty({
@@ -95,7 +109,9 @@ export class WebhookDeliveryVo {
   })
   status!: WebhookDeliveryStatus;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "投递尝试次数。"
+  })
   attemptCount!: number;
 
   @ApiProperty({
@@ -110,7 +126,9 @@ export class WebhookDeliveryVo {
   })
   durationMs?: number | null;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "本次投递签名。"
+  })
   signature!: string;
 
   @ApiPropertyOptional({
@@ -147,13 +165,19 @@ export class WebhookDeliveryVo {
 }
 
 export class WebhookSubscriptionVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "Webhook 订阅 ID。"
+  })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "Webhook 订阅名称。"
+  })
   name!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "Webhook 目标地址。"
+  })
   endpointUrl!: string;
 
   @ApiProperty({
@@ -166,13 +190,19 @@ export class WebhookSubscriptionVo {
   })
   status!: WebhookSubscriptionStatus;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "签名密钥提示。"
+  })
   signingSecretHint!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "最大重试次数。"
+  })
   maxAttempts!: number;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "请求超时时间，单位秒。"
+  })
   timeoutSeconds!: number;
 
   @ApiPropertyOptional({
@@ -220,10 +250,14 @@ export class WebhookSubscriptionVo {
 }
 
 export class IdentityConnectorVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "身份连接器 ID。"
+  })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "身份连接器名称。"
+  })
   name!: string;
 
   @ApiProperty({
@@ -322,26 +356,38 @@ export class IdentityConnectorVo {
 }
 
 export class OpenApiCustomerOwnerVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "客户负责人员工 ID。"
+  })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "客户负责人姓名。"
+  })
   displayName!: string;
 }
 
 export class OpenApiCustomerTagVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "客户标签 ID。"
+  })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "客户标签名称。"
+  })
   name!: string;
 }
 
 export class OpenApiCustomerVo {
-  @ApiProperty()
+  @ApiProperty({
+    description: "客户 ID。"
+  })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({
+    description: "客户名称。"
+  })
   name!: string;
 
   @ApiPropertyOptional({
@@ -370,21 +416,25 @@ export class OpenApiCustomerVo {
   status?: string | null;
 
   @ApiProperty({
+    description: "客户负责人信息。",
     type: () => OpenApiCustomerOwnerVo
   })
   owner!: OpenApiCustomerOwnerVo;
 
   @ApiProperty({
+    description: "客户标签列表。",
     type: () => [OpenApiCustomerTagVo]
   })
   tags!: OpenApiCustomerTagVo[];
 
   @ApiProperty({
+    description: "客户创建时间。",
     format: "date-time"
   })
   createdAt!: string;
 
   @ApiProperty({
+    description: "客户更新时间。",
     format: "date-time"
   })
   updatedAt!: string;

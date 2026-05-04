@@ -4,7 +4,7 @@ import { IsArray, IsOptional, IsString } from "class-validator";
 
 export class CreateWorkflowCcDto {
   @ApiProperty({
-    description: "抄送用户 ID 列表。",
+    description: "抄送员工 ID 列表。",
     type: [String]
   })
   @IsArray()

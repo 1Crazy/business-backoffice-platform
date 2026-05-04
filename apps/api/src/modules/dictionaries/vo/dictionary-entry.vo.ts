@@ -3,7 +3,7 @@ import { ApiProperty } from "@nestjs/swagger";
 
 export class DictionaryEntryVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "字典项 ID。"
   })
   id!: string;
 

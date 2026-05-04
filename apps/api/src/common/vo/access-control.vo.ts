@@ -4,7 +4,7 @@ import { DataScope, RecordStatus, UserStatus } from "@prisma/client";
 
 export class DepartmentParentVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "部门 ID。"
   })
   id!: string;
 
@@ -54,7 +54,7 @@ format: "date-time"
 
 export class PermissionVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "权限 ID。"
   })
   id!: string;
 
@@ -160,7 +160,7 @@ export class ActionPermissionRuleVo {
 
 export class RoleVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "角色 ID。"
   })
   id!: string;
 
@@ -244,7 +244,7 @@ export class UserRoleRelationVo {
 
 export class UserSummaryVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "员工 ID。"
   })
   id!: string;
 

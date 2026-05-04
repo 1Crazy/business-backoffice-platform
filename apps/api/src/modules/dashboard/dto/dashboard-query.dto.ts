@@ -27,7 +27,7 @@ export class DashboardQueryDto {
   departmentId?: string;
 
   @ApiPropertyOptional({
-    description: "按负责人筛选时使用的用户 ID。"
+    description: "按负责人筛选时使用的员工 ID。"
   })
   @IsOptional()
   @IsString()

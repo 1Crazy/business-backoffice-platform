@@ -125,7 +125,7 @@ export class WorkflowTemplateNodeDto {
   allowTransfer?: boolean;
 
   @ApiPropertyOptional({
-    description: "当前节点自动抄送的用户 ID 列表。",
+    description: "当前节点自动抄送的员工 ID 列表。",
     type: [String]
   })
   @IsOptional()
@@ -171,7 +171,7 @@ export class CreateWorkflowTemplateDto {
   formSchema!: Record<string, unknown>;
 
   @ApiPropertyOptional({
-    description: "流程发起时自动抄送的用户 ID 列表。",
+    description: "流程发起时自动抄送的员工 ID 列表。",
     type: [String]
   })
   @IsOptional()

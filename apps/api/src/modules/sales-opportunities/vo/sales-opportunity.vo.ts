@@ -62,7 +62,7 @@ export class OpportunityLeadSummaryVo {
 
 export class OpportunityStageHistoryVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "商机阶段变更记录 ID。"
   })
   id!: string;
 
@@ -311,7 +311,7 @@ export class SalesOpportunityVo {
   sourceLead?: OpportunityLeadSummaryVo | null;
 
   @ApiProperty({
-    description: "负责人 ID。"
+    description: "当前负责该商机的员工 ID。"
   })
   ownerId!: string;
 

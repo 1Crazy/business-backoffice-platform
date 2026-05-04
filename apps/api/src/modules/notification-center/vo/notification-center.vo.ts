@@ -11,7 +11,7 @@ import {
 
 class NotificationDeliveryVo {
   @ApiProperty({
-    description: "投递记录 ID。"
+    description: "通知投递记录 ID。"
   })
   id!: string;
 
@@ -85,7 +85,7 @@ export class NotificationRecordVo {
   id!: string;
 
   @ApiProperty({
-    description: "归一化事件 ID。"
+    description: "通知归一化事件 ID，用于关联同一业务事件的多渠道投递。"
   })
   eventId!: string;
 
@@ -186,7 +186,7 @@ export class NotificationRecordVo {
 
 export class NotificationPreferenceVo {
   @ApiProperty({
-    description: "偏好记录 ID。"
+    description: "通知偏好配置 ID。"
   })
   id!: string;
 

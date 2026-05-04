@@ -19,7 +19,7 @@ export class UpdateSalesOpportunityDto {
   sourceLeadId?: string | null;
 
   @ApiPropertyOptional({
-    description: "负责人 ID。"
+    description: "商机负责人员工 ID。"
   })
   @IsOptional()
   @IsString()

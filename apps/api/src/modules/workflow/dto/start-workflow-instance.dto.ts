@@ -11,7 +11,7 @@ export class StartWorkflowInstanceDto {
   title!: string;
 
   @ApiPropertyOptional({
-    description: "业务主键，用于关联外部业务对象。",
+    description: "关联业务单据 ID 或外部业务键，用于绑定流程与业务对象。",
     nullable: true
   })
   @IsOptional()
@@ -25,7 +25,7 @@ export class StartWorkflowInstanceDto {
   formData!: Record<string, unknown>;
 
   @ApiPropertyOptional({
-    description: "发起时额外抄送的用户 ID 列表。",
+    description: "流程发起时额外抄送的员工 ID 列表。",
     type: [String]
   })
   @IsOptional()

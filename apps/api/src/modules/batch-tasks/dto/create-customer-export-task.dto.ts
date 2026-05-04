@@ -18,7 +18,7 @@ export class CreateCustomerExportTaskDto {
   status?: string;
 
   @ApiPropertyOptional({
-    description: "负责人 ID。"
+    description: "客户负责人员工 ID。"
   })
   @IsOptional()
   @IsString()

@@ -4,7 +4,7 @@ import { IsString } from "class-validator";
 
 export class ReassignSalesOpportunityOwnerDto {
   @ApiProperty({
-    description: "新的负责人 ID。"
+    description: "新的商机负责人员工 ID。"
   })
   @IsString()
   ownerId!: string;

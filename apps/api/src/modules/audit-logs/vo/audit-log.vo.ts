@@ -6,7 +6,7 @@ import { PaginatedResponseDto } from "@/common/pagination/paginated-response.dto
 
 export class AuditLogVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "审计日志 ID。"
   })
   id!: string;
 

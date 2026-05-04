@@ -8,7 +8,7 @@ import { PaginatedResponseDto } from "@/common/pagination/paginated-response.dto
 
 export class LeadConvertedCustomerSummaryVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "转化后客户 ID。"
   })
   id!: string;
 
@@ -42,14 +42,14 @@ nullable: true
   status?: string | null;
 
   @ApiProperty({
-    description: "负责人 ID。"
+    description: "当前负责该客户的员工 ID。"
   })
   ownerId!: string;
 }
 
 export class LeadVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "线索 ID。"
   })
   id!: string;
 
@@ -89,7 +89,7 @@ nullable: true
   notes?: string | null;
 
   @ApiProperty({
-    description: "负责人 ID。"
+    description: "当前负责该线索的员工 ID。"
   })
   ownerId!: string;
 
@@ -133,7 +133,7 @@ format: "date-time"
 
 export class ReminderLeadSummaryVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "线索 ID。"
   })
   id!: string;
 
@@ -157,7 +157,7 @@ nullable: true
 
 export class ReminderCustomerSummaryVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "客户 ID。"
   })
   id!: string;
 
@@ -175,7 +175,7 @@ nullable: true
 
 export class ReminderFollowUpSummaryVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "跟进记录 ID。"
   })
   id!: string;
 
@@ -194,7 +194,7 @@ format: "date-time",
 
 export class LeadReminderVo {
   @ApiProperty({
-    description: "记录 ID。"
+    description: "线索跟进提醒 ID。"
   })
   id!: string;
 

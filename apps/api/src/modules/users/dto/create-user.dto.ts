@@ -39,7 +39,7 @@ export class CreateUserDto {
   phone?: string | null;
 
   @ApiPropertyOptional({
-    description: "所属部门 ID。",
+    description: "员工所属部门 ID。",
     nullable: true
   })
   @IsOptional()
