@@ -25,6 +25,7 @@ import {
   CurrentUserVo,
   LoginResponseVo,
   LogoutResponseVo,
+  MfaStatusVo,
   MfaSetupVo,
   PasswordResetRequestVo,
   PasswordResetTokenVo,
@@ -130,6 +131,14 @@ export class AuthController {
   })
   verifyMfa(@CurrentUser() user: AuthUser, @Body() dto: VerifyMfaDto) {
     return this.authService.verifyMfa(user, dto);
+  }
+
+  @Get("mfa/status")
+  @ApiOkResponse({
+    type: MfaStatusVo
+  })
+  getMfaStatus(@CurrentUser() user: AuthUser) {
+    return this.authService.getMfaStatus(user);
   }
 
   @Get("sessions")

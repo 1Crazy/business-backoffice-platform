@@ -23,7 +23,7 @@ function main() {
   const datasetPath = process.env.ATTACHMENT_DATASET_PATH;
 
   if (!datasetPath) {
-    throw new Error("ATTACHMENT_DATASET_PATH is required.");
+    throw new Error("必须提供 ATTACHMENT_DATASET_PATH。");
   }
 
   const dataset = readJson(datasetPath);

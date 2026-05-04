@@ -38,7 +38,7 @@ export class AccessPolicyService {
     actor: AuthUser,
     resource: string,
     action: string,
-    message = "You do not have permission to perform this action."
+    message = "当前账号没有执行该操作的权限。"
   ) {
     const matchedRules = (actor.actionPermissionRules ?? []).filter(
       (rule) => this.matchesResource(rule.resource, resource) && this.matchesResource(rule.action, action)
@@ -63,7 +63,7 @@ export class AccessPolicyService {
       }
 
       if (this.hasDefinedPathValue(payload, rule.field)) {
-        throw new ForbiddenException(messageBuilder?.(rule.field) ?? `You cannot edit restricted field "${rule.field}".`);
+        throw new ForbiddenException(messageBuilder?.(rule.field) ?? `字段“${rule.field}”不允许修改。`);
       }
     }
   }

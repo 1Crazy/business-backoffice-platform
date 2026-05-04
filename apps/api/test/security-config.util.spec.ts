@@ -19,12 +19,12 @@ function config(values: Record<string, string | undefined>) {
 describe("security config", () => {
   it("rejects the template JWT secret", () => {
     expect(() => getRequiredJwtSecret(config({ JWT_SECRET: DEFAULT_INSECURE_JWT_SECRET }))).toThrow(
-      "JWT_SECRET must be replaced"
+      "必须将 JWT_SECRET 替换为强随机密钥"
     );
   });
 
   it("rejects weak JWT secrets", () => {
-    expect(() => getRequiredJwtSecret(config({ JWT_SECRET: "short-secret" }))).toThrow("at least 32 characters");
+    expect(() => getRequiredJwtSecret(config({ JWT_SECRET: "short-secret" }))).toThrow("长度至少需要 32 位");
   });
 
   it("parses explicit CORS origins outside local runtime", () => {
@@ -44,7 +44,7 @@ describe("security config", () => {
 
   it("requires swagger basic auth outside local runtime when swagger is enabled", () => {
     expect(() => getSwaggerBasicAuth(config({ NODE_ENV: "production", SWAGGER_ENABLED: "true" }))).toThrow(
-      "SWAGGER_BASIC_AUTH_USERNAME and SWAGGER_BASIC_AUTH_PASSWORD"
+      "必须配置 SWAGGER_BASIC_AUTH_USERNAME 和 SWAGGER_BASIC_AUTH_PASSWORD"
     );
     expect(
       getSwaggerBasicAuth(
@@ -71,13 +71,13 @@ describe("security config", () => {
   });
 
   it("rejects access token ttl values above thirty minutes", () => {
-    expect(() => getJwtAccessTokenTtl(config({ JWT_ACCESS_TOKEN_TTL: "12h" }))).toThrow("must not exceed 30 minutes");
+    expect(() => getJwtAccessTokenTtl(config({ JWT_ACCESS_TOKEN_TTL: "12h" }))).toThrow("不能超过 30 分钟");
   });
 
   it("allows in-memory risk throttle only in local runtimes", () => {
     expect(getRiskThrottleStoreMode(config({ NODE_ENV: "test" }))).toBe("memory");
     expect(() => getRiskThrottleStoreMode(config({ NODE_ENV: "production" }))).toThrow(
-      "RISK_THROTTLE_STORE=database is required"
+      "必须使用 RISK_THROTTLE_STORE=database"
     );
   });
 

@@ -195,7 +195,7 @@ export class ProductConfigurationService {
     const targetEntry = resolvedEntries.find((item) => item.scope === scope && item.configKey === configKey);
 
     if (!targetEntry) {
-      throw new NotFoundException("Product configuration entry was not found.");
+      throw new NotFoundException("产品配置项不存在。");
     }
 
     const tenantId = requireTenantId(actor);

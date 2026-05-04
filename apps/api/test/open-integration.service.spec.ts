@@ -670,7 +670,7 @@ describe("OpenIntegrationService", () => {
         subject: "idp-user-1",
         email: "admin@acme.test"
       } as any)
-    ).rejects.toThrow("Connector login proof is required.");
+    ).rejects.toThrow("连接器登录凭证不能为空。");
 
     expect(authService.loginWithUser).not.toHaveBeenCalled();
   });
@@ -697,11 +697,11 @@ describe("OpenIntegrationService", () => {
     for (let index = 0; index < 10; index += 1) {
       await expect(
         service.listOpenApiCustomers({ page: 1, pageSize: 20 } as any, "oak_limited", "wrong-secret")
-      ).rejects.toThrow("Open API credential is invalid.");
+      ).rejects.toThrow("Open API 凭证无效。");
     }
 
     await expect(
       service.listOpenApiCustomers({ page: 1, pageSize: 20 } as any, "oak_limited", "wrong-secret")
-    ).rejects.toThrow("Too many failed attempts");
+    ).rejects.toThrow("失败次数过多，请稍后再试。");
   });
 });

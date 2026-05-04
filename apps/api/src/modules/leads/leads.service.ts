@@ -184,7 +184,7 @@ export class LeadsService {
 
     // 状态字段和 convertedCustomerId 任一命中都视为已转化，避免历史脏数据导致重复转客户。
     if (lead.status === LeadStatus.CONVERTED || lead.convertedCustomerId) {
-      throw new ForbiddenException("This lead has already been converted.");
+      throw new ForbiddenException("该线索已经完成转化。");
     }
 
     const customer = await this.leadsRepository.convertLeadToCustomer(lead);

@@ -56,7 +56,7 @@ describe("ObjectStorageAttachmentStorageDriver", () => {
     expect(Buffer.concat(chunks).toString()).toBe("hello world");
 
     await driver.delete(stored.storageKey);
-    await expect(driver.openReadStream(stored.storageKey)).rejects.toThrow("Stored attachment content was not found.");
+    await expect(driver.openReadStream(stored.storageKey)).rejects.toThrow("附件存储内容不存在。");
 
     rmSync(rootDir, { recursive: true, force: true });
   });

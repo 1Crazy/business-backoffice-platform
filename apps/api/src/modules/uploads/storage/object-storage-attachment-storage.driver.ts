@@ -58,7 +58,7 @@ export class ObjectStorageAttachmentStorageDriver implements AttachmentStorageDr
         size: stats.size
       };
     } catch {
-      throw new NotFoundException("Stored attachment content was not found.");
+      throw new NotFoundException("附件存储内容不存在。");
     }
   }
 

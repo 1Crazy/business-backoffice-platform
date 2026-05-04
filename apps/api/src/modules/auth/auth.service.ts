@@ -129,7 +129,7 @@ export class AuthService {
           reason: !user ? "invalid_username" : isTenantUnavailable ? "inactive_tenant" : "inactive_user"
         }
       });
-      throw new UnauthorizedException("Invalid credentials.");
+      throw new UnauthorizedException("账号或密码错误。");
     }
 
     const isValidPassword = await bcrypt.compare(dto.password, user.passwordHash);
@@ -144,8 +144,8 @@ export class AuthService {
           securityLockStatus: nextSecurityLockStatus,
           securityLockReason:
             nextSecurityLockStatus === "REVIEW_REQUIRED"
-              ? "Repeated failed logins require administrator review."
-              : "Repeated failed logins permanently locked this account."
+              ? "连续登录失败次数过多，当前账号需要管理员审核。"
+              : "连续登录失败次数过多，当前账号已被永久锁定。"
         });
       } else {
         await this.authRepository.updateUserSecurityState(user.id, user.tenantId, {
@@ -164,11 +164,11 @@ export class AuthService {
           reason: "invalid_password"
         }
       });
-      throw new UnauthorizedException("Invalid credentials.");
+      throw new UnauthorizedException("账号或密码错误。");
     }
 
     if (this.isSecurityLocked(user)) {
-      throw new UnauthorizedException("User is unavailable.");
+      throw new UnauthorizedException("当前账号不可用，请联系管理员。");
     }
 
     const result = await this.loginWithUser(user, {
@@ -185,7 +185,7 @@ export class AuthService {
 
   async loginWithUser(user: AuthUserRecord, auditContext: LoginAuditContext = {}): Promise<LoginResponse> {
     if (!this.isLoginUserAvailable(user)) {
-      throw new UnauthorizedException("User is unavailable.");
+      throw new UnauthorizedException("当前账号不可用，请联系管理员。");
     }
 
     const hasConfiguredMfa = this.hasConfiguredMfa(user);
@@ -223,7 +223,7 @@ export class AuthService {
 
   async refresh(dto: RefreshSessionInput) {
     if (!dto.refreshToken) {
-      throw new UnauthorizedException("Session is invalid.");
+      throw new UnauthorizedException("登录状态已失效，请重新登录。");
     }
 
     const refreshTokenHash = this.hashRefreshToken(dto.refreshToken);
@@ -249,7 +249,7 @@ export class AuthService {
           reason: !session ? "invalid_refresh_token" : "unavailable_session"
         }
       });
-      throw new UnauthorizedException("Session is invalid.");
+      throw new UnauthorizedException("登录状态已失效，请重新登录。");
     }
 
     const authUser = {
@@ -278,7 +278,7 @@ export class AuthService {
 
   async logout(user: AuthUser) {
     if (!user.sessionId) {
-      throw new UnauthorizedException("Missing active session.");
+      throw new UnauthorizedException("当前缺少有效会话，请重新登录。");
     }
 
     await this.authRepository.revokeSession(user.sessionId, user.id, requireTenantId(user));
@@ -309,16 +309,16 @@ export class AuthService {
 
   async revokeMySession(sessionId: string, user: AuthUser) {
     if (!user.sessionId) {
-      throw new UnauthorizedException("Missing active session.");
+      throw new UnauthorizedException("当前缺少有效会话，请重新登录。");
     }
 
     if (sessionId === user.sessionId) {
-      throw new BadRequestException("Use logout to revoke the current session.");
+      throw new BadRequestException("当前会话请通过退出登录完成下线。");
     }
 
     const result = await this.authRepository.revokeSession(sessionId, user.id, requireTenantId(user));
     if (result.count === 0) {
-      throw new NotFoundException("Active session was not found.");
+      throw new NotFoundException("目标会话不存在或已失效。");
     }
 
     await this.auditLogsService.create({
@@ -344,12 +344,12 @@ export class AuthService {
     await this.authRepository.findUserById(userId, tenantId);
     const session = await this.authRepository.findSessionById(sessionId, tenantId);
     if (!session || session.userId !== userId || session.revokedAt) {
-      throw new NotFoundException("Active session was not found.");
+      throw new NotFoundException("目标会话不存在或已失效。");
     }
 
     const result = await this.authRepository.revokeSessionByTenant(sessionId, tenantId);
     if (result.count === 0) {
-      throw new NotFoundException("Active session was not found.");
+      throw new NotFoundException("目标会话不存在或已失效。");
     }
 
     await this.auditLogsService.create({
@@ -434,7 +434,7 @@ export class AuthService {
       tokenRecord.expiresAt <= new Date() ||
       !candidateUser
     ) {
-      throw new UnauthorizedException("Password reset token is invalid.");
+      throw new UnauthorizedException("密码重置令牌无效或已过期。");
     }
 
     await this.assertPasswordHistory(candidateUser.id, candidateUser.passwordHash, dto.password);
@@ -473,12 +473,12 @@ export class AuthService {
 
     if (requestedAction === "disable") {
       if (!enabled || !activeSecret) {
-        throw new BadRequestException("MFA is not enabled.");
+        throw new BadRequestException("当前账号尚未启用身份验证器。");
       }
 
       const verified = await this.verifyMfaMaterial(record, dto.code?.trim() ?? dto.recoveryCode?.trim());
       if (!verified) {
-        throw new UnauthorizedException("MFA code is invalid.");
+        throw new UnauthorizedException("身份验证器验证码或恢复码无效。");
       }
 
       await this.authRepository.updateUserSecurityState(record.id, tenantId, {
@@ -510,12 +510,12 @@ export class AuthService {
 
     if (requestedAction === "rotate-recovery") {
       if (!enabled || !activeSecret) {
-        throw new BadRequestException("MFA is not enabled.");
+        throw new BadRequestException("当前账号尚未启用身份验证器。");
       }
 
       const verified = await this.verifyMfaMaterial(record, dto.code?.trim() ?? dto.recoveryCode?.trim());
       if (!verified) {
-        throw new UnauthorizedException("MFA code is invalid.");
+        throw new UnauthorizedException("身份验证器验证码或恢复码无效。");
       }
 
       const rotatedRecoveryCodes = await this.replaceRecoveryCodes(record.id);
@@ -563,7 +563,7 @@ export class AuthService {
       token: dto.code.trim()
     });
     if (!verifyResult.valid) {
-      throw new UnauthorizedException("MFA code is invalid.");
+      throw new UnauthorizedException("身份验证器验证码无效。");
     }
 
     const recoveryCodes = await this.replaceRecoveryCodes(record.id);
@@ -598,11 +598,25 @@ export class AuthService {
     const record = await this.authRepository.findUserById(user.id, tenantId);
     const verified = await this.verifyMfaMaterial(record, dto.code.trim());
     if (!verified) {
-      throw new UnauthorizedException("MFA code is invalid.");
+      throw new UnauthorizedException("身份验证器验证码或恢复码无效。");
     }
 
     return {
       success: true
+    };
+  }
+
+  async getMfaStatus(user: AuthUser) {
+    const tenantId = requireTenantId(user);
+    const record = await this.authRepository.findUserById(user.id, tenantId);
+    const enabled = this.hasConfiguredMfa(record);
+    const pending = Boolean((record as AuthUserRecord & { mfaPendingSecret?: string | null }).mfaPendingSecret);
+    const configuredAt = (record as AuthUserRecord & { mfaConfiguredAt?: Date | null }).mfaConfiguredAt ?? null;
+
+    return {
+      enabled,
+      pending,
+      configuredAt: configuredAt?.toISOString() ?? null
     };
   }
 
@@ -615,19 +629,19 @@ export class AuthService {
       challenge.expiresAt <= new Date() ||
       !this.isLoginUserAvailable(challenge.user)
     ) {
-      throw new UnauthorizedException("MFA challenge is invalid.");
+      throw new UnauthorizedException("身份验证器验证流程已失效，请重新登录。");
     }
 
     let recoveryCodes: string[] = [];
     if (this.hasConfiguredMfa(challenge.user)) {
       const verified = await this.verifyMfaMaterial(challenge.user, dto.code.trim());
       if (!verified) {
-        throw new UnauthorizedException("MFA code is invalid.");
+        throw new UnauthorizedException("身份验证器验证码或恢复码无效。");
       }
     } else {
       const pendingSecret = (challenge.user as AuthUserRecord & { mfaPendingSecret?: string | null }).mfaPendingSecret;
       if (!pendingSecret) {
-        throw new UnauthorizedException("MFA enrollment is not prepared.");
+        throw new UnauthorizedException("身份验证器绑定信息尚未准备完成，请重新发起绑定。");
       }
 
       const otp = await this.getOtpToolkit();
@@ -636,7 +650,7 @@ export class AuthService {
         token: dto.code.trim()
       });
       if (!verifyResult.valid) {
-        throw new UnauthorizedException("MFA code is invalid.");
+        throw new UnauthorizedException("身份验证器验证码无效。");
       }
 
       recoveryCodes = await this.replaceRecoveryCodes(challenge.user.id);
@@ -679,7 +693,7 @@ export class AuthService {
     });
 
     if (!result.success) {
-      throw new UnauthorizedException("MFA challenge did not produce an active session.");
+      throw new UnauthorizedException("身份验证器验证未能创建有效会话，请重新登录。");
     }
 
     return result;
@@ -693,7 +707,7 @@ export class AuthService {
 
   async validateSessionPayload(payload: AuthUser): Promise<AuthUser> {
     if (!payload.sessionId || !payload.tenantId) {
-      throw new UnauthorizedException("Session is invalid.");
+      throw new UnauthorizedException("登录状态已失效，请重新登录。");
     }
 
     const [user, session] = await Promise.all([
@@ -714,7 +728,7 @@ export class AuthService {
       Boolean(user.tenant.archivedAt) ||
       this.isSecurityLocked(user)
     ) {
-      throw new UnauthorizedException("Session is invalid.");
+      throw new UnauthorizedException("登录状态已失效，请重新登录。");
     }
 
     if (
@@ -725,7 +739,7 @@ export class AuthService {
       session.revokedAt ||
       session.expiresAt <= new Date()
     ) {
-      throw new UnauthorizedException("Session is invalid.");
+      throw new UnauthorizedException("登录状态已失效，请重新登录。");
     }
 
     return {
@@ -811,7 +825,7 @@ export class AuthService {
     const secret = (record as AuthUserRecord & { mfaSecret?: string | null }).mfaSecret;
 
     if (!normalizedCode || !secret) {
-      throw new UnauthorizedException("MFA is not configured.");
+      throw new UnauthorizedException("当前账号尚未完成身份验证器配置。");
     }
 
     const otp = await this.getOtpToolkit();
@@ -977,14 +991,14 @@ export class AuthService {
     const reusedCurrentPassword = await bcrypt.compare(nextPassword, currentPasswordHash);
 
     if (reusedCurrentPassword) {
-      throw new BadRequestException("Password must not match a recently used password.");
+      throw new BadRequestException("新密码不能与最近使用过的密码相同。");
     }
 
     const history = await this.authRepository.listPasswordHistory(userId, PASSWORD_HISTORY_LIMIT);
 
     for (const item of history) {
       if (await bcrypt.compare(nextPassword, item.passwordHash)) {
-        throw new BadRequestException("Password must not match a recently used password.");
+        throw new BadRequestException("新密码不能与最近使用过的密码相同。");
       }
     }
   }

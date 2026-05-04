@@ -196,7 +196,7 @@ export class CustomersService {
       const matchedTagCount = await this.customersRepository.countTagsByIds(tenantId, dto.tagIds);
 
       if (matchedTagCount !== dto.tagIds.length) {
-        throw new ForbiddenException("Cross-tenant tags are not allowed.");
+        throw new ForbiddenException("不允许绑定跨租户标签。");
       }
     }
 

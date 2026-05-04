@@ -56,7 +56,7 @@ export class RiskThrottleService {
     }
 
     if (entry.lockedUntil && entry.lockedUntil.getTime() > now) {
-      throw new HttpException("Too many failed attempts. Please try again later.", HttpStatus.TOO_MANY_REQUESTS);
+      throw new HttpException("失败次数过多，请稍后再试。", HttpStatus.TOO_MANY_REQUESTS);
     }
 
     if (entry.lockedUntil || now - entry.firstAttemptAt.getTime() > options.windowMs) {

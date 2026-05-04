@@ -8,6 +8,7 @@ import { useAuthStore } from "@/stores/auth";
 const AppLayout = () => import("@/layout/AppLayout.vue");
 const ForgotPasswordPage = () => import("@/pages/forgot-password/ForgotPasswordPage.vue");
 const LoginPage = () => import("@/pages/login/LoginPage.vue");
+const MfaSecurityPage = () => import("@/pages/mfa-security/MfaSecurityPage.vue");
 const MicroAppPage = () => import("@/pages/micro-app/MicroAppPage.vue");
 const NoAccessPage = () => import("@/pages/no-access/NoAccessPage.vue");
 const PlatformGovernancePage = () => import("@/pages/platform-governance/PlatformGovernancePage.vue");
@@ -130,6 +131,21 @@ const routes: RouteRecordRaw[] = [
     children: [
       ...nativeRoutes,
       ...microRoutes,
+      {
+        path: "account/security/mfa",
+        name: "account-mfa-security",
+        component: MfaSecurityPage,
+        meta: {
+          title: "MFA 安全设置",
+          description: "管理身份验证器绑定、恢复码和关闭动作。",
+          hidden: true,
+          kicker: "账号安全",
+          sectionLabel: "身份验证器",
+          domain: "platform",
+          domainTitle: "账号安全",
+          domainBadge: "SECURITY"
+        }
+      },
       ...legacyRedirectRoutes
     ]
   },

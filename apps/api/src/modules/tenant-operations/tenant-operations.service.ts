@@ -319,13 +319,13 @@ export class TenantOperationsService {
 
   private assertDefaultTenantMutable(tenant: TenantRecord) {
     if (tenant.isDefault) {
-      throw new BadRequestException("Default tenant cannot be modified through lifecycle actions.");
+      throw new BadRequestException("默认租户不允许通过生命周期动作修改。");
     }
   }
 
   private assertTenantNotArchived(tenant: TenantRecord) {
     if (tenant.archivedAt) {
-      throw new BadRequestException("Archived tenant cannot be modified.");
+      throw new BadRequestException("已归档租户不允许继续修改。");
     }
   }
 }

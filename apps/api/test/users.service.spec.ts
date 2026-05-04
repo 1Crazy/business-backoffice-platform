@@ -158,7 +158,7 @@ describe("UsersService", () => {
         },
         buildActor()
       )
-    ).rejects.toThrow("complexity policy");
+    ).rejects.toThrow("密码复杂度不符合要求");
   });
 
   it("allows administrators to clear a permanent lock", async () => {

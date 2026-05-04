@@ -142,14 +142,14 @@ export class BatchTasksService implements OnModuleInit {
   }
 
   async createCustomerImportTask(file: Express.Multer.File | undefined, ownerId: string | undefined, actor: AuthUser) {
-    this.assertPermission(actor, "customer:write", "You do not have permission to import customers.");
+    this.assertPermission(actor, "customer:write", "当前账号没有导入客户的权限。");
 
     if (!file) {
-      throw new BadRequestException("Import file is required.");
+      throw new BadRequestException("请先上传导入文件。");
     }
 
     if (!["text/csv", "application/vnd.ms-excel"].includes(file.mimetype)) {
-      throw new BadRequestException("Only CSV import files are supported.");
+      throw new BadRequestException("当前只支持导入 CSV 文件。");
     }
 
     const tenantId = requireTenantId(actor);
@@ -265,7 +265,7 @@ export class BatchTasksService implements OnModuleInit {
     const task = await this.batchTasksRepository.findTaskById(id);
 
     if (!task.resultStorageKey || !task.resultFileName) {
-      throw new NotFoundException("Batch task result file was not found.");
+      throw new NotFoundException("批处理结果文件不存在。");
     }
 
     this.assertTaskReadable(task.resourceType, actor);
@@ -290,7 +290,7 @@ export class BatchTasksService implements OnModuleInit {
     const task = await this.batchTasksRepository.findTaskById(id);
 
     if (!task.failureStorageKey || !task.failureFileName) {
-      throw new NotFoundException("Batch task failure file was not found.");
+      throw new NotFoundException("批处理失败明细文件不存在。");
     }
 
     this.assertTaskReadable(task.resourceType, actor);
@@ -478,7 +478,7 @@ export class BatchTasksService implements OnModuleInit {
       .filter(Boolean);
 
     if (normalizedLines.length < 2) {
-      throw new BadRequestException("Import file must contain a header row and at least one data row.");
+      throw new BadRequestException("导入文件必须包含表头且至少有一行数据。");
     }
 
     const headers = normalizedLines[0].split(",").map((item) => item.trim());
@@ -594,7 +594,7 @@ export class BatchTasksService implements OnModuleInit {
       return;
     }
 
-    throw new ForbiddenException("You do not have permission to read this batch task.");
+    throw new ForbiddenException("当前账号没有权限查看该批处理任务。");
   }
 
   private toJsonValue(value: Record<string, unknown>) {
@@ -609,7 +609,7 @@ export class BatchTasksService implements OnModuleInit {
     const value = payload[key];
 
     if (typeof value !== "string" || !value) {
-      throw new BadRequestException(`Background job payload is missing ${key}.`);
+      throw new BadRequestException(`后台任务缺少必要参数：${key}。`);
     }
 
     return value;

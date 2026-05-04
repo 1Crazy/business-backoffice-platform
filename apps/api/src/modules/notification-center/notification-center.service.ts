@@ -559,7 +559,7 @@ export class NotificationCenterService implements OnModuleInit {
     const value = payload[key];
 
     if (typeof value !== "string" || !value) {
-      throw new BadRequestException(`Background job payload is missing ${key}.`);
+      throw new BadRequestException(`后台任务缺少必要参数：${key}。`);
     }
 
     return value;

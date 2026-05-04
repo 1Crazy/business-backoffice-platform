@@ -47,7 +47,7 @@ export class CsrfGuard implements CanActivate {
       return true;
     }
 
-    throw new ForbiddenException("CSRF token is invalid.");
+    throw new ForbiddenException("安全校验失败，请刷新页面后重试。");
   }
 
   private readHeader(value: string | string[] | undefined): string | undefined {

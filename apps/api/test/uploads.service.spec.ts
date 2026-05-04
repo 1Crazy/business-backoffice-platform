@@ -99,7 +99,7 @@ describe("UploadsService", () => {
     expect(dataScopeService.assertOwnerAccessible).toHaveBeenCalledWith(
       actor,
       "owner-1",
-      "You do not have access to this attachment."
+      "当前账号无权访问该附件。"
     );
     expect(result).toEqual([
       expect.objectContaining({
@@ -155,7 +155,7 @@ describe("UploadsService", () => {
           permissions: ["upload:write", "customer:read"]
         }
       )
-    ).rejects.toThrow("Attachment type is not supported.");
+    ).rejects.toThrow("附件类型不受支持。");
 
     expect(storageDriver.store).not.toHaveBeenCalled();
   });
@@ -202,7 +202,7 @@ describe("UploadsService", () => {
           permissions: ["upload:write", "customer:read"]
         }
       )
-    ).rejects.toThrow("Attachment exceeds the maximum allowed size.");
+    ).rejects.toThrow("附件大小超过系统限制。");
 
     expect(storageDriver.store).not.toHaveBeenCalled();
   });
@@ -262,7 +262,7 @@ describe("UploadsService", () => {
     expect(dataScopeService.assertOwnerAccessible).toHaveBeenCalledWith(
       actor,
       "owner-1",
-      "You do not have access to this attachment."
+      "当前账号无权访问该附件。"
     );
     expect(storageDriver.openReadStream).toHaveBeenCalledWith("stored-file.pdf");
     expect(auditLogsService.create).toHaveBeenCalledWith(
@@ -317,7 +317,7 @@ describe("UploadsService", () => {
         roleCodes: ["sales-member"],
         permissions: []
       })
-    ).rejects.toThrow("You do not have permission to access this attachment.");
+    ).rejects.toThrow("当前账号无权访问该附件。");
 
     expect(storageDriver.openReadStream).not.toHaveBeenCalled();
   });
@@ -436,7 +436,7 @@ describe("UploadsService", () => {
         roleCodes: ["sales-member"],
         permissions: ["customer:read"]
       })
-    ).rejects.toThrow("Attachment preview is not supported for this file type.");
+    ).rejects.toThrow("当前文件类型不支持预览。");
 
     expect(storageDriver.openReadStream).not.toHaveBeenCalled();
     expect(auditLogsService.create).not.toHaveBeenCalled();
@@ -544,7 +544,7 @@ describe("UploadsService", () => {
           permissions: ["upload:write", "customer:read"]
         }
       )
-    ).rejects.toThrow("Attachment content does not match the declared type.");
+    ).rejects.toThrow("附件内容与声明的文件类型不一致。");
 
     expect(storageDriver.store).not.toHaveBeenCalled();
   });
@@ -850,10 +850,10 @@ describe("UploadsService", () => {
     };
 
     await expect(service.download("attachment-7", actor)).rejects.toThrow(
-      "Attachment is not available until the scan is clean."
+      "附件尚未通过安全扫描，暂时不可用。"
     );
     await expect(service.preview("attachment-7", actor)).rejects.toThrow(
-      "Attachment is not available until the scan is clean."
+      "附件尚未通过安全扫描，暂时不可用。"
     );
   });
 

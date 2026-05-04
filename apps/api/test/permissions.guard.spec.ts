@@ -128,7 +128,7 @@ describe("PermissionsGuard", () => {
       { permissions: ["customer:assign"] },
       "customer",
       "assign",
-      "You do not have permission to perform this action."
+      "当前账号没有执行该操作的权限。"
     );
   });
 });

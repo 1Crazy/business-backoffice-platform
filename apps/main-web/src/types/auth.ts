@@ -10,6 +10,25 @@ export interface CurrentUser {
   permissions: string[];
 }
 
+export interface MfaStatus {
+  enabled: boolean;
+  pending: boolean;
+  configuredAt: string | null;
+}
+
+export interface ConfigureMfaPayload {
+  code?: string;
+  recoveryCode?: string;
+  action?: "setup" | "rotate-recovery" | "disable";
+}
+
+export interface MfaSetupResponse {
+  enabled: boolean;
+  pending: boolean;
+  challenge: string | null;
+  recoveryCodes: string[];
+}
+
 export interface LoginPayload {
   username: string;
   password: string;
@@ -17,6 +36,10 @@ export interface LoginPayload {
 
 export interface VerifyLoginMfaPayload {
   ticket: string;
+  code: string;
+}
+
+export interface VerifyMfaPayload {
   code: string;
 }
 

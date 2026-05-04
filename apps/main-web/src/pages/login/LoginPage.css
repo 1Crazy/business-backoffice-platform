@@ -171,7 +171,7 @@
 }
 
 .secondary-button {
-  margin-top: -6px;
+  margin-top: 0;
 }
 
 .link-button {
@@ -187,6 +187,15 @@
   border-radius: 18px;
   background: #f7faff;
   border: 1px solid rgba(59, 130, 246, 0.14);
+}
+
+.dialog-form {
+  display: grid;
+  gap: 12px;
+}
+
+.dialog-form .el-button + .el-button {
+  margin-left: 0;
 }
 
 .mfa-title {

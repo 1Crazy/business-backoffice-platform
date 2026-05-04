@@ -48,7 +48,7 @@ export class AuditLogsRepository {
         )?.id;
 
       if (!tenantId) {
-        throw new Error("Default tenant is missing.");
+        throw new Error("缺少默认租户，无法写入审计日志。");
       }
 
       return tx.auditLog.create({

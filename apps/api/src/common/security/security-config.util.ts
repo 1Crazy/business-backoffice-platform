@@ -15,15 +15,15 @@ export function getRequiredJwtSecret(configService: ConfigService): string {
   const jwtSecret = configService.get<string>("JWT_SECRET")?.trim();
 
   if (!jwtSecret) {
-    throw new Error("JWT_SECRET is required.");
+    throw new Error("必须配置 JWT_SECRET。");
   }
 
   if (jwtSecret === DEFAULT_INSECURE_JWT_SECRET || jwtSecret.toLowerCase().includes("replace-with")) {
-    throw new Error("JWT_SECRET must be replaced with a strong secret before the API starts.");
+    throw new Error("启动 API 前必须将 JWT_SECRET 替换为强随机密钥。");
   }
 
   if (jwtSecret.length < MIN_JWT_SECRET_LENGTH) {
-    throw new Error(`JWT_SECRET must be at least ${MIN_JWT_SECRET_LENGTH} characters long.`);
+    throw new Error(`JWT_SECRET 长度至少需要 ${MIN_JWT_SECRET_LENGTH} 位。`);
   }
 
   return jwtSecret;
@@ -34,11 +34,11 @@ export function getJwtAccessTokenTtl(configService: ConfigService): string {
   const ttlSeconds = parseTtlSeconds(rawTtl);
 
   if (ttlSeconds <= 0) {
-    throw new Error("JWT_ACCESS_TOKEN_TTL must be greater than 0.");
+    throw new Error("JWT_ACCESS_TOKEN_TTL 必须大于 0。");
   }
 
   if (ttlSeconds > MAX_ACCESS_TOKEN_TTL_SECONDS) {
-    throw new Error("JWT_ACCESS_TOKEN_TTL must not exceed 30 minutes.");
+    throw new Error("JWT_ACCESS_TOKEN_TTL 不能超过 30 分钟。");
   }
 
   return rawTtl;
@@ -48,7 +48,7 @@ function parseTtlSeconds(value: string): number {
   const match = value.match(/^(\d+)(s|m|h)$/);
 
   if (!match) {
-    throw new Error("JWT_ACCESS_TOKEN_TTL must use a duration like 900s, 15m, or 1h.");
+    throw new Error("JWT_ACCESS_TOKEN_TTL 必须使用类似 900s、15m 或 1h 的时长格式。");
   }
 
   const amount = Number(match[1]);
@@ -73,7 +73,7 @@ export function getAllowedCorsOrigins(configService: ConfigService): string[] | 
       return true;
     }
 
-    throw new Error("CORS_ALLOWED_ORIGINS is required outside local/test environments.");
+    throw new Error("在非本地/测试环境中必须配置 CORS_ALLOWED_ORIGINS。");
   }
 
   return rawOrigins
@@ -105,7 +105,7 @@ export function getSwaggerBasicAuth(configService: ConfigService): { username: s
   const password = configService.get<string>("SWAGGER_BASIC_AUTH_PASSWORD")?.trim();
 
   if (!username || !password) {
-    throw new Error("SWAGGER_BASIC_AUTH_USERNAME and SWAGGER_BASIC_AUTH_PASSWORD are required when Swagger is enabled outside local/test environments.");
+    throw new Error("在非本地环境启用 Swagger 时，必须配置 SWAGGER_BASIC_AUTH_USERNAME 和 SWAGGER_BASIC_AUTH_PASSWORD。");
   }
 
   return {
@@ -123,13 +123,13 @@ export function getRiskThrottleStoreMode(configService: ConfigService): "memory"
 
   if (rawMode === "memory" || !rawMode) {
     if (!isLocalRuntime(configService)) {
-      throw new Error("RISK_THROTTLE_STORE=database is required outside local/test environments.");
+      throw new Error("在非本地/测试环境中必须使用 RISK_THROTTLE_STORE=database。");
     }
 
     return "memory";
   }
 
-  throw new Error("RISK_THROTTLE_STORE must be either memory or database.");
+  throw new Error("RISK_THROTTLE_STORE 只允许为 memory 或 database。");
 }
 
 export function assertRuntimeSecurityConfig(configService: ConfigService): void {

@@ -209,6 +209,11 @@ describe("AuthController", () => {
     const authService = {
       getProfile: vi.fn().mockResolvedValue({
         id: "user-1"
+      }),
+      getMfaStatus: vi.fn().mockResolvedValue({
+        enabled: true,
+        pending: false,
+        configuredAt: "2026-05-04T00:00:00.000Z"
       })
     } as any;
     const controller = new AuthController(authService);
@@ -218,8 +223,10 @@ describe("AuthController", () => {
     } as any;
 
     await controller.getProfile(user);
+    await controller.getMfaStatus(user);
 
     expect(authService.getProfile).toHaveBeenCalledWith("user-1", "session-1");
+    expect(authService.getMfaStatus).toHaveBeenCalledWith(user);
   });
 
   it("delegates current-user session listing to auth service", async () => {
@@ -287,6 +294,7 @@ describe("AuthController", () => {
       resetPassword: vi.fn().mockResolvedValue({ success: true }),
       configureMfa: vi.fn().mockResolvedValue({ enabled: true, pending: false, challenge: null, recoveryCodes: [] }),
       verifyMfa: vi.fn().mockResolvedValue({ success: true }),
+      getMfaStatus: vi.fn().mockResolvedValue({ enabled: true, pending: false, configuredAt: "2026-05-04T00:00:00.000Z" }),
       verifyLoginMfa: vi.fn().mockResolvedValue({
         success: true,
         mfaRequired: false,
@@ -313,12 +321,14 @@ describe("AuthController", () => {
     await controller.resetPassword({ token: "token-1", password: "Password123!A" });
     await controller.configureMfa(user, {});
     await controller.verifyMfa(user, { code: "123456" });
+    await controller.getMfaStatus(user);
     await controller.verifyLoginMfa({ ticket: "ticket-1", code: "123456" }, response);
 
     expect(authService.requestPasswordReset).toHaveBeenCalledWith({ identifier: "admin" });
     expect(authService.resetPassword).toHaveBeenCalledWith({ token: "token-1", password: "Password123!A" });
     expect(authService.configureMfa).toHaveBeenCalledWith(user, {});
     expect(authService.verifyMfa).toHaveBeenCalledWith(user, { code: "123456" });
+    expect(authService.getMfaStatus).toHaveBeenCalledWith(user);
     expect(authService.verifyLoginMfa).toHaveBeenCalledWith({ ticket: "ticket-1", code: "123456" });
     expect(response.cookie).toHaveBeenCalledWith("platform_access_token", "token", expect.any(Object));
   });

@@ -11,11 +11,11 @@ function main() {
   const artifactPath = process.env.BACKUP_ARTIFACT_PATH;
 
   if (!artifactPath) {
-    throw new Error("BACKUP_ARTIFACT_PATH is required.");
+    throw new Error("必须提供 BACKUP_ARTIFACT_PATH。");
   }
 
-  ensureExists(artifactPath, "Backup artifact was not found.");
-  ensureExists(`${artifactPath}.manifest.json`, "Backup manifest was not found.");
+  ensureExists(artifactPath, "未找到备份产物文件。");
+  ensureExists(`${artifactPath}.manifest.json`, "未找到备份清单文件。");
 
   const healthUrl = process.env.RESTORE_SMOKE_HEALTH_URL ?? "http://localhost:3000/api/health";
   const checks = [
@@ -41,7 +41,7 @@ function main() {
       {
         artifactPath,
         checks,
-        note: "restore smoke scaffold created; run endpoint-specific checks in environment"
+        note: "已生成恢复演练检查骨架，请在目标环境继续执行接口级校验。"
       },
       null,
       2

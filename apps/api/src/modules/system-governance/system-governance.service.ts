@@ -78,7 +78,7 @@ export class SystemGovernanceService implements OnModuleInit, OnModuleDestroy {
     );
 
     if (!current) {
-      throw new BadRequestException("Notification channel configuration was not found.");
+      throw new BadRequestException("通知通道配置不存在。");
     }
 
     const updated = await this.systemGovernanceRepository.updateNotificationChannelConfig(adapterCode, dto);
@@ -129,7 +129,7 @@ export class SystemGovernanceService implements OnModuleInit, OnModuleDestroy {
     const config = await this.systemGovernanceRepository.findStorageConfigByProvider(provider);
 
     if (config && (!config.isEnabled || !config.previewEnabled)) {
-      throw new ForbiddenException("Attachment preview is disabled for this storage configuration.");
+      throw new ForbiddenException("当前存储配置未开启附件预览。");
     }
   }
 
@@ -177,7 +177,7 @@ export class SystemGovernanceService implements OnModuleInit, OnModuleDestroy {
     const job = await this.systemGovernanceRepository.findSchedulerJobByCode(code);
 
     if (job.status !== SchedulerJobStatus.RUNNING) {
-      throw new BadRequestException("Scheduler job is paused and cannot be executed.");
+      throw new BadRequestException("调度任务已暂停，暂时不能执行。");
     }
 
     const startedAt = new Date();
@@ -405,7 +405,7 @@ export class SystemGovernanceService implements OnModuleInit, OnModuleDestroy {
       return `清理审计日志 ${summary.auditLogsDeleted} 条，通知 ${summary.notificationsDeleted} 条，Webhook 投递 ${summary.webhookDeliveriesDeleted} 条，已撤销会话 ${summary.revokedSessionsDeleted} 条，失败明细 ${summary.batchTaskFailuresDeleted} 条。`;
     }
 
-    throw new BadRequestException("Unsupported scheduler job code.");
+    throw new BadRequestException("不支持的调度任务编码。");
   }
 
   private async publishGovernanceFailureAlert(jobName: string, actor: AuthUser, message: string) {
@@ -612,7 +612,7 @@ export class SystemGovernanceService implements OnModuleInit, OnModuleDestroy {
     const value = payload[key];
 
     if (typeof value !== "string" || !value) {
-      throw new BadRequestException(`Background job payload is missing ${key}.`);
+      throw new BadRequestException(`后台任务缺少必要参数：${key}。`);
     }
 
     return value;

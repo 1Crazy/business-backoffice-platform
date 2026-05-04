@@ -191,3 +191,22 @@ export class MfaSetupVo {
   })
   recoveryCodes!: string[];
 }
+
+export class MfaStatusVo {
+  @ApiProperty({
+    description: "当前账号是否已启用 MFA。"
+  })
+  enabled!: boolean;
+
+  @ApiProperty({
+    description: "当前是否存在待确认的 MFA 绑定。"
+  })
+  pending!: boolean;
+
+  @ApiPropertyOptional({
+    description: "MFA 最近一次完成配置的时间。",
+    format: "date-time",
+    nullable: true
+  })
+  configuredAt!: string | null;
+}

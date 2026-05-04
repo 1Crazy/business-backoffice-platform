@@ -144,7 +144,7 @@ export class OpenIntegrationService implements OnModuleInit {
     const current = await this.openIntegrationRepository.findOpenApiCredentialById(id, tenantId);
 
     if (current.status !== OpenApiCredentialStatus.ACTIVE) {
-      throw new BadRequestException("Only active credentials can be rotated.");
+      throw new BadRequestException("只有启用中的凭证才允许轮换。");
     }
 
     const plainSecret = this.generateSecret("opsk");
@@ -248,7 +248,7 @@ export class OpenIntegrationService implements OnModuleInit {
     const subscription = await this.openIntegrationRepository.findWebhookSubscriptionById(id, tenantId);
 
     if (subscription.status !== WebhookSubscriptionStatus.ACTIVE) {
-      throw new BadRequestException("Webhook subscription is disabled.");
+      throw new BadRequestException("当前 Webhook 订阅已禁用。");
     }
 
     const payload = {
@@ -424,7 +424,7 @@ export class OpenIntegrationService implements OnModuleInit {
     );
 
     if (!existingDelivery) {
-      throw new BadRequestException("Webhook delivery was not found.");
+      throw new BadRequestException("Webhook 投递记录不存在。");
     }
 
     const payloadMetadata =
@@ -658,7 +658,7 @@ export class OpenIntegrationService implements OnModuleInit {
         }
       });
       await this.riskThrottleService?.recordFailure(throttleKey, CONNECTOR_LOGIN_THROTTLE);
-      throw new UnauthorizedException("Identity connector is disabled.");
+      throw new UnauthorizedException("身份连接器已禁用。");
     }
 
     try {
@@ -697,7 +697,7 @@ export class OpenIntegrationService implements OnModuleInit {
     if (!user) {
       await this.handleConnectorLoginFailure(connector, dto, "user_not_found");
       await this.riskThrottleService?.recordFailure(throttleKey, CONNECTOR_LOGIN_THROTTLE);
-      throw new UnauthorizedException("The identity cannot be mapped to a tenant user.");
+      throw new UnauthorizedException("当前身份无法映射到租户内用户。");
     }
 
     if (dto.subject?.trim()) {
@@ -807,7 +807,7 @@ export class OpenIntegrationService implements OnModuleInit {
     resource: string
   ) {
     if (!accessKey || !secret) {
-      throw new UnauthorizedException("Missing open API credentials.");
+      throw new UnauthorizedException("缺少 Open API 凭证。");
     }
 
     const normalizedAccessKey = accessKey.trim();
@@ -826,7 +826,7 @@ export class OpenIntegrationService implements OnModuleInit {
           resource
         }
       });
-      throw new UnauthorizedException("Open API credential is invalid.");
+      throw new UnauthorizedException("Open API 凭证无效。");
     }
 
     if (
@@ -846,7 +846,7 @@ export class OpenIntegrationService implements OnModuleInit {
           resource
         }
       });
-      throw new UnauthorizedException("Open API credential is unavailable.");
+      throw new UnauthorizedException("Open API 凭证当前不可用。");
     }
 
     const scopes = this.readStringArray(credential.scopes);
@@ -865,7 +865,7 @@ export class OpenIntegrationService implements OnModuleInit {
           scopes
         }
       });
-      throw new ForbiddenException("Open API credential scope is insufficient.");
+      throw new ForbiddenException("Open API 凭证权限范围不足。");
     }
 
     await this.riskThrottleService?.recordSuccess(throttleKey);
@@ -920,18 +920,18 @@ export class OpenIntegrationService implements OnModuleInit {
         return;
       }
 
-      throw new UnauthorizedException("Mock connector login is disabled.");
+      throw new UnauthorizedException("Mock 连接器登录已禁用。");
     }
 
     if (dto.proofType !== "CLIENT_SECRET" || !dto.proofSecret) {
-      throw new UnauthorizedException("Connector login proof is required.");
+      throw new UnauthorizedException("连接器登录凭证不能为空。");
     }
 
     if (
       !connector.clientSecretHash ||
       !this.verifyStoredSecret(dto.proofSecret.trim(), connector.clientSecretHash, connector.clientSecretHashVersion)
     ) {
-      throw new UnauthorizedException("Connector login proof is invalid.");
+      throw new UnauthorizedException("连接器登录凭证无效。");
     }
   }
 
@@ -953,7 +953,7 @@ export class OpenIntegrationService implements OnModuleInit {
     const domain = email.split("@")[1]?.toLowerCase();
 
     if (!domain || !allowedDomains.includes(domain)) {
-      throw new ForbiddenException("The email domain is not allowed for this connector.");
+      throw new ForbiddenException("当前邮箱域名不在该连接器允许范围内。");
     }
   }
 
@@ -969,7 +969,7 @@ export class OpenIntegrationService implements OnModuleInit {
     );
 
     if (!normalized.length) {
-      throw new BadRequestException("At least one valid open API scope is required.");
+      throw new BadRequestException("至少需要选择一个有效的 Open API 权限范围。");
     }
 
     return normalized;
@@ -987,7 +987,7 @@ export class OpenIntegrationService implements OnModuleInit {
     );
 
     if (!normalized.length) {
-      throw new BadRequestException("At least one valid webhook event type is required.");
+      throw new BadRequestException("至少需要选择一个有效的 Webhook 事件类型。");
     }
 
     return normalized;
@@ -1049,7 +1049,7 @@ export class OpenIntegrationService implements OnModuleInit {
     }
 
     if (this.configService && !isLocalRuntime(this.configService)) {
-      throw new Error("OPEN_INTEGRATION_SECRET_PEPPER is required outside local/test environments.");
+      throw new Error("在非本地/测试环境中必须配置 OPEN_INTEGRATION_SECRET_PEPPER。");
     }
 
     return "local-open-integration-secret-pepper";
@@ -1072,7 +1072,7 @@ export class OpenIntegrationService implements OnModuleInit {
     const [ivPart, tagPart, encryptedPart] = ciphertext.split(".");
 
     if (!ivPart || !tagPart || !encryptedPart) {
-      throw new Error("Encrypted secret payload is malformed.");
+      throw new Error("加密后的密钥载荷格式不正确。");
     }
 
     const decipher = createDecipheriv("aes-256-gcm", this.getSecretEncryptionKey(), Buffer.from(ivPart, "base64url"));
@@ -1090,7 +1090,7 @@ export class OpenIntegrationService implements OnModuleInit {
 
     if (!material) {
       if (this.configService && !isLocalRuntime(this.configService)) {
-        throw new Error("OPEN_INTEGRATION_SECRET_ENCRYPTION_KEY is required outside local/test environments.");
+        throw new Error("在非本地/测试环境中必须配置 OPEN_INTEGRATION_SECRET_ENCRYPTION_KEY。");
       }
 
       return createHash("sha256").update("local-open-integration-secret-encryption-key").digest();

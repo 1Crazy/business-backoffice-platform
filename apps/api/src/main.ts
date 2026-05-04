@@ -8,6 +8,7 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 import type { NextFunction, Request, Response } from "express";
 
 import { AppModule } from "./app.module";
+import { HttpExceptionFilter, UnknownExceptionFilter } from "./common/filters/http-exception.filter";
 import { PrismaClientExceptionFilter } from "./common/filters/prisma-client-exception.filter";
 import {
   assertRuntimeSecurityConfig,
@@ -36,7 +37,7 @@ async function bootstrap(): Promise<void> {
       forbidNonWhitelisted: true
     })
   );
-  app.useGlobalFilters(new PrismaClientExceptionFilter());
+  app.useGlobalFilters(new PrismaClientExceptionFilter(), new HttpExceptionFilter(), new UnknownExceptionFilter());
 
   if (shouldEnableSwagger(configService)) {
     const swaggerConfig = new DocumentBuilder()

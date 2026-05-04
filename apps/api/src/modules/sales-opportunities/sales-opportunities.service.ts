@@ -241,7 +241,7 @@ export class SalesOpportunitiesService {
     this.assertOpenStage(dto.stage);
 
     if (dto.stage === existing.stage) {
-      throw new BadRequestException("The opportunity is already in this stage.");
+      throw new BadRequestException("当前商机已经处于该阶段。");
     }
 
     const opportunity = await this.salesOpportunitiesRepository.changeStage({
@@ -337,19 +337,19 @@ export class SalesOpportunitiesService {
     await this.dataScopeService.assertOpportunityAccessible(
       actor,
       opportunityId,
-      "You do not have access to this opportunity."
+      "当前账号无权访问该商机。"
     );
   }
 
   private assertOpportunityStillOpen(stage: OpportunityStage) {
     if (OPPORTUNITY_CLOSED_STAGES.includes(stage)) {
-      throw new BadRequestException("Closed opportunities can no longer be updated through stage actions.");
+      throw new BadRequestException("已收口商机不能再通过阶段动作更新。");
     }
   }
 
   private assertOpenStage(stage: OpportunityStage) {
     if (!OPPORTUNITY_OPEN_STAGES.includes(stage)) {
-      throw new BadRequestException("This action only supports in-progress stages.");
+      throw new BadRequestException("当前动作只支持进行中阶段。");
     }
   }
 }

@@ -16,6 +16,7 @@
         </nav>
 
         <div class="host-topbar-actions">
+          <el-button text class="host-security-button" @click="handleNavigate('/account/security/mfa')">MFA 安全</el-button>
           <div class="host-user-summary">
             <span class="host-user-name">{{ authStore.currentUser?.displayName ?? "当前用户" }}</span>
             <span class="host-user-caption">{{ productConfigStore.runtimeConfig?.brandName ?? "当前账号" }}</span>
@@ -198,11 +199,17 @@ async function handleLogout(): Promise<void> {
   padding-inline: 8px;
 }
 
-.host-logout-button.el-button.is-text {
+.host-security-button {
+  padding-inline: 8px;
+}
+
+.host-logout-button.el-button.is-text,
+.host-security-button.el-button.is-text {
   color: var(--host-text-secondary);
 }
 
-.host-logout-button.el-button.is-text:hover {
+.host-logout-button.el-button.is-text:hover,
+.host-security-button.el-button.is-text:hover {
   color: var(--tenant-accent, var(--host-chip-color));
   background: var(--host-chip-background);
 }

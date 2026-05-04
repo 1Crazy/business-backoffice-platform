@@ -137,7 +137,7 @@ export class DataScopeService {
     return scope.ownerIds?.includes(ownerId) ?? false;
   }
 
-  async assertOwnerAccessible(actor: AuthUser, ownerId: string, message = "You do not have access to this record.") {
+  async assertOwnerAccessible(actor: AuthUser, ownerId: string, message = "当前账号无权访问该记录。") {
     const canAccessOwner = await this.canAccessOwner(actor, ownerId);
 
     if (!canAccessOwner) {
@@ -180,7 +180,7 @@ export class DataScopeService {
     return this.matchesScopedRecord(scope, customer.ownerId, customer.tags.map((item) => item.tagId));
   }
 
-  async assertCustomerAccessible(actor: AuthUser, customerId: string, message = "You do not have access to this customer.") {
+  async assertCustomerAccessible(actor: AuthUser, customerId: string, message = "当前账号无权访问该客户。") {
     const canAccessCustomer = await this.canAccessCustomer(actor, customerId);
 
     if (!canAccessCustomer) {
@@ -230,7 +230,7 @@ export class DataScopeService {
   async assertOpportunityAccessible(
     actor: AuthUser,
     opportunityId: string,
-    message = "You do not have access to this opportunity."
+    message = "当前账号无权访问该商机。"
   ) {
     const canAccessOpportunity = await this.canAccessOpportunity(actor, opportunityId);
 

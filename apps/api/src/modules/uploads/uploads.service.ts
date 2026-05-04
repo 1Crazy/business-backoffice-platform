@@ -214,18 +214,18 @@ export class UploadsService {
     if (businessType === AttachmentBusinessType.CUSTOMER) {
       const customer = await this.uploadsRepository.findCustomerOwnerById(businessId, requireTenantId(actor));
 
-      await this.dataScopeService.assertOwnerAccessible(actor, customer.ownerId, "You do not have access to this attachment.");
+      await this.dataScopeService.assertOwnerAccessible(actor, customer.ownerId, "当前账号无权访问该附件。");
       return;
     }
 
     if (businessType === AttachmentBusinessType.LEAD) {
       const lead = await this.uploadsRepository.findLeadOwnerById(businessId, requireTenantId(actor));
 
-      await this.dataScopeService.assertOwnerAccessible(actor, lead.ownerId, "You do not have access to this attachment.");
+      await this.dataScopeService.assertOwnerAccessible(actor, lead.ownerId, "当前账号无权访问该附件。");
       return;
     }
 
-    throw new BadRequestException("Unsupported attachment business type.");
+    throw new BadRequestException("不支持的附件业务类型。");
   }
 
   private assertBusinessPermission(actor: AuthUser, businessType: AttachmentBusinessType): void {
@@ -238,26 +238,26 @@ export class UploadsService {
           : undefined;
 
     if (!requiredPermission || !actor.permissions.includes(requiredPermission)) {
-      throw new ForbiddenException("You do not have permission to access this attachment.");
+      throw new ForbiddenException("当前账号无权访问该附件。");
     }
   }
 
   private validateFile(file?: Express.Multer.File): void {
     if (!file) {
-      throw new BadRequestException("Attachment file is required.");
+      throw new BadRequestException("请先上传附件文件。");
     }
 
     if (file.size > MAX_ATTACHMENT_SIZE_BYTES) {
-      throw new PayloadTooLargeException("Attachment exceeds the maximum allowed size.");
+      throw new PayloadTooLargeException("附件大小超过系统限制。");
     }
 
     // MIME 校验放在 service 层是为了保证无论从控制器还是未来其他入口上传，都共享同一条安全边界。
     if (!ALLOWED_ATTACHMENT_MIME_TYPES.includes(file.mimetype as (typeof ALLOWED_ATTACHMENT_MIME_TYPES)[number])) {
-      throw new UnsupportedMediaTypeException("Attachment type is not supported.");
+      throw new UnsupportedMediaTypeException("附件类型不受支持。");
     }
 
     if (!file.buffer || !this.isContentConsistentWithMime(file.buffer, file.mimetype)) {
-      throw new UnsupportedMediaTypeException("Attachment content does not match the declared type.");
+      throw new UnsupportedMediaTypeException("附件内容与声明的文件类型不一致。");
     }
   }
 
@@ -267,7 +267,7 @@ export class UploadsService {
         mimeType as (typeof PREVIEWABLE_ATTACHMENT_MIME_TYPES)[number]
       )
     ) {
-      throw new BadRequestException("Attachment preview is not supported for this file type.");
+      throw new BadRequestException("当前文件类型不支持预览。");
     }
   }
 
@@ -276,7 +276,7 @@ export class UploadsService {
       return;
     }
 
-    throw new ForbiddenException("Attachment is not available until the scan is clean.");
+    throw new ForbiddenException("附件尚未通过安全扫描，暂时不可用。");
   }
 
   private normalizeOriginalName(originalName: string): string {

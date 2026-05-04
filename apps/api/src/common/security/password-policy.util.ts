@@ -35,30 +35,30 @@ export function assertStrongPassword(password: string, options: PasswordPolicyOp
   const failures: string[] = [];
 
   if (normalized.length < policy.minLength) {
-    failures.push(`at least ${policy.minLength} characters`);
+    failures.push(`至少 ${policy.minLength} 位`);
   }
 
   if (policy.requireUppercase && !/[A-Z]/.test(normalized)) {
-    failures.push("an uppercase letter");
+    failures.push("至少一个大写字母");
   }
 
   if (policy.requireLowercase && !/[a-z]/.test(normalized)) {
-    failures.push("a lowercase letter");
+    failures.push("至少一个小写字母");
   }
 
   if (policy.requireNumber && !/\d/.test(normalized)) {
-    failures.push("a number");
+    failures.push("至少一个数字");
   }
 
   if (policy.requireSymbol && !/[^A-Za-z0-9]/.test(normalized)) {
-    failures.push("a symbol");
+    failures.push("至少一个符号");
   }
 
   if (policy.forbidCommonPasswords && COMMON_PASSWORDS.has(normalized.toLowerCase())) {
-    failures.push("a less predictable password");
+    failures.push("不能使用过于常见的弱密码");
   }
 
   if (failures.length > 0) {
-    throw new BadRequestException(`Password does not meet the complexity policy: ${failures.join(", ")}.`);
+    throw new BadRequestException(`密码复杂度不符合要求：${failures.join("，")}。`);
   }
 }

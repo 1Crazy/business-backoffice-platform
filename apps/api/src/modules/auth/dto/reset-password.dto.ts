@@ -12,7 +12,7 @@ export class ResetPasswordDto {
   @IsString()
   @MinLength(12)
   @Matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).+$/, {
-    message: "password must contain uppercase, lowercase, number, and symbol"
+    message: "密码至少 12 位，且需包含大写字母、小写字母、数字和符号。"
   })
   password!: string;
 }

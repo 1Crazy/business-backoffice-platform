@@ -702,7 +702,7 @@ describe("AuthService", () => {
         username: "admin",
         password: "WrongPassword!9"
       })
-    ).rejects.toThrow("Too many failed attempts");
+    ).rejects.toThrow("失败次数过多，请稍后再试。");
   });
 
   it("throttles repeated invalid refresh token attempts", async () => {
@@ -725,7 +725,7 @@ describe("AuthService", () => {
       await expect(service.refresh({ refreshToken })).rejects.toBeInstanceOf(UnauthorizedException);
     }
 
-    await expect(service.refresh({ refreshToken })).rejects.toThrow("Too many failed attempts");
+    await expect(service.refresh({ refreshToken })).rejects.toThrow("失败次数过多，请稍后再试。");
   });
 
   it("issues and consumes password reset tokens", async () => {
@@ -912,7 +912,7 @@ describe("AuthService", () => {
         token: "reset-token",
         password: "Password123"
       })
-    ).rejects.toThrow("complexity policy");
+    ).rejects.toThrow("密码复杂度不符合要求");
   });
 
   it("permanently locks the account after repeated lock windows", async () => {
@@ -946,7 +946,7 @@ describe("AuthService", () => {
         username: "admin",
         password: "WrongPassword!9"
       })
-    ).rejects.toThrow("Too many failed attempts");
+    ).rejects.toThrow("失败次数过多，请稍后再试。");
 
     expect(authRepository.updateUserSecurityState).toHaveBeenCalledWith(
       "user-1",
@@ -1018,7 +1018,7 @@ describe("AuthService", () => {
         username: "admin",
         password: "Admin123456!Aa"
       })
-    ).rejects.toThrow("User is unavailable.");
+    ).rejects.toThrow("当前账号不可用，请联系管理员。");
   });
 
   it("rejects session payload validation when the account is permanently locked", async () => {
@@ -1060,7 +1060,7 @@ describe("AuthService", () => {
         dataScopes: ["ALL"],
         sessionId: "session-1"
       })
-    ).rejects.toThrow("Session is invalid.");
+    ).rejects.toThrow("登录状态已失效，请重新登录。");
   });
 
   it("configures and verifies mfa", async () => {

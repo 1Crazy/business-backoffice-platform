@@ -3,6 +3,8 @@ import { ArgumentsHost, Catch, ExceptionFilter, HttpStatus } from "@nestjs/commo
 import { Prisma } from "@prisma/client";
 import type { Request, Response } from "express";
 
+import { translateErrorPayload } from "@/common/errors/error-message.util";
+
 @Catch(Prisma.PrismaClientKnownRequestError)
 export class PrismaClientExceptionFilter implements ExceptionFilter {
   catch(exception: Prisma.PrismaClientKnownRequestError, host: ArgumentsHost): void {
@@ -13,7 +15,7 @@ export class PrismaClientExceptionFilter implements ExceptionFilter {
 
     response.status(statusCode).json({
       statusCode,
-      message,
+      message: translateErrorPayload(message),
       errorCode: exception.code,
       path: request.url,
       timestamp: new Date().toISOString()

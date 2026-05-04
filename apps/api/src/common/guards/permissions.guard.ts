@@ -38,13 +38,13 @@ export class PermissionsGuard implements CanActivate {
     const user = request.user as AuthUser | undefined;
 
     if (!user) {
-      throw new ForbiddenException("Missing authenticated user.");
+      throw new ForbiddenException("当前请求缺少登录身份信息。");
     }
 
     const hasPermission = permissions.every((permission) => user.permissions.includes(permission));
 
     if (!hasPermission) {
-      throw new ForbiddenException("Insufficient permissions.");
+      throw new ForbiddenException("当前账号没有执行该操作的权限。");
     }
 
     const actionPermission = this.reflector.getAllAndOverride<ActionPermissionMetadata | undefined>(ACTION_PERMISSION_KEY, [
@@ -57,7 +57,7 @@ export class PermissionsGuard implements CanActivate {
         user,
         actionPermission.resource,
         actionPermission.action,
-        "You do not have permission to perform this action."
+        "当前账号没有执行该操作的权限。"
       );
     }
 

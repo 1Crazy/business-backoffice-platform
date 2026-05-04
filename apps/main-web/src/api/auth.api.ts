@@ -1,12 +1,16 @@
 /** 领域 API：封装主应用登录、资料查询与退出接口。 */
 import { http } from "@/api/http";
 import type {
+  ConfigureMfaPayload,
   CurrentUser,
   LoginPayload,
   LoginResponse,
+  MfaSetupResponse,
+  MfaStatus,
   PasswordResetResponse,
   RequestPasswordResetPayload,
   ResetPasswordPayload,
+  VerifyMfaPayload,
   VerifyLoginMfaPayload
 } from "@/types/auth";
 
@@ -32,6 +36,21 @@ export async function resetPassword(payload: ResetPasswordPayload): Promise<Pass
 
 export async function fetchCurrentUserProfile(): Promise<CurrentUser> {
   const { data } = await http.get<CurrentUser>("/auth/profile");
+  return data;
+}
+
+export async function fetchMfaStatus(): Promise<MfaStatus> {
+  const { data } = await http.get<MfaStatus>("/auth/mfa/status");
+  return data;
+}
+
+export async function configureMfa(payload: ConfigureMfaPayload): Promise<MfaSetupResponse> {
+  const { data } = await http.post<MfaSetupResponse>("/auth/mfa/configure", payload);
+  return data;
+}
+
+export async function verifyMfa(payload: VerifyMfaPayload): Promise<PasswordResetResponse> {
+  const { data } = await http.post<PasswordResetResponse>("/auth/mfa/verify", payload);
   return data;
 }
 

@@ -168,14 +168,14 @@ export class UsersService {
 
   private async assertPasswordHistory(userId: string, currentPasswordHash: string, nextPassword: string) {
     if (await bcrypt.compare(nextPassword, currentPasswordHash)) {
-      throw new BadRequestException("Password must not match a recently used password.");
+      throw new BadRequestException("新密码不能与最近使用过的密码相同。");
     }
 
     const history = await this.usersRepository.listPasswordHistory(userId, PASSWORD_HISTORY_LIMIT);
 
     for (const item of history) {
       if (await bcrypt.compare(nextPassword, item.passwordHash)) {
-        throw new BadRequestException("Password must not match a recently used password.");
+        throw new BadRequestException("新密码不能与最近使用过的密码相同。");
       }
     }
   }
