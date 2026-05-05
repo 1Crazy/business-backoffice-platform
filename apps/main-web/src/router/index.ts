@@ -158,6 +158,8 @@ const routes: RouteRecordRaw[] = [
   }
 ];
 
+const ANONYMOUS_ACCESS_PATHS = new Set(["/login", "/forgot-password", "/auth/password-reset"]);
+
 export const router = createRouter({
   history: createWebHistory(),
   routes
@@ -166,7 +168,11 @@ export const router = createRouter({
 router.beforeEach(async (to) => {
   const authStore = useAuthStore();
 
-  if (to.path === "/login") {
+  if (ANONYMOUS_ACCESS_PATHS.has(to.path)) {
+    if (to.path !== "/login") {
+      return true;
+    }
+
     if (!authStore.sessionExpiresAt) {
       return true;
     }

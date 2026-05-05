@@ -14,6 +14,7 @@
         label-position="top"
         require-asterisk-position="right"
         status-icon
+        class="dialog-form"
         @submit.prevent="handleSubmit"
       >
         <el-form-item label="账号或邮箱" prop="identifier" required>
@@ -123,11 +124,20 @@ async function goLogin() {
   line-height: 1.7;
 }
 
+.dialog-form {
+  display: grid;
+  gap: 12px;
+}
+
+.dialog-form .el-button + .el-button {
+  margin-left: 0;
+}
+
 .submit-button {
   width: 100%;
 }
 
 .secondary-button {
-  margin-top: -6px;
+  margin-top: 0;
 }
 </style>
