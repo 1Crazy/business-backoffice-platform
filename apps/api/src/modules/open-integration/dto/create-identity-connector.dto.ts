@@ -74,7 +74,7 @@ export class CreateIdentityConnectorDto {
   allowedDomains?: string[];
 
   @ApiPropertyOptional({
-    description: "扩展配置。",
+    description: "扩展配置。该字段为动态对象，具体键值由连接器类型与接入协议决定。",
     type: "object",
     additionalProperties: true
   })

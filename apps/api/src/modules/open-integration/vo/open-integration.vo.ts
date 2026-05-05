@@ -311,6 +311,7 @@ export class IdentityConnectorVo {
   allowedDomains!: string[];
 
   @ApiPropertyOptional({
+    description: "连接器扩展配置。该字段为动态对象，具体键值由连接器类型与接入协议决定。",
     nullable: true,
     type: "object",
     additionalProperties: true

@@ -59,9 +59,24 @@ function mergePropertyDescriptions(modules: SchemaDescriptionModule[]): Record<s
   return Object.assign({}, ...modules.map((module) => module.propertyDescriptions ?? {}));
 }
 
+function mergeEnumDescriptions(modules: SchemaDescriptionModule[]): Record<string, string> {
+  const merged: Record<string, string> = {};
+
+  for (const module of modules) {
+    for (const [enumName, descriptionMap] of Object.entries(module.enumDescriptions ?? {})) {
+      merged[enumName] = Object.entries(descriptionMap)
+        .map(([value, description]) => `${value}: ${description}`)
+        .join("\n");
+    }
+  }
+
+  return merged;
+}
+
 export function applySchemaDescriptionModules(document: OpenAPIObject, ...modules: SchemaDescriptionModule[]): void {
   const schemaDescriptions = mergeSchemaDescriptions(modules);
   const propertyDescriptions = mergePropertyDescriptions(modules);
+  const enumDescriptions = mergeEnumDescriptions(modules);
   const schemas = document.components?.schemas ?? {};
 
   for (const [schemaName, schema] of Object.entries(schemas as Record<string, any>)) {
@@ -85,14 +100,33 @@ export function applySchemaDescriptionModules(document: OpenAPIObject, ...module
 
       const explicitDescription = propertyDescriptions[`${schemaName}.${propertyName}`];
       const fallbackDescription = COMMON_PROPERTY_DESCRIPTION_FALLBACKS[propertyName];
+      const enumRefName =
+        typeof propertySchema.allOf?.[0]?.$ref === "string"
+          ? propertySchema.allOf[0].$ref.split("/").pop()
+          : typeof propertySchema.$ref === "string"
+            ? propertySchema.$ref.split("/").pop()
+            : undefined;
+      const enumDescription = enumRefName ? enumDescriptions[enumRefName] : undefined;
+      const appendEnumDescription = (description: string): string => {
+        if (!enumDescription || description.includes(enumDescription)) {
+          return description;
+        }
+
+        return `${description}\n取值说明：\n${enumDescription}`;
+      };
 
       if (explicitDescription) {
-        propertySchema.description = explicitDescription;
+        propertySchema.description = appendEnumDescription(explicitDescription);
         continue;
       }
 
       if (!propertySchema.description && fallbackDescription) {
-        propertySchema.description = fallbackDescription;
+        propertySchema.description = appendEnumDescription(fallbackDescription);
+        continue;
+      }
+
+      if (typeof propertySchema.description === "string") {
+        propertySchema.description = appendEnumDescription(propertySchema.description);
       }
     }
   }

@@ -70,7 +70,7 @@ export class NotificationChannelConfigVo {
   recentFailures!: number;
 
   @ApiPropertyOptional({
-    description: "通知渠道运行配置。",
+    description: "通知渠道运行配置。该字段为动态对象，具体键值由渠道适配器实现决定。",
     nullable: true,
     type: "object",
     additionalProperties: true
@@ -78,7 +78,7 @@ export class NotificationChannelConfigVo {
   config?: Record<string, unknown> | null;
 
   @ApiPropertyOptional({
-    description: "通知渠道能力声明。",
+    description: "通知渠道能力声明。该字段为动态对象，用于标记渠道支持的能力开关与限制。",
     nullable: true,
     type: "object",
     additionalProperties: true
@@ -147,7 +147,7 @@ export class StorageConfigVo {
   previewEnabled!: boolean;
 
   @ApiPropertyOptional({
-    description: "存储扩展配置。",
+    description: "存储扩展配置。该字段为动态对象，具体键值由存储驱动实现决定。",
     nullable: true,
     type: "object",
     additionalProperties: true
@@ -288,11 +288,12 @@ export class SchedulerJobExecutionVo {
 
 export class PersonalDataExportVo {
   @ApiProperty({
-    description: "导出的用户个人数据快照。"
+    description: "导出的用户个人数据快照。该字段为动态对象，按导出时汇总到的用户资料结构返回。"
   })
   user!: Record<string, unknown>;
 
   @ApiProperty({
+    description: "导出元数据。该字段为动态对象，包含导出范围、时间与统计信息。",
     type: "object",
     additionalProperties: true
   })

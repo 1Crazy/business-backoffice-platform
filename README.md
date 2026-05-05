@@ -74,7 +74,7 @@
 
 ## 环境要求
 
-- Node.js `20.x`
+- Node.js `24.x`
 - `pnpm 10.x`
 - Docker Desktop 或可用的 Docker daemon
 

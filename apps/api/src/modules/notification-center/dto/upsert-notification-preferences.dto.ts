@@ -78,7 +78,7 @@ export class UpsertNotificationPreferenceItemDto {
   nudgeThresholdMinutes?: number | null;
 
   @ApiPropertyOptional({
-    description: "静默时段设置。",
+    description: "静默时段设置。该字段为动态对象，通常按星期和时间段提交免打扰配置。",
     nullable: true,
     type: "object",
     additionalProperties: true

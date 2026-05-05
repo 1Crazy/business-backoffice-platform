@@ -68,13 +68,14 @@ export class ProductConfigEntryVo {
   effectiveSource!: ProductConfigLayer;
 
   @ApiProperty({
-    description: "当前生效配置值。",
+    description: "当前生效配置值。该字段为动态对象，不同配置项会返回不同键值结构。",
     type: "object",
     additionalProperties: true
   })
   effectiveValue!: Record<string, unknown>;
 
   @ApiPropertyOptional({
+    description: "平台默认层的原始配置值。该字段为动态对象，不同配置项会返回不同键值结构。",
     nullable: true,
     type: "object",
     additionalProperties: true
@@ -82,6 +83,7 @@ export class ProductConfigEntryVo {
   platformDefaultValue?: Record<string, unknown> | null;
 
   @ApiPropertyOptional({
+    description: "行业模板层的原始配置值。该字段为动态对象，不同配置项会返回不同键值结构。",
     nullable: true,
     type: "object",
     additionalProperties: true
@@ -89,6 +91,7 @@ export class ProductConfigEntryVo {
   industryTemplateValue?: Record<string, unknown> | null;
 
   @ApiPropertyOptional({
+    description: "租户覆盖层的原始配置值。该字段为动态对象，不同配置项会返回不同键值结构。",
     nullable: true,
     type: "object",
     additionalProperties: true
@@ -135,9 +138,16 @@ export class ProductRuntimeConfigVo {
   hiddenNavigationKeys!: string[];
 
   @ApiProperty({
-    description: "运行时导航文案映射。",
+    description: "运行时导航文案映射。该字段为动态对象，key 是导航项键，value 是展示文案。",
     type: "object",
-    additionalProperties: true
+    additionalProperties: {
+      type: "string"
+    },
+    example: {
+      dashboard: "经营看板",
+      customers: "客户管理",
+      workflow: "工作流"
+    }
   })
   navigationLabels!: Record<string, string>;
 }

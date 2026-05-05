@@ -55,7 +55,7 @@ export class WorkflowTemplateNodeVo {
   assignmentType!: WorkflowAssignmentType;
 
   @ApiProperty({
-    description: "审批人分配配置。"
+    description: "审批人分配配置。该字段为动态对象，具体键值取决于 assignmentType 与节点规则。"
   })
   assignmentConfig!: Record<string, unknown>;
 
@@ -127,7 +127,7 @@ export class WorkflowTemplateVo {
   status!: WorkflowTemplateStatus;
 
   @ApiProperty({
-    description: "表单结构定义。"
+    description: "表单结构定义。该字段为动态对象，返回流程模板约定的表单 schema。"
   })
   formSchema!: Record<string, unknown>;
 
@@ -354,7 +354,7 @@ export class WorkflowInstanceVo {
   applicant!: WorkflowUserSummaryVo;
 
   @ApiProperty({
-    description: "表单数据。"
+    description: "表单数据。该字段为动态对象，实际字段由流程模板定义。"
   })
   formData!: Record<string, unknown>;
 
@@ -453,7 +453,7 @@ export class WorkflowPendingTaskVo {
   applicant!: WorkflowUserSummaryVo;
 
   @ApiProperty({
-    description: "流程表单数据。"
+    description: "流程表单数据。该字段为动态对象，实际字段由流程模板定义。"
   })
   formData!: Record<string, unknown>;
 

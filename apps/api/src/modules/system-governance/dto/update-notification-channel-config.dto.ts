@@ -21,6 +21,7 @@ export class UpdateNotificationChannelConfigDto {
   isEnabled?: boolean;
 
   @ApiPropertyOptional({
+    description: "通知渠道运行配置。该字段为动态对象，具体键值由渠道适配器实现决定。",
     nullable: true,
     type: "object",
     additionalProperties: true
@@ -30,6 +31,7 @@ export class UpdateNotificationChannelConfigDto {
   config?: Record<string, unknown> | null;
 
   @ApiPropertyOptional({
+    description: "通知渠道能力声明。该字段为动态对象，用于提交能力开关与扩展约束。",
     nullable: true,
     type: "object",
     additionalProperties: true

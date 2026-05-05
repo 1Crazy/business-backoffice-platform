@@ -136,7 +136,7 @@ export class NotificationRecordVo {
   targetLabel?: string | null;
 
   @ApiPropertyOptional({
-    description: "渠道偏好快照。",
+    description: "渠道偏好快照。该字段为动态对象，用于记录通知生成时各渠道偏好判定结果。",
     nullable: true,
     type: "object",
     additionalProperties: true
@@ -144,7 +144,7 @@ export class NotificationRecordVo {
   channelPreferences?: Record<string, unknown> | null;
 
   @ApiPropertyOptional({
-    description: "路由快照。",
+    description: "路由快照。该字段为动态对象，用于记录通知生成时的路由决策上下文。",
     nullable: true,
     type: "object",
     additionalProperties: true
@@ -240,7 +240,7 @@ export class NotificationPreferenceVo {
   nudgeThresholdMinutes?: number | null;
 
   @ApiPropertyOptional({
-    description: "静默时段设置。",
+    description: "静默时段设置。该字段为动态对象，通常按星期和时间段描述免打扰配置。",
     nullable: true,
     type: "object",
     additionalProperties: true

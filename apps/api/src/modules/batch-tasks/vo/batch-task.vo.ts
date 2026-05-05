@@ -38,7 +38,7 @@ export class BatchTaskFailureVo {
   reason!: string;
 
   @ApiPropertyOptional({
-    description: "失败上下文。",
+    description: "失败上下文。该字段为动态对象，用于补充失败行对应的原始值或校验细节。",
     nullable: true,
     type: "object",
     additionalProperties: true
@@ -101,7 +101,7 @@ export class BatchTaskVo {
   failureCount!: number;
 
   @ApiPropertyOptional({
-    description: "筛选快照。",
+    description: "筛选快照。该字段为动态对象，用于记录导出任务实际使用的筛选条件。",
     nullable: true,
     type: "object",
     additionalProperties: true

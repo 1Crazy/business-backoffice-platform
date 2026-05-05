@@ -40,8 +40,8 @@ nullable: true
   targetId?: string | null;
 
   @ApiPropertyOptional({
-    description: "附加明细。",
-type: "object",
+    description: "附加明细。该字段为动态对象，用于记录本次审计事件的扩展上下文。",
+    type: "object",
     additionalProperties: true,
     nullable: true
   })

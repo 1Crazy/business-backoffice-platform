@@ -19,7 +19,7 @@ export class StartWorkflowInstanceDto {
   businessKey?: string | null;
 
   @ApiProperty({
-    description: "流程表单数据。"
+    description: "流程表单数据。该字段为动态对象，实际字段由所选流程模板定义。"
   })
   @IsObject()
   formData!: Record<string, unknown>;

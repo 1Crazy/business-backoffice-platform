@@ -37,6 +37,7 @@ export class UpdateStorageConfigDto {
   previewEnabled?: boolean;
 
   @ApiPropertyOptional({
+    description: "存储扩展配置。该字段为动态对象，具体键值由存储驱动实现决定。",
     nullable: true,
     type: "object",
     additionalProperties: true

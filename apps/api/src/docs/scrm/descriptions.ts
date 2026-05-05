@@ -32,12 +32,12 @@ export const SCRM_SCHEMA_DESCRIPTIONS: SchemaDescriptionModule = {
       NEW: "新录入线索，尚未跟进。",
       CONTACTED: "已首次联系线索。",
       QUALIFIED: "已确认具有继续推进价值。",
-      DISQUALIFIED: "已判定为无效线索。",
-      CONVERTED: "已成功转化为客户。"
+      CONVERTED: "已成功转化为客户。",
+      CLOSED: "线索已关闭，不再继续跟进。"
     },
     ReminderStatus: {
       PENDING: "待处理提醒。",
-      COMPLETED: "提醒已处理完成。",
+      DONE: "提醒已处理完成。",
       CANCELLED: "提醒已取消。"
     },
     OpportunityStage: {

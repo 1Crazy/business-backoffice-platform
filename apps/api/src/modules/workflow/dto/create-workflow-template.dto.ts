@@ -165,7 +165,7 @@ export class CreateWorkflowTemplateDto {
   businessType!: string;
 
   @ApiProperty({
-    description: "表单结构定义。"
+    description: "表单结构定义。该字段为动态对象，按业务场景描述可渲染表单 schema。"
   })
   @IsObject()
   formSchema!: Record<string, unknown>;
